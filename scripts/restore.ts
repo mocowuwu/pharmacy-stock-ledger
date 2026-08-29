@@ -27,9 +27,12 @@ function argument(name: string): string | undefined {
 
 const SCRATCH = "pharmacy_restore_test";
 
-function run(command: string, args: string[]): Promise<number> {
+function run(command: string, args: string[], env: Record<string, string> = {}): Promise<number> {
   return new Promise((done, fail) => {
-    const child = spawn(command, args, { stdio: ["ignore", "inherit", "inherit"] });
+    const child = spawn(command, args, {
+      stdio: ["ignore", "inherit", "inherit"],
+      env: { ...process.env, ...env },
+    });
     child.on("error", fail);
     child.on("exit", (code) => done(code ?? 1));
   });
@@ -79,36 +82,59 @@ async function main() {
   if (replacingLive) console.log("        -> REPLACING LIVE DATA");
   console.log("");
 
+  // Credentials travel with the connection, not just the host and port.
+  // Without the username these tools fall back to the operating-system account
+  // and then sit waiting for a password nobody is there to type.
+  const connection = [
+    "-h", server.hostname,
+    "-p", server.port || "5432",
+    ...(server.username ? ["-U", decodeURIComponent(server.username)] : []),
+  ];
+  const credentials: Record<string, string> = server.password
+    ? { PGPASSWORD: decodeURIComponent(server.password) }
+    : {};
+
   if (target === SCRATCH) {
     // Dropping and recreating gives the drill a clean target every time, so a
     // successful restore cannot be a leftover from the previous one.
-    await run("dropdb", ["--if-exists", "-h", server.hostname, "-p", server.port || "5432", target]);
-    const created = await run("createdb", ["-h", server.hostname, "-p", server.port || "5432", target]);
+    await run("dropdb", ["--if-exists", ...connection, target], credentials);
+    const created = await run("createdb", [...connection, target], credentials);
     if (created !== 0) {
       console.error("Could not create the scratch database.");
       process.exit(created);
     }
   }
 
-  const code = await run("pg_restore", [
-    "--dbname",
-    server.toString(),
-    "--clean",
-    "--if-exists",
-    "--no-owner",
-    "--exit-on-error",
-    path,
-  ]);
+  const code = await run(
+    "pg_restore",
+    [
+      "--dbname", server.toString(),
+      "--clean",
+      "--if-exists",
+      "--no-owner",
+      "--exit-on-error",
+      path,
+    ],
+    credentials,
+  );
 
   if (code !== 0) {
     console.error(`pg_restore exited with ${code}. The restore did NOT complete.`);
     process.exit(code);
   }
 
+  // Redacted. A connection string printed with its password in it ends up in
+  // the terminal scrollback, in whatever log the operator pasted it into, and
+  // in the shell history of anyone who runs the suggestion.
+  const shown = new URL(server.toString());
+  if (shown.password) shown.password = "***";
+
   console.log("");
   console.log("Restored. Now check it is actually usable, not merely present:");
-  console.log(`  psql ${server.toString()} -c "select count(*) from stock_movements"`);
-  console.log(`  DATABASE_URL=${server.toString()} npm run check-ledger`);
+  console.log(`  psql ${shown.toString()} -c "select count(*) from stock_movements"`);
+  console.log(`  DATABASE_URL=${shown.toString()} npm run check-ledger`);
+  console.log("");
+  console.log("  (substitute the real password from .env.local)");
   console.log("");
   console.log("The second one matters most: it proves the ledger still reconciles.");
 }

@@ -1,8 +1,48 @@
 # Getting it running in the clinic
 
-Two paths. **The first has been tested end to end**; the second is written but
-has not been built, because Docker was not installed on the machine this was
-developed on. Use the first unless you have a reason not to.
+**Start here: the installer.** It takes a machine with nothing on it to a
+pharmacy the tills can open, in one command, and it brings its own PostgreSQL so
+there is nothing to install by hand.
+
+```
+macOS    double-click  install-macos.command
+Linux    sh install-linux.sh
+Windows  not built yet -- see the bottom of this file
+```
+
+It installs into `~/pharmacy`, needs no administrator password, and touches
+nothing outside that folder. Uninstalling is deleting it.
+
+The macOS path has been run end to end on a clean directory: PostgreSQL fetched
+and checksum-verified, cluster created, application built, owner account seeded,
+service registered, and a backup taken and restored with the ledger reconciling.
+**The Linux path is written but has not been run**, because this was developed
+on a Mac. Expect to fix something; the installer stops with a sentence rather
+than half-finishing.
+
+What it prints at the end is the part that matters: the owner's one-time
+password, and the LAN address to open from the till. Write both down.
+
+Afterwards, `~/pharmacy/pharmacy` is the control command:
+
+```bash
+~/pharmacy/pharmacy status     # is it running, and where to open it
+~/pharmacy/pharmacy backup     # take a backup now
+~/pharmacy/pharmacy logs       # the last 60 lines
+~/pharmacy/pharmacy restart    # after editing .env.local
+~/pharmacy/pharmacy uninstall  # removes the software, keeps the records
+```
+
+Running the installer again over an existing install upgrades it: the database,
+its records and the owner account are left exactly as they are.
+
+---
+
+# Doing it by hand
+
+Everything below is the manual path, kept because it is what the installer
+automates and what you fall back to when something about your machine is
+unusual. The Docker path at the end is written but unverified.
 
 Either way you need one machine that stays on. A mini PC in the back room is
 the recommendation: when the internet drops, the till keeps selling. A cloud
@@ -24,6 +64,8 @@ server means a closed counter on the morning the connection fails.
 ---
 
 ## Path A — plain Node and Postgres (tested)
+
+*The installer above does all of this for you. This is the long way round.*
 
 ### 1. Install the two dependencies
 
@@ -203,3 +245,28 @@ data, count, parallel run.
 | Works locally, not from the till | The app is bound to localhost, or the machine's firewall is blocking 3000 |
 | Sales fail with a duplicate key | Two app instances against one database. There should be exactly one |
 | Times and expiry dates look a day out | `PHARMACY_TIMEZONE` and the Settings timezone disagree with where you are |
+
+---
+
+## Windows
+
+Not built yet, deliberately rather than by oversight. The installer's work is
+already cross-platform JavaScript and PostgreSQL 18 publishes a Windows build,
+so what is missing is a service registration, a launcher, and packaging into an
+`.exe` — perhaps a day's work.
+
+It should be done **on Windows**. An installer that has never been run on the
+system it installs onto is a guess, and the failures are all in the parts a Mac
+cannot exercise: paths with spaces, the service manager, SmartScreen, antivirus
+holding a file open mid-copy. Running Claude Code inside a Windows VM is the
+right way — snapshot, install, roll back, try again on a genuinely clean system.
+
+Two things to know before that session:
+
+- An unsigned installer trips **SmartScreen**. The operator clicks *More info →
+  Run anyway* once. Removing that warning needs a code-signing certificate at a
+  few hundred dollars a year, which is rarely worth it for one clinic.
+- The manual path above works on Windows today. It is longer, not worse.
+
+In the meantime `install-windows.bat` exists only to say so rather than to fail
+confusingly.

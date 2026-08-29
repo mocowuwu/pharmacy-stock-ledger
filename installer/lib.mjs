@@ -1,0 +1,295 @@
+import { createHash } from "node:crypto";
+import { spawn } from "node:child_process";
+import { access, mkdir, rm, writeFile } from "node:fs/promises";
+import { createWriteStream } from "node:fs";
+import { networkInterfaces } from "node:os";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import { dirname, join } from "node:path";
+
+/**
+ * Shared parts of the installer.
+ *
+ * Written for somebody standing at a clinic mini PC who did not ask to become a
+ * system administrator. Two consequences run through all of it:
+ *
+ * 1. **Say what is happening and why.** Every step prints before it runs, so a
+ *    failure names the thing that failed rather than ending a silent minute.
+ * 2. **Refuse rather than half-do.** An installer that stops with a clear
+ *    sentence is recoverable. One that leaves a broken half-install is a
+ *    machine somebody has to wipe.
+ */
+
+/* ------------------------------------------------------------------ output */
+
+const BOLD = "[1m";
+const DIM = "[2m";
+const RED = "[31m";
+const GREEN = "[32m";
+const YELLOW = "[33m";
+const PURPLE = "[35m";
+const OFF = "[0m";
+
+// Windows terminals before 10 do not understand these, and a machine piping the
+// output to a file does not want them either.
+const colour = process.stdout.isTTY && process.env.NO_COLOR === undefined;
+const paint = (code, text) => (colour ? `${code}${text}${OFF}` : text);
+
+let stepNumber = 0;
+
+export const ui = {
+  title(text) {
+    console.log("");
+    console.log(paint(BOLD + PURPLE, text));
+    console.log(paint(DIM, "─".repeat(Math.min(text.length, 60))));
+  },
+  step(text) {
+    stepNumber += 1;
+    console.log("");
+    console.log(paint(BOLD, `${stepNumber}. ${text}`));
+  },
+  info: (text) => console.log(`   ${text}`),
+  detail: (text) => console.log(paint(DIM, `   ${text}`)),
+  ok: (text) => console.log(`   ${paint(GREEN, "✓")} ${text}`),
+  warn: (text) => console.log(`   ${paint(YELLOW, "!")} ${text}`),
+  blank: () => console.log(""),
+
+  /**
+   * Ends the install with an explanation and, where possible, the way out.
+   * Never a stack trace: a trace tells the reader nothing they can act on.
+   */
+  fail(text, remedy) {
+    console.log("");
+    console.log(`${paint(RED + BOLD, "Stopped.")} ${text}`);
+    if (remedy) {
+      console.log("");
+      console.log(remedy);
+    }
+    console.log("");
+    process.exit(1);
+  },
+
+  /** A box for the one thing that must not be missed: the owner's password. */
+  box(lines) {
+    const width = Math.max(...lines.map((l) => l.length)) + 4;
+    console.log("");
+    console.log(paint(PURPLE, "┌" + "─".repeat(width) + "┐"));
+    for (const line of lines) {
+      const pad = " ".repeat(width - line.length - 4);
+      console.log(paint(PURPLE, "│") + `  ${line}${pad}  ` + paint(PURPLE, "│"));
+    }
+    console.log(paint(PURPLE, "└" + "─".repeat(width) + "┘"));
+    console.log("");
+  },
+};
+
+/* ----------------------------------------------------------------- running */
+
+/**
+ * Runs a command, streaming its output only when it fails.
+ *
+ * `npm ci` prints hundreds of lines nobody reads while it works, and the three
+ * that matter when it breaks. Capturing and replaying on failure gives a quiet
+ * install and a legible error.
+ */
+export function run(command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: options.cwd,
+      env: { ...process.env, ...options.env },
+      stdio: options.inherit ? "inherit" : ["ignore", "pipe", "pipe"],
+      shell: false,
+    });
+
+    let output = "";
+    if (!options.inherit) {
+      child.stdout?.on("data", (d) => (output += d));
+      child.stderr?.on("data", (d) => (output += d));
+    }
+
+    child.on("error", (error) =>
+      reject(new Error(`could not run ${command}: ${error.message}`)),
+    );
+    child.on("exit", (code) => {
+      if (code === 0) return resolve(output);
+      reject(
+        new Error(
+          `${command} ${args.join(" ")} exited with ${code}` +
+            (output ? `\n\n${output.trim().split("\n").slice(-25).join("\n")}` : ""),
+        ),
+      );
+    });
+  });
+}
+
+/** Whether a command exists, used for preflight rather than for control flow. */
+export async function has(command) {
+  try {
+    await run(process.platform === "win32" ? "where" : "which", [command]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function exists(path) {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/* --------------------------------------------------------------- platform */
+
+/**
+ * The Rust target triple, which is how the PostgreSQL binaries are named.
+ *
+ * Only the combinations a clinic will plausibly use. Anything else stops with a
+ * message naming what was detected, rather than downloading something that
+ * cannot run.
+ */
+export function targetTriple() {
+  const key = `${process.platform}-${process.arch}`;
+  const triples = {
+    "darwin-arm64": "aarch64-apple-darwin",
+    "darwin-x64": "x86_64-apple-darwin",
+    "linux-x64": "x86_64-unknown-linux-gnu",
+    "linux-arm64": "aarch64-unknown-linux-gnu",
+    "win32-x64": "x86_64-pc-windows-msvc",
+  };
+  return triples[key] ?? null;
+}
+
+/**
+ * The address a till should be pointed at.
+ *
+ * "Open localhost:3000" is useless from another machine, which is where this
+ * will actually be opened from. Prefers a private LAN address.
+ */
+export function lanAddress() {
+  const candidates = [];
+  for (const entries of Object.values(networkInterfaces())) {
+    for (const entry of entries ?? []) {
+      if (entry.family !== "IPv4" || entry.internal) continue;
+      const isPrivate =
+        entry.address.startsWith("192.168.") ||
+        entry.address.startsWith("10.") ||
+        /^172\.(1[6-9]|2\d|3[01])\./u.test(entry.address);
+      candidates.push({ address: entry.address, isPrivate });
+    }
+  }
+  return (
+    candidates.find((c) => c.isPrivate)?.address ??
+    candidates[0]?.address ??
+    "127.0.0.1"
+  );
+}
+
+/* -------------------------------------------------------------- downloads */
+
+/**
+ * Downloads to a file, checking the SHA-256 the publisher put beside it.
+ *
+ * The checksum is not ceremony. This fetches a database engine over the public
+ * internet onto the machine that will hold the pharmacy's records; a truncated
+ * download that silently half-extracts is the good outcome without it.
+ */
+export async function download(url, destination, options = {}) {
+  await mkdir(dirname(destination), { recursive: true });
+
+  const response = await fetch(url, { redirect: "follow" });
+  if (!response.ok || !response.body) {
+    throw new Error(`download failed (${response.status}) for ${url}`);
+  }
+
+  const total = Number(response.headers.get("content-length") ?? 0);
+  let received = 0;
+  let lastPrinted = 0;
+
+  const hash = createHash("sha256");
+  const source = Readable.fromWeb(response.body);
+  source.on("data", (chunk) => {
+    hash.update(chunk);
+    received += chunk.length;
+    if (!total || !process.stdout.isTTY) return;
+    const percent = Math.floor((received / total) * 100);
+    if (percent >= lastPrinted + 10) {
+      lastPrinted = percent;
+      process.stdout.write(`\r   ${paint(DIM, `downloading… ${percent}%`)}`);
+    }
+  });
+
+  await pipeline(source, createWriteStream(destination));
+  if (process.stdout.isTTY && total) process.stdout.write("\r[2K");
+
+  const digest = hash.digest("hex");
+  if (options.sha256 && digest !== options.sha256) {
+    await rm(destination, { force: true });
+    throw new Error(
+      `checksum mismatch for ${url}\n  expected ${options.sha256}\n  got      ${digest}`,
+    );
+  }
+  return digest;
+}
+
+/** The publisher's `.sha256` file, which is `<hex>  <filename>`. */
+export async function fetchChecksum(url) {
+  const response = await fetch(url, { redirect: "follow" });
+  if (!response.ok) return null;
+  const text = await response.text();
+  const match = /^([0-9a-f]{64})/iu.exec(text.trim());
+  return match ? match[1].toLowerCase() : null;
+}
+
+/**
+ * Extracts a .tar.gz using the system tar.
+ *
+ * Every target has one -- macOS and Linux forever, Windows since 10 -- and a
+ * pure-JavaScript tar would be another dependency to be wrong about symlinks
+ * and permissions, which matter for a PostgreSQL tree.
+ */
+export async function extractTarGz(archive, into) {
+  await mkdir(into, { recursive: true });
+  await run("tar", ["-xzf", archive, "-C", into]);
+}
+
+/* ------------------------------------------------------------------ files */
+
+export async function writeIfAbsent(path, contents) {
+  if (await exists(path)) return false;
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, contents, "utf8");
+  return true;
+}
+
+/**
+ * Free space where the install is going, in gigabytes.
+ *
+ * Worth checking before rather than discovering three minutes into `npm ci`.
+ * A full disk does not announce itself: PostgreSQL and the build both fail in
+ * ways that read as corruption rather than as "no room".
+ */
+export async function freeSpaceGb(path) {
+  const { statfs } = await import("node:fs/promises");
+  try {
+    const stats = await statfs(path);
+    return (stats.bavail * stats.bsize) / 1024 ** 3;
+  } catch {
+    return null;
+  }
+}
+
+/** Layout of an installation. One place, so nothing has to guess. */
+export function layout(root) {
+  return {
+    root,
+    app: join(root, "app"),
+    postgres: join(root, "postgres"),
+    data: join(root, "data", "pgdata"),
+    backups: join(root, "backups"),
+    logs: join(root, "logs"),
+    config: join(root, "pharmacy.json"),
+  };
+}
