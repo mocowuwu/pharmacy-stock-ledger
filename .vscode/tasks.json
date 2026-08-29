@@ -1,0 +1,27 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      // Terminal 1. Owns the development database. PGlite serves a single
+      // connection, so exactly one process may hold the data directory --
+      // running this separately means you can stop and restart the app without
+      // taking the database down with it.
+      "label": "db: serve",
+      "type": "npm",
+      "script": "db:serve",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      // Terminal 2. Reuses the database above if it is already listening.
+      "label": "dev: app",
+      "type": "npm",
+      "script": "dev",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    { "label": "test", "type": "npm", "script": "test", "group": "test", "problemMatcher": [] },
+    { "label": "typecheck", "type": "npm", "script": "typecheck", "problemMatcher": ["$tsc"] },
+    { "label": "lint", "type": "npm", "script": "lint", "problemMatcher": ["$eslint-stylish"] }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  // Suggested when the folder is first opened. None of them are required to
+  // build or run the project -- the toolchain lives in package.json.
+  "recommendations": [
+    "anthropic.claude-code",
+    "dbaeumer.vscode-eslint",
+    "bradlc.vscode-tailwindcss"
+  ],
+  // Prettier is deliberately absent: this project has no Prettier config, so
+  // installing it would reformat files against the style ESLint enforces.
+  "unwantedRecommendations": ["esbenp.prettier-vscode"]
+}

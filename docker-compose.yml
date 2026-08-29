@@ -1,0 +1,42 @@
+# Deployment target. Runs identically on a mini PC in the clinic or on a VPS --
+# see "Host-agnostic constraints" in the implementation plan. Local development
+# does not need this file: with DATABASE_URL unset the app uses PGlite instead.
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pharmacy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-pharmacy}
+      # Indonesian collation for correct sorting of item names.
+      LANG: id_ID.utf8
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pharmacy}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Not published to the host: only the app container reaches the database.
+    expose:
+      - "5432"
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-pharmacy}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-pharmacy}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-12}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      PHARMACY_TIMEZONE: ${PHARMACY_TIMEZONE:-Asia/Jakarta}
+      NODE_ENV: production
+    ports:
+      - "${APP_PORT:-3000}:3000"
+
+volumes:
+  pgdata:

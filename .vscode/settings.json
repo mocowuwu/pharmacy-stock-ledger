@@ -1,0 +1,31 @@
+{
+  // Use the TypeScript in node_modules, so the editor and `npm run typecheck`
+  // agree. Without this VS Code uses its own bundled version and can report
+  // errors the build does not, or miss ones it does.
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+
+  "editor.codeActionsOnSave": { "source.fixAll.eslint": "explicit" },
+  "eslint.useFlatConfig": true,
+
+  // Tailwind 4 keeps its config in CSS, so point IntelliSense at the stylesheet
+  // and teach it the template literals this codebase builds class names with.
+  "tailwindCSS.experimental.classRegex": [
+    ["className=\\{`([^`]*)`\\}", "([^\\s]*)"],
+    ["(?:inputBase|inputClass)\\s*=\\s*[\"'`]([^\"'`]*)"]
+  ],
+
+  // Build output and the development database are not source. Leaving them
+  // searchable makes a project-wide find return compiled copies of every file.
+  "search.exclude": {
+    "**/.next": true,
+    "**/.data": true,
+    "**/node_modules": true,
+    "**/*.tsbuildinfo": true
+  },
+  "files.exclude": { "**/.next": true, "**/.data": true },
+
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "[json]": { "editor.defaultFormatter": "vscode.json-language-features" }
+}

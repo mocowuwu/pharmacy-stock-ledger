@@ -1,0 +1,187 @@
+@import "tailwindcss";
+
+/*
+ * Palette
+ * -------
+ * Purple accent on a lightly purple-biased neutral, with a dark sidebar that
+ * stays dark in both themes.
+ *
+ * Status colours were chosen with the data-viz validator rather than by eye.
+ * Amber and red sit next to each other on the hue wheel, and the first pass
+ * failed the normal-vision separation floor -- two states that a person with
+ * full colour vision would struggle to tell apart. The pair below clears it
+ * (ΔE 23 normal, 11 deuteranopia) and every chip also carries its state as
+ * text, so nothing is identified by colour alone.
+ *
+ * The one check knowingly not met is the dark-mode lightness band, which
+ * exists so categorical *chart series* read at equal visual weight. These are
+ * status colours: critical is supposed to be louder than notice.
+ */
+:root {
+  --bg: #f6f5fa;
+  --surface: #ffffff;
+  --surface-2: #f1eff7;
+  --ink: #17141f;
+  --muted: #5c5670;
+  --faint: #8b85a0;
+  --rule: #e6e3ef;
+
+  --accent: #6d3beb;
+  --accent-soft: #eee9fd;
+  --accent-contrast: #ffffff;
+
+  --critical: #b3261e;
+  --critical-soft: #fbeae8;
+  --warning: #d98a00;
+  --warning-ink: #8a5a00;
+  --warning-soft: #fdf2de;
+  --notice: #1f6fb2;
+  --notice-soft: #e7f1fa;
+
+  /* The sidebar keeps its own scale: dark in both themes, like the reference. */
+  --sidebar: #221c33;
+  --sidebar-ink: #edeaf6;
+  --sidebar-muted: #9a93b5;
+  --sidebar-hover: #2e2745;
+  --sidebar-rule: #332b4a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f0d16;
+    --surface: #17141f;
+    --surface-2: #1e1a2a;
+    --ink: #edeaf6;
+    --muted: #9c95b3;
+    --faint: #7a7391;
+    --rule: #2a2438;
+
+    --accent: #9b7bf5;
+    --accent-soft: #241d3a;
+    --accent-contrast: #120e22;
+
+    --critical: #d8443a;
+    --critical-soft: #2e1614;
+    --warning: #afa637;
+    --warning-ink: #afa637;
+    --warning-soft: #262214;
+    --notice: #4e97d8;
+    --notice-soft: #14202e;
+
+    --sidebar: #191527;
+    --sidebar-ink: #edeaf6;
+    --sidebar-muted: #918ab0;
+    --sidebar-hover: #251f3a;
+    --sidebar-rule: #2b2440;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0f0d16;
+  --surface: #17141f;
+  --surface-2: #1e1a2a;
+  --ink: #edeaf6;
+  --muted: #9c95b3;
+  --faint: #7a7391;
+  --rule: #2a2438;
+
+  --accent: #9b7bf5;
+  --accent-soft: #241d3a;
+  --accent-contrast: #120e22;
+
+  --critical: #d8443a;
+  --critical-soft: #2e1614;
+  --warning: #afa637;
+  --warning-ink: #afa637;
+  --warning-soft: #262214;
+  --notice: #4e97d8;
+  --notice-soft: #14202e;
+
+  --sidebar: #191527;
+  --sidebar-ink: #edeaf6;
+  --sidebar-muted: #918ab0;
+  --sidebar-hover: #251f3a;
+  --sidebar-rule: #2b2440;
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-foreground: var(--ink);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-rule: var(--rule);
+  --color-accent: var(--accent);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-accent-soft: var(--accent-soft);
+  --color-critical: var(--critical);
+  --color-critical-soft: var(--critical-soft);
+  --color-warning: var(--warning);
+  --color-warning-ink: var(--warning-ink);
+  --color-warning-soft: var(--warning-soft);
+  --color-notice: var(--notice);
+  --color-notice-soft: var(--notice-soft);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-ink: var(--sidebar-ink);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-rule: var(--sidebar-rule);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+/* Quantities, prices and dates line up in columns throughout the app. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Visible keyboard focus everywhere: the till is operated without a mouse. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/*
+ * Receipt printing. Sized for an 80mm thermal roll, which is what a pharmacy
+ * till already has -- no driver integration, just the browser's print dialog.
+ * Everything but the receipt is hidden, and colours flatten to ink on paper.
+ */
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 4mm;
+  }
+
+  aside,
+  header,
+  nav,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 11px;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+}
