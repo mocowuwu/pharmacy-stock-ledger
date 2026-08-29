@@ -54,6 +54,20 @@ relax one without saying so explicitly.
 - **Only terminal statuses can be forced** through `applyMovement`'s
   `setStatus` (`quarantined`, `expired`, `disposed`). Nothing may push a batch
   back to `active` that way; that is the hole the sticky-status rule closes.
+- **Margin reads `sale_lines.unit_cost_snapshot`, never the batch.** That column
+  is why last month's margin does not move when this month's delivery costs
+  more. A report that joins `batches` for cost has undone it.
+- **`reports.sales` shows what sold; `reports.financial` shows what it cost.**
+  The split is deliberate and off for managers by default, so cost prices and
+  margins need not be visible on the shop floor. `REPORT_PERMISSION` in
+  `src/lib/reports/catalogue.ts` is the map, and the CSV route re-checks it --
+  a route handler is as exposed as a page.
+- **A report day is a day in the pharmacy's timezone.** `localDate()` in
+  `src/lib/reports/queries.ts`; casting a `timestamptz` to a date in UTC files
+  an early-morning Jakarta sale under the previous day.
+- **CSV writes money as a plain integer**, never a formatted amount: `15000`,
+  not `Rp 15.000`. A formatted amount is text to a spreadsheet, so a column of
+  them sums to zero -- `parseFloat("15.000")` arriving from the other direction.
 
 ## Conventions
 
@@ -78,6 +92,13 @@ depending on the reader, and a misread expiry is a safety problem.
 **Enum values live in `src/lib/catalogue/enums.ts`**, not in the schema. The
 schema builds its `pgEnum`s from that module, so forms can render options
 without pulling drizzle's pg-core into the browser bundle.
+
+**Reports aggregate in SQL**, in `src/lib/reports/queries.ts`, which takes an
+executor and no session -- the same split as `src/lib/stock/*`, and what makes
+the arithmetic testable against a real database. Note that Postgres will not
+match a `GROUP BY` expression containing a bind parameter against the same
+expression in the `SELECT`; group by output position (`groupBy(sql`1`)`) when
+the timezone is interpolated.
 
 **Money and dates go through `src/lib/format/`.** Never `parseFloat` a price:
 `parseFloat("15.000")` is 15, and in Indonesian that string means fifteen

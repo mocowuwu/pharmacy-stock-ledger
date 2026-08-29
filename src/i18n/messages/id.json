@@ -522,5 +522,109 @@
       "posted": "Diposting",
       "cancelled": "Dibatalkan"
     }
+  },
+  "reports": {
+    "title": "Laporan",
+    "subtitle": "Apa yang dijual, dihasilkan, dimiliki dan hilang",
+    "range": "Periode",
+    "from": "Dari",
+    "to": "Sampai",
+    "apply": "Tampilkan",
+    "export": "Unduh CSV",
+    "exportHint": "Bisa dibuka di Google Sheets atau Excel. Nilai ditulis sebagai angka biasa supaya bisa dijumlahkan.",
+    "noData": "Tidak ada catatan pada periode ini.",
+    "preset": {
+      "today": "Hari ini",
+      "7d": "7 hari terakhir",
+      "30d": "30 hari terakhir",
+      "90d": "90 hari terakhir",
+      "month": "Bulan ini",
+      "lastMonth": "Bulan lalu",
+      "custom": "Pilih sendiri"
+    },
+    "nav": {
+      "sales": "Penjualan",
+      "margin": "Margin",
+      "valuation": "Nilai stok",
+      "expiry": "Kerugian kedaluwarsa",
+      "suppliers": "Pemasok"
+    },
+    "blurb": {
+      "sales": "Pendapatan per hari, barang, kategori, kasir dan metode pembayaran",
+      "margin": "Yang terjual dibandingkan dengan modalnya",
+      "valuation": "Isi rak saat ini, dinilai dengan harga beli",
+      "expiry": "Yang dimusnahkan, dan alasannya",
+      "suppliers": "Kiriman tiap pemasok, dan berapa yang berakhir dimusnahkan"
+    },
+    "sales": {
+      "revenue": "Pendapatan",
+      "refunds": "Dikembalikan",
+      "net": "Pendapatan bersih",
+      "transactions": "Transaksi",
+      "averageSale": "Rata-rata transaksi",
+      "units": "Unit terjual",
+      "voided": "Dibatalkan",
+      "voidedHint": "Tidak dihitung dalam angka mana pun di halaman ini",
+      "discount": "Diskon diberikan",
+      "tax": "PPN dipungut",
+      "daily": "Pendapatan per hari",
+      "byItem": "Per barang",
+      "byCategory": "Per kategori",
+      "byCashier": "Per kasir",
+      "byPayment": "Per metode pembayaran",
+      "sold": "Terjual",
+      "returned": "Diretur",
+      "netUnits": "Unit bersih",
+      "netRevenue": "Pendapatan bersih"
+    },
+    "margin": {
+      "revenue": "Pendapatan",
+      "cost": "Harga pokok",
+      "margin": "Margin",
+      "marginPercent": "Margin %",
+      "byItem": "Per barang",
+      "costNote": "Harga pokok diambil dari biaya batch saat barang terjual, disalin ke transaksi pada saat itu. Kiriman berikutnya dengan harga berbeda tidak mengubah margin bulan lalu.",
+      "netOfReturns": "Unit yang diretur menarik kembali harga jual sekaligus modalnya."
+    },
+    "valuation": {
+      "total": "Nilai stok",
+      "units": "Unit tersedia",
+      "asOf": "Per {date}",
+      "nowOnly": "Ini potret rak saat ini. Menilai stok pada tanggal lampau berarti memutar ulang buku besar, dan laporan ini tidak melakukannya.",
+      "byCategory": "Per kategori",
+      "byExpiry": "Per sisa waktu jual",
+      "batches": "Batch",
+      "horizon": {
+        "expired": "Sudah kedaluwarsa",
+        "within30": "Dalam 30 hari",
+        "within90": "31 sampai 90 hari",
+        "within180": "91 sampai 180 hari",
+        "beyond": "Lebih dari 180 hari"
+      },
+      "expiredWarning": "Stok kedaluwarsa yang masih terhitung di sini adalah uang yang sudah hilang. Musnahkan dari layar Pemusnahan.",
+      "quarantineNote": "Batch karantina dan kedaluwarsa ikut dihitung: uangnya masih tertahan di sana."
+    },
+    "expiry": {
+      "total": "Nilai dimusnahkan",
+      "units": "Unit dimusnahkan",
+      "byItem": "Per barang",
+      "byMonth": "Per bulan",
+      "byReason": "Per alasan",
+      "events": "Pemusnahan",
+      "reason": "Alasan",
+      "month": "Bulan",
+      "note": "Dinilai dengan biaya batch, dicatat saat pemusnahan dilakukan."
+    },
+    "suppliers": {
+      "received": "Diterima",
+      "deliveries": "Pengiriman",
+      "unitsReceived": "Unit",
+      "value": "Nilai diterima",
+      "remaining": "Masih tersedia",
+      "disposed": "Dimusnahkan",
+      "disposalRate": "Dimusnahkan %",
+      "note": "Kolom terakhir yang paling perlu diperhatikan. Stok yang datang mendekati kedaluwarsa tidak murah, apa pun kata fakturnya.",
+      "systemSupplier": "Saldo awal"
+    }
   }
 }

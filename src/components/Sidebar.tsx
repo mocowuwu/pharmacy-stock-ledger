@@ -70,6 +70,12 @@ const ICONS: Record<string, ReactNode> = {
       <path d="m15.2 16.3 1.4 1.4 2.6-2.8" />
     </>
   ),
+  reports: (
+    <>
+      <path d="M4 20V10M9.5 20V4M15 20v-7M20.5 20V7" />
+      <path d="M3 20h18" />
+    </>
+  ),
   suppliers: (
     <>
       <path d="M4 21V6.5L12 3l8 3.5V21" />

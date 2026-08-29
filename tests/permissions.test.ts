@@ -10,6 +10,12 @@ import {
   type Grant,
   type Permission,
 } from "@/lib/auth/permissions";
+import {
+  isReportSlug,
+  REPORTS,
+  REPORT_PERMISSION,
+  resolveRange,
+} from "@/lib/reports/catalogue";
 
 let db: TestDb;
 let close: () => Promise<void>;
@@ -144,5 +150,75 @@ describe("session storage", () => {
     expect(row.tokenHash).not.toBe(token);
     expect(row.tokenHash).toBe(hashToken(token));
     expect(row.tokenHash).toHaveLength(64);
+  });
+});
+
+describe("report permissions", () => {
+  it("puts every report that exposes cost behind reports.financial", async () => {
+    const id = await makeUser({
+      username: "sales-only",
+      permissions: ["reports.sales"],
+    });
+    const grant = await grantFor(id);
+
+    // What sold, yes. What it cost, no -- that is the whole point of the split,
+    // and this asserts the routing map has not drifted away from it.
+    expect(can(grant, REPORT_PERMISSION.sales)).toBe(true);
+    for (const slug of ["margin", "valuation", "expiry", "suppliers"] as const) {
+      expect(REPORT_PERMISSION[slug], slug).toBe("reports.financial");
+      expect(can(grant, REPORT_PERMISSION[slug]), slug).toBe(false);
+    }
+  });
+
+  it("names a permission for every report and refuses an unknown slug", () => {
+    for (const slug of REPORTS) {
+      expect(REPORT_PERMISSION[slug], slug).toBeDefined();
+      expect(isReportSlug(slug)).toBe(true);
+    }
+    expect(isReportSlug("everything")).toBe(false);
+    expect(isReportSlug("../../etc/passwd")).toBe(false);
+  });
+});
+
+describe("report periods", () => {
+  const on = "2026-03-15";
+
+  it("resolves each preset to a window ending today", () => {
+    expect(resolveRange({ preset: "today", on })).toMatchObject({
+      from: "2026-03-15",
+      to: "2026-03-15",
+    });
+    expect(resolveRange({ preset: "7d", on })).toMatchObject({ from: "2026-03-09" });
+    expect(resolveRange({ preset: "30d", on })).toMatchObject({ from: "2026-02-14" });
+    expect(resolveRange({ preset: "month", on })).toMatchObject({
+      from: "2026-03-01",
+      to: "2026-03-15",
+    });
+  });
+
+  it("ends last month on its own last day, whatever its length", () => {
+    // February 2026 has 28 days. Subtracting a fixed 30 would land in January.
+    expect(resolveRange({ preset: "lastMonth", on })).toMatchObject({
+      from: "2026-02-01",
+      to: "2026-02-28",
+    });
+    // And across a year boundary.
+    expect(resolveRange({ preset: "lastMonth", on: "2026-01-10" })).toMatchObject({
+      from: "2025-12-01",
+      to: "2025-12-31",
+    });
+  });
+
+  it("swaps a range typed the wrong way round instead of returning nothing", () => {
+    expect(resolveRange({ from: "2026-03-31", to: "2026-03-01" })).toMatchObject({
+      from: "2026-03-01",
+      to: "2026-03-31",
+      preset: "custom",
+    });
+  });
+
+  it("falls back to a sensible window rather than failing on a bad URL", () => {
+    expect(resolveRange({ preset: "last-fortnight", on }).preset).toBe("30d");
+    expect(resolveRange({ from: "yesterday", to: "today", on }).preset).toBe("30d");
   });
 });

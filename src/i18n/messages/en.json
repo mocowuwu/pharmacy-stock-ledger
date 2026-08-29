@@ -522,5 +522,109 @@
       "posted": "Posted",
       "cancelled": "Cancelled"
     }
+  },
+  "reports": {
+    "title": "Reports",
+    "subtitle": "What the pharmacy sold, made, holds and lost",
+    "range": "Period",
+    "from": "From",
+    "to": "To",
+    "apply": "Show",
+    "export": "Download CSV",
+    "exportHint": "Opens in Google Sheets or Excel. Amounts are plain numbers so they can be added up.",
+    "noData": "Nothing recorded in this period.",
+    "preset": {
+      "today": "Today",
+      "7d": "Last 7 days",
+      "30d": "Last 30 days",
+      "90d": "Last 90 days",
+      "month": "This month",
+      "lastMonth": "Last month",
+      "custom": "Custom"
+    },
+    "nav": {
+      "sales": "Sales",
+      "margin": "Margin",
+      "valuation": "Stock value",
+      "expiry": "Expiry loss",
+      "suppliers": "Suppliers"
+    },
+    "blurb": {
+      "sales": "Revenue by day, item, category, cashier and payment method",
+      "margin": "What was sold against what it cost",
+      "valuation": "What is on the shelf right now, at cost",
+      "expiry": "What was written off, and why",
+      "suppliers": "What each supplier delivered, and how much of it was binned"
+    },
+    "sales": {
+      "revenue": "Revenue",
+      "refunds": "Refunded",
+      "net": "Net takings",
+      "transactions": "Sales",
+      "averageSale": "Average sale",
+      "units": "Units sold",
+      "voided": "Voided",
+      "voidedHint": "Excluded from every figure on this page",
+      "discount": "Discounts given",
+      "tax": "VAT collected",
+      "daily": "Revenue per day",
+      "byItem": "By item",
+      "byCategory": "By category",
+      "byCashier": "By cashier",
+      "byPayment": "By payment method",
+      "sold": "Sold",
+      "returned": "Returned",
+      "netUnits": "Net units",
+      "netRevenue": "Net revenue"
+    },
+    "margin": {
+      "revenue": "Revenue",
+      "cost": "Cost of goods",
+      "margin": "Margin",
+      "marginPercent": "Margin %",
+      "byItem": "By item",
+      "costNote": "Cost is what each batch actually cost when it was sold, copied onto the sale at the time. A later delivery at a different price does not change a past month's margin.",
+      "netOfReturns": "Returned units take back both their price and their cost."
+    },
+    "valuation": {
+      "total": "Stock at cost",
+      "units": "Units on hand",
+      "asOf": "As at {date}",
+      "nowOnly": "This is a snapshot of the shelf right now. A valuation for a past date would mean replaying the ledger, which this report does not do.",
+      "byCategory": "By category",
+      "byExpiry": "By time left to sell",
+      "batches": "Batches",
+      "horizon": {
+        "expired": "Already expired",
+        "within30": "Within 30 days",
+        "within90": "31 to 90 days",
+        "within180": "91 to 180 days",
+        "beyond": "More than 180 days"
+      },
+      "expiredWarning": "Expired stock still counted here is money already lost. Write it off from the Disposal screen.",
+      "quarantineNote": "Quarantined and expired batches are included: the money is still tied up in them."
+    },
+    "expiry": {
+      "total": "Written off",
+      "units": "Units destroyed",
+      "byItem": "By item",
+      "byMonth": "By month",
+      "byReason": "By reason",
+      "events": "Write-offs",
+      "reason": "Reason",
+      "month": "Month",
+      "note": "Valued at what each batch cost, snapshotted when it was destroyed."
+    },
+    "suppliers": {
+      "received": "Received",
+      "deliveries": "Deliveries",
+      "unitsReceived": "Units",
+      "value": "Value received",
+      "remaining": "Still on hand",
+      "disposed": "Written off",
+      "disposalRate": "Written off %",
+      "note": "The last column is the one worth watching. Stock that arrives close to its expiry is not cheap, whatever the invoice says.",
+      "systemSupplier": "Opening balance"
+    }
   }
 }

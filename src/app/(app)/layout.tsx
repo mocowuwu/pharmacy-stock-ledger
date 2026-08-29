@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { requireSession } from "@/lib/dal/session";
-import { can, type Permission } from "@/lib/auth/permissions";
+import { canAny, type Permission } from "@/lib/auth/permissions";
 import { SidebarNav, TopNav, type NavEntry } from "@/components/Sidebar";
 import { signOut } from "../actions";
 
@@ -11,18 +11,21 @@ import { signOut } from "../actions";
  * Only built sections appear, so the nav can never advertise a screen that does
  * not exist.
  */
-const NAV: Array<{ key: string; href: string; permission: Permission }> = [
-  { key: "dashboard", href: "/", permission: "items.view" },
-  { key: "sell", href: "/sell", permission: "sales.create" },
-  { key: "items", href: "/items", permission: "items.view" },
-  { key: "receive", href: "/receive", permission: "batches.receive" },
-  { key: "sales", href: "/sales", permission: "sales.create" },
-  { key: "returns", href: "/returns", permission: "sales.return" },
-  { key: "dispose", href: "/dispose", permission: "stock.dispose" },
-  { key: "counts", href: "/counts", permission: "stock.count" },
-  { key: "alerts", href: "/alerts", permission: "alerts.view" },
-  { key: "suppliers", href: "/suppliers", permission: "items.view" },
-  { key: "categories", href: "/categories", permission: "items.view" },
+const NAV: Array<{ key: string; href: string; permissions: Permission[] }> = [
+  { key: "dashboard", href: "/", permissions: ["items.view"] },
+  { key: "sell", href: "/sell", permissions: ["sales.create"] },
+  { key: "items", href: "/items", permissions: ["items.view"] },
+  { key: "receive", href: "/receive", permissions: ["batches.receive"] },
+  { key: "sales", href: "/sales", permissions: ["sales.create"] },
+  { key: "returns", href: "/returns", permissions: ["sales.return"] },
+  { key: "dispose", href: "/dispose", permissions: ["stock.dispose"] },
+  { key: "counts", href: "/counts", permissions: ["stock.count"] },
+  { key: "alerts", href: "/alerts", permissions: ["alerts.view"] },
+  { key: "suppliers", href: "/suppliers", permissions: ["items.view"] },
+  { key: "categories", href: "/categories", permissions: ["items.view"] },
+  // Reports appears for anyone holding either half of the split: a manager may
+  // be able to see what sold without being able to see what it cost.
+  { key: "reports", href: "/reports", permissions: ["reports.sales", "reports.financial"] },
 ];
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
@@ -30,7 +33,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const t = await getTranslations();
 
   const entries: NavEntry[] = NAV.filter((entry) =>
-    can(session.grant, entry.permission),
+    canAny(session.grant, entry.permissions),
   ).map((entry) => ({ key: entry.key, href: entry.href, label: t(`nav.${entry.key}`) }));
 
   const initials = session.user.fullName
