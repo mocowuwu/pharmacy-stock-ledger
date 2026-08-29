@@ -49,6 +49,10 @@ Then open http://localhost:3000.
 | `npm run db:seed` | Settings, the opening-balance supplier, starter categories, the owner |
 | `npm run test` | Unit and integration tests |
 | `npm run test:concurrency` | The same, plus the real-concurrency tests (needs Postgres) |
+| `npm run alerts` | Reconciles alerts and quarantines expired stock. Nightly |
+| `npm run digest` | The morning email. Writes to `.data/digest/` if no mail server is set |
+| `npm run backup` | `pg_dump` to a dated file |
+| `npm run restore` | Restores into a scratch database. Refuses to touch live data without a flag |
 | `npm run typecheck` | TypeScript, no emit |
 | `npm run build` | Production build |
 
@@ -158,3 +162,8 @@ TLS locally, even with a private CA, is the better answer.
 Phase 1 (foundations) is complete: schema and migrations, sessions, sign-in,
 forced password change, the permission system, the audit log, the bilingual
 scaffolding and the currency and date formatting. Phases 2–9 are in the plan.
+
+## Going live
+
+See [GO-LIVE.md](GO-LIVE.md): backup drill, settings, accounts, entering the
+catalogue, clearing the demo data, the opening count and the parallel run.

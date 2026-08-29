@@ -46,3 +46,6 @@ next-env.d.ts
 # Editor swap files
 *.swp
 *.swo
+
+# Backups
+/backups/

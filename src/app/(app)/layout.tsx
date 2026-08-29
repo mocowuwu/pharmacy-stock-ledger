@@ -66,10 +66,10 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col bg-sidebar py-5 md:flex">
         <div className="px-6 pb-6">
           <span className="text-lg font-semibold tracking-tight text-sidebar-ink">
-            {t("app.name")}
+            {settings.businessName || t("app.name")}
           </span>
           <span className="mt-0.5 block text-xs text-sidebar-muted">
-            {t("app.tagline")}
+            {settings.businessTagline || t("app.tagline")}
           </span>
         </div>
 
@@ -102,7 +102,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between gap-3 bg-sidebar px-4 py-3 md:hidden">
-          <span className="font-semibold text-sidebar-ink">{t("app.name")}</span>
+          <span className="font-semibold text-sidebar-ink">
+            {settings.businessName || t("app.name")}
+          </span>
           <form action={signOut}>
             <button
               type="submit"

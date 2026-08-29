@@ -8,6 +8,8 @@ import { assertPermission, requireSession } from "./session";
 import { recordAudit } from "@/lib/audit";
 import { addDays, today } from "@/lib/format/date";
 import { refusalToSaveSettings } from "@/lib/accounts/rules";
+import { isKnownTimezone } from "@/lib/format/timezones";
+import { verifyMail } from "@/lib/digest/send";
 
 /**
  * The single settings row.
@@ -48,8 +50,16 @@ export const getSettings = cache(async () => {
       returnsEnabled: true,
       barcodesEnabled: true,
       narkotikaEnabled: false,
+      businessTagline: null,
       digestEnabled: false,
       digestEmail: null,
+      digestHour: 7,
+      smtpHost: null,
+      smtpPort: 587,
+      smtpUser: null,
+      smtpPassword: null,
+      smtpFrom: null,
+      smtpSecure: false,
       updatedBy: null,
       updatedAt: new Date(),
     }
@@ -67,6 +77,7 @@ export class SettingsError extends Error {
 
 export type SettingsInput = {
   businessName: string;
+  businessTagline: string | null;
   businessAddress: string | null;
   businessPhone: string | null;
   npwp: string | null;
@@ -86,6 +97,18 @@ export type SettingsInput = {
   narkotikaEnabled: boolean;
   digestEnabled: boolean;
   digestEmail: string | null;
+  digestHour: number;
+  smtpHost: string | null;
+  smtpPort: number;
+  smtpUser: string | null;
+  /**
+   * Blank means "leave the stored one alone". The screen never receives the
+   * current password, so an empty field is the normal case on every save that
+   * is not deliberately changing it.
+   */
+  smtpPassword: string | null;
+  smtpFrom: string | null;
+  smtpSecure: boolean;
 };
 
 /**
@@ -103,12 +126,21 @@ export async function updateSettings(input: SettingsInput) {
   const refusal = refusalToSaveSettings(input);
   if (refusal) throw new SettingsError(refusal);
 
+  if (!Number.isInteger(input.digestHour) || input.digestHour < 0 || input.digestHour > 23) {
+    throw new SettingsError("invalid_hour");
+  }
+  if (!Number.isInteger(input.smtpPort) || input.smtpPort < 1 || input.smtpPort > 65_535) {
+    throw new SettingsError("invalid_port");
+  }
+  if (!isKnownTimezone(input.timezone)) throw new SettingsError("invalid_timezone");
+
   const before = await getSettings();
 
   await db
     .update(settings)
     .set({
       businessName: input.businessName.trim(),
+      businessTagline: input.businessTagline?.trim() || null,
       businessAddress: input.businessAddress?.trim() || null,
       businessPhone: input.businessPhone?.trim() || null,
       npwp: input.npwp?.trim() || null,
@@ -128,6 +160,16 @@ export async function updateSettings(input: SettingsInput) {
       narkotikaEnabled: input.narkotikaEnabled,
       digestEnabled: input.digestEnabled,
       digestEmail: input.digestEmail?.trim() || null,
+      digestHour: input.digestHour,
+      smtpHost: input.smtpHost?.trim() || null,
+      smtpPort: input.smtpPort,
+      smtpUser: input.smtpUser?.trim() || null,
+      // Only overwritten when something was actually typed.
+      ...(input.smtpPassword?.trim()
+        ? { smtpPassword: input.smtpPassword.trim() }
+        : {}),
+      smtpFrom: input.smtpFrom?.trim() || null,
+      smtpSecure: input.smtpSecure,
       updatedBy: session.user.id,
       updatedAt: new Date(),
     })
@@ -139,8 +181,10 @@ export async function updateSettings(input: SettingsInput) {
     action: "settings.updated",
     entityType: "settings",
     entityId: null,
-    before: { ...before, updatedAt: undefined },
-    after: { ...input },
+    // The password is stripped from both sides: an audit log that records a
+    // secret is a second place the secret lives.
+    before: { ...before, updatedAt: undefined, smtpPassword: undefined },
+    after: { ...input, smtpPassword: undefined },
   });
 
   return { ok: true };
@@ -237,3 +281,61 @@ export async function addTaxRate(input: {
 
   return created;
 }
+
+
+/**
+ * The mail configuration, with the password replaced by whether there is one.
+ *
+ * The settings screen needs to show that a password is stored without ever
+ * receiving it: a secret that reaches the browser is a secret in the page
+ * source, in the back/forward cache and in any screen recording.
+ */
+export async function mailSettings() {
+  await assertPermission("settings.manage");
+  const config = await getSettings();
+  return {
+    host: config.smtpHost,
+    port: config.smtpPort,
+    user: config.smtpUser,
+    from: config.smtpFrom,
+    secure: config.smtpSecure,
+    hasPassword: Boolean(config.smtpPassword),
+  };
+}
+
+/** Runs the connection check against the stored configuration. */
+export async function verifyMailSettings() {
+  await assertPermission("settings.manage");
+  const config = await getSettings();
+  return verifyMail({
+    host: config.smtpHost,
+    port: config.smtpPort,
+    user: config.smtpUser,
+    password: config.smtpPassword,
+    from: config.smtpFrom,
+    secure: config.smtpSecure,
+  });
+}
+
+/**
+ * The name and description, without requiring a session.
+ *
+ * The sign-in screen shows them, and nobody is signed in there. That is not a
+ * leak: a pharmacy's name is on the shopfront. Nothing else from the settings
+ * row is exposed this way.
+ */
+export const publicBranding = cache(async () => {
+  const db = await getDb();
+  const [row] = await db
+    .select({
+      businessName: settings.businessName,
+      businessTagline: settings.businessTagline,
+    })
+    .from(settings)
+    .where(eq(settings.id, 1));
+
+  return {
+    businessName: row?.businessName?.trim() || null,
+    businessTagline: row?.businessTagline?.trim() || null,
+  };
+});

@@ -16,10 +16,17 @@ import {
 } from "@/components/ui";
 import { formatDate } from "@/lib/format/date";
 import { MODULES, moduleFlags, type ModuleKey } from "@/lib/catalogue/modules";
-import { createTaxRate, saveSettings } from "./actions";
+import {
+  INDONESIAN_TIMEZONES,
+  otherTimezones,
+  systemTimezone,
+  timezoneLabel,
+} from "@/lib/format/timezones";
+import { mailSettings } from "@/lib/dal/settings";
+import { demoDataSummary, RESET_CONFIRMATION } from "@/lib/dal/maintenance";
+import { digestReadiness } from "@/lib/digest/job";
+import { createTaxRate, saveSettings, testMailSettings, wipeDemoData } from "./actions";
 
-/** The three the pharmacy is plausibly in. Not a picker of every zone on earth. */
-const TIMEZONES = ["Asia/Jakarta", "Asia/Makassar", "Asia/Jayapura"];
 
 function Toggle({
   name,
@@ -58,6 +65,10 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
   const rates = await listTaxRates();
   const current = await effectiveTaxRate();
   const flags = moduleFlags(settings);
+  const mail = await mailSettings();
+  const demo = await demoDataSummary();
+  const readiness = digestReadiness(settings);
+  const machineZone = systemTimezone();
 
   const MODULE_FIELD: Record<ModuleKey, string> = {
     returns: "returnsEnabled",
@@ -73,6 +84,16 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
       <div className="mb-6 flex flex-col gap-3">
         {query.saved && <Alert tone="notice">{t("settings.saved")}</Alert>}
         {query.rateAdded && <Alert tone="notice">{t("settings.taxRateAdded")}</Alert>}
+        {query.wiped && <Alert tone="notice">{t("settings.demoWiped")}</Alert>}
+        {query.mail === "ok" && <Alert tone="notice">{t("settings.mailOk")}</Alert>}
+        {query.mail === "failed" && (
+          <Alert>
+            {t("settings.mailFailed")}
+            {typeof query.detail === "string" && (
+              <span className="mt-1 block font-mono text-xs">{query.detail}</span>
+            )}
+          </Alert>
+        )}
         {typeof query.error === "string" && (
           <Alert>{t(`errors.${query.error}`)}</Alert>
         )}
@@ -96,6 +117,16 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
                 name="businessName"
                 required
                 defaultValue={settings.businessName}
+                className={inputClass}
+              />
+            </Field>
+            <Field
+              label={t("settings.businessTagline")}
+              hint={t("settings.businessTaglineHint")}
+            >
+              <input
+                name="businessTagline"
+                defaultValue={settings.businessTagline ?? ""}
                 className={inputClass}
               />
             </Field>
@@ -127,17 +158,34 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
                 className={`${inputClass} font-mono`}
               />
             </Field>
-            <Field label={t("settings.timezone")} hint={t("settings.timezoneHint")}>
+            <Field
+              label={t("settings.timezone")}
+              hint={
+                machineZone !== settings.timezone
+                  ? t("settings.timezoneMismatch", { zone: machineZone })
+                  : t("settings.timezoneHint")
+              }
+            >
               <select
                 name="timezone"
                 defaultValue={settings.timezone}
                 className={inputClass}
               >
-                {TIMEZONES.map((zone) => (
-                  <option key={zone} value={zone}>
-                    {zone}
-                  </option>
-                ))}
+                {/* The Indonesian zones first, under the names staff use. */}
+                <optgroup label="Indonesia">
+                  {INDONESIAN_TIMEZONES.map((zone) => (
+                    <option key={zone.zone} value={zone.zone}>
+                      {timezoneLabel(zone.zone)}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label={t("settings.timezoneOther")}>
+                  {otherTimezones().map((zone) => (
+                    <option key={zone} value={zone}>
+                      {zone}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             </Field>
           </Card>
@@ -254,11 +302,19 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
 
         <section>
           <SectionHeading>{t("settings.digest")}</SectionHeading>
+          <p className="mb-3 -mt-1 text-sm text-muted">{t("settings.digestHint")}</p>
+
+          {readiness === "preview_only" && (
+            <Alert tone="notice" className="mb-3">
+              {t("settings.digestPreviewOnly")}
+            </Alert>
+          )}
+
           <Card className="grid gap-4 p-5 sm:grid-cols-2">
             <Toggle
               name="digestEnabled"
               label={t("settings.digestEnabled")}
-              hint={t("settings.digestNotBuilt")}
+              hint={t("settings.digestEnabledHint")}
               defaultChecked={settings.digestEnabled}
             />
             <Field label={t("settings.digestEmail")}>
@@ -269,6 +325,81 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
                 className={inputClass}
               />
             </Field>
+            <Field label={t("settings.digestHour")} hint={t("settings.digestHourHint")}>
+              <select
+                name="digestHour"
+                defaultValue={settings.digestHour}
+                className={inputClass}
+              >
+                {Array.from({ length: 24 }, (_, hour) => (
+                  <option key={hour} value={hour}>
+                    {String(hour).padStart(2, "0")}:00
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </Card>
+        </section>
+
+        <section>
+          <SectionHeading>{t("settings.mail")}</SectionHeading>
+          <p className="mb-3 -mt-1 text-sm text-muted">{t("settings.mailHint")}</p>
+          <Card className="grid gap-4 p-5 sm:grid-cols-2">
+            <Field label={t("settings.smtpHost")} hint={t("settings.smtpHostHint")}>
+              <input
+                name="smtpHost"
+                defaultValue={mail.host ?? ""}
+                placeholder="smtp.gmail.com"
+                className={`${inputClass} font-mono`}
+              />
+            </Field>
+            <Field label={t("settings.smtpPort")}>
+              <input
+                name="smtpPort"
+                inputMode="numeric"
+                defaultValue={mail.port}
+                className={`${inputClass} tabular`}
+              />
+            </Field>
+            <Field label={t("settings.smtpUser")}>
+              <input
+                name="smtpUser"
+                autoComplete="off"
+                defaultValue={mail.user ?? ""}
+                className={`${inputClass} font-mono`}
+              />
+            </Field>
+            {/* Never rendered back. Blank means "keep the stored one". */}
+            <Field
+              label={t("settings.smtpPassword")}
+              hint={
+                mail.hasPassword
+                  ? t("settings.smtpPasswordStored")
+                  : t("settings.smtpPasswordHint")
+              }
+            >
+              <input
+                name="smtpPassword"
+                type="password"
+                autoComplete="new-password"
+                placeholder={mail.hasPassword ? "••••••••" : ""}
+                className={inputClass}
+              />
+            </Field>
+            <Field label={t("settings.smtpFrom")} hint={t("settings.smtpFromHint")}>
+              <input
+                name="smtpFrom"
+                defaultValue={mail.from ?? ""}
+                placeholder="Apotek Klinik <apotek@example.com>"
+                className={inputClass}
+              />
+            </Field>
+            <Toggle
+              name="smtpSecure"
+              label={t("settings.smtpSecure")}
+              hint={t("settings.smtpSecureHint")}
+              defaultChecked={mail.secure}
+            />
           </Card>
         </section>
 
@@ -281,6 +412,23 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
           </button>
         </div>
       </form>
+
+      {/* Its own form: testing uses what is saved, so it must not be able to
+          ride along with unsaved edits and report on something else. */}
+      <section className="mt-10">
+        <SectionHeading>{t("settings.mailTest")}</SectionHeading>
+        <Card className="flex flex-wrap items-center justify-between gap-3 p-5">
+          <p className="text-sm text-muted">{t("settings.mailTestHint")}</p>
+          <form action={testMailSettings}>
+            <button
+              type="submit"
+              className="rounded-lg border border-rule px-4 py-2 text-sm text-muted hover:border-accent hover:text-accent"
+            >
+              {t("settings.mailTestRun")}
+            </button>
+          </form>
+        </Card>
+      </section>
 
       {/* Its own form: adding a rate is a separate, dated decision, and it must
           not ride along with an unrelated settings save. */}
@@ -366,6 +514,43 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
           </form>
         </Card>
       </section>
+      {/* Last on the page and quiet about it. This is the one destructive
+          action in the system, and it should be findable without being
+          something anybody meets on the way to something else. */}
+      {session.user.isOwner && (
+        <section className="mt-12 border-t border-rule pt-6">
+          <h2 className="text-sm font-medium text-muted">{t("settings.demo")}</h2>
+          <p className="mt-1 max-w-2xl text-sm text-faint">
+            {t("settings.demoHint", {
+              items: demo.items,
+              batches: demo.batches,
+              sales: demo.sales,
+            })}
+          </p>
+
+          <form
+            action={wipeDemoData}
+            className="mt-3 flex flex-wrap items-end gap-2"
+          >
+            <Field label={t("settings.demoConfirm", { phrase: RESET_CONFIRMATION })}>
+              <input
+                name="confirmation"
+                autoComplete="off"
+                placeholder={RESET_CONFIRMATION}
+                className={`${inputBase} font-mono`}
+              />
+            </Field>
+            <button
+              type="submit"
+              className="rounded-lg border border-critical/40 px-4 py-2 text-sm text-critical hover:bg-critical-soft"
+            >
+              {t("settings.demoWipe")}
+            </button>
+          </form>
+
+          <p className="mt-2 text-xs text-faint">{t("settings.demoKeeps")}</p>
+        </section>
+      )}
     </>
   );
 }

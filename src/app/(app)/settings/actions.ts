@@ -2,7 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { addTaxRate, SettingsError, updateSettings } from "@/lib/dal/settings";
+import {
+  addTaxRate,
+  SettingsError,
+  updateSettings,
+  verifyMailSettings,
+} from "@/lib/dal/settings";
+import { MaintenanceError, resetDemoData } from "@/lib/dal/maintenance";
 import { PermissionError } from "@/lib/dal/session";
 
 function codeFor(error: unknown): string {
@@ -19,6 +25,7 @@ export async function saveSettings(formData: FormData) {
   try {
     await updateSettings({
       businessName: String(formData.get("businessName") ?? ""),
+      businessTagline: String(formData.get("businessTagline") ?? "") || null,
       businessAddress: String(formData.get("businessAddress") ?? "") || null,
       businessPhone: String(formData.get("businessPhone") ?? "") || null,
       npwp: String(formData.get("npwp") ?? "") || null,
@@ -38,6 +45,15 @@ export async function saveSettings(formData: FormData) {
       narkotikaEnabled: formData.get("narkotikaEnabled") === "on",
       digestEnabled: formData.get("digestEnabled") === "on",
       digestEmail: String(formData.get("digestEmail") ?? "") || null,
+      digestHour: number(formData, "digestHour"),
+      smtpHost: String(formData.get("smtpHost") ?? "") || null,
+      smtpPort: number(formData, "smtpPort"),
+      smtpUser: String(formData.get("smtpUser") ?? "") || null,
+      // Blank leaves whatever is stored alone; the screen never had it to
+      // begin with, so an empty field is the normal case.
+      smtpPassword: String(formData.get("smtpPassword") ?? "") || null,
+      smtpFrom: String(formData.get("smtpFrom") ?? "") || null,
+      smtpSecure: formData.get("smtpSecure") === "on",
     });
   } catch (error) {
     redirect(`/settings?error=${codeFor(error)}`);
@@ -67,4 +83,41 @@ export async function createTaxRate(formData: FormData) {
 
   revalidatePath("/settings");
   redirect("/settings?rateAdded=1");
+}
+
+
+/**
+ * Opens a connection to the mail server and authenticates, without sending.
+ *
+ * A wrong password should be found when it is typed, not at seven the next
+ * morning when nobody is watching.
+ */
+export async function testMailSettings() {
+  const result = await verifyMailSettings();
+  redirect(
+    result.ok
+      ? "/settings?mail=ok"
+      : `/settings?mail=failed&detail=${encodeURIComponent(result.error.slice(0, 120))}`,
+  );
+}
+
+/** Clears the demo catalogue and its history. Owner only, typed confirmation. */
+export async function wipeDemoData(formData: FormData) {
+  const confirmation = String(formData.get("confirmation") ?? "");
+
+  try {
+    await resetDemoData(confirmation);
+  } catch (error) {
+    const code =
+      error instanceof MaintenanceError
+        ? error.code
+        : error instanceof PermissionError
+          ? "not_allowed"
+          : "unknown";
+    if (code === "unknown") console.error(error);
+    redirect(`/settings?error=${code}`);
+  }
+
+  revalidatePath("/", "layout");
+  redirect("/settings?wiped=1");
 }

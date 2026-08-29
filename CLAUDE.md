@@ -27,6 +27,19 @@ relax one without saying so explicitly.
   transactions do identically; the unique index then refuses the loser, and the
   cashier sees an opaque database error instead of a receipt. The advisory lock
   makes that a queue. Take it as late as possible, immediately before the insert.
+- **The name, description and timezone are the owner's, not the code's.** The
+  sidebar, the sign-in screen and the receipt read `settings.businessName` and
+  fall back to the i18n string only when it is blank. The timezone is any IANA
+  zone, with the three Indonesian ones pinned.
+- **The demo catalogue ships and stays until the owner clears it.** A system
+  that opens on an empty screen teaches nobody the till. `resetDemoData` in
+  `src/lib/dal/maintenance.ts` is the one destructive operation in the project,
+  owner-only and behind a typed phrase; accounts, settings, tax rates and the
+  audit log survive it.
+- **The SMTP password never reaches the browser.** The settings screen is told
+  whether one is stored, never what it is, and a blank field means "keep it".
+  It is stripped from the audit log too -- a log that records a secret is a
+  second place the secret lives.
 - **Money is `BIGINT`, in whole rupiah.** An `INT` column overflows around
   Rp 2.1 billion, which this business passes in under a year.
 - **Every write carries a user id.** No system actions, no shared logins.

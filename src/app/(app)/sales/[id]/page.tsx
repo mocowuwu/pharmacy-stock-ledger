@@ -72,7 +72,9 @@ export default async function SaleDetailPage({
       */}
       <Card className="mx-auto max-w-sm p-5 print:max-w-none print:border-0 print:shadow-none">
         <div className="text-center">
-          <div className="font-semibold">{t("app.name")}</div>
+          <div className="font-semibold">
+            {settings.businessName || t("app.name")}
+          </div>
           <div className="tabular mt-1 text-xs text-muted">{sale.saleNumber}</div>
           <div className="tabular text-xs text-muted">
             {formatDateTime(sale.soldAt, locale)}

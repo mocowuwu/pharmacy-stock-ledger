@@ -20,6 +20,12 @@ export const settings = pgTable(
     id: integer("id").primaryKey().default(1),
 
     businessName: text("business_name").notNull().default(""),
+    /**
+     * The line under the name, on the sidebar and the sign-in screen. A
+     * description of the business rather than of the software -- the staff read
+     * it every day and "Sistem persediaan" tells them nothing they don't know.
+     */
+    businessTagline: text("business_tagline"),
     businessAddress: text("business_address"),
     businessPhone: text("business_phone"),
     /** Tax identification number. Only meaningful once the business is a PKP. */
@@ -93,6 +99,28 @@ export const settings = pgTable(
 
     digestEnabled: boolean("digest_enabled").notNull().default(false),
     digestEmail: text("digest_email"),
+    /** Local hour the digest is sent, 0-23. The job decides; nothing polls. */
+    digestHour: integer("digest_hour").notNull().default(7),
+
+    /*
+     * Outgoing mail, configured by the owner rather than by an environment
+     * variable, because the person who knows the mailbox password is the owner
+     * and not whoever deploys the container.
+     *
+     * With no host set the digest renders to a file instead of sending, so the
+     * feature is usable and inspectable before any account exists.
+     */
+    smtpHost: text("smtp_host"),
+    smtpPort: integer("smtp_port").notNull().default(587),
+    smtpUser: text("smtp_user"),
+    /**
+     * Never leaves the server. The settings screen is told whether one is set,
+     * never what it is, and only overwrites it when a new one is typed.
+     */
+    smtpPassword: text("smtp_password"),
+    smtpFrom: text("smtp_from"),
+    /** True for implicit TLS on 465; STARTTLS on 587 is negotiated either way. */
+    smtpSecure: boolean("smtp_secure").notNull().default(false),
 
     updatedBy: uuid("updated_by").references(() => users.id),
     updatedAt: ts("updated_at").notNull().defaultNow(),
