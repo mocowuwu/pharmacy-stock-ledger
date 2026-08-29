@@ -32,12 +32,18 @@ export function Till({
   canOverridePrice,
   canOverrideBatch,
   tax,
+  scanning,
 }: {
   locale: Locale;
   canDiscount: boolean;
   canOverridePrice: boolean;
   canOverrideBatch: boolean;
   tax: { enabled: boolean; rateBps: number; mode: "inclusive" | "exclusive" } | null;
+  /**
+   * Whether to mention scanning. The field itself stays either way -- it is
+   * the item search, and a scanner just types into it very fast.
+   */
+  scanning: boolean;
 }) {
   const t = useTranslations();
   const [query, setQuery] = useState("");
@@ -204,7 +210,7 @@ export function Till({
         {/* Search sits outside any form: a scanner ends every read with Enter. */}
         <Card className="p-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-muted">{t("sell.search")}</span>
+            <span className="text-sm font-medium text-muted">{t(scanning ? "sell.search" : "sell.searchNoScan")}</span>
             <input
               ref={searchRef}
               value={query}
@@ -224,7 +230,7 @@ export function Till({
               }}
               className={inputClass}
             />
-            <span className="text-xs text-faint">{t("sell.searchHint")}</span>
+            <span className="text-xs text-faint">{t(scanning ? "sell.searchHint" : "sell.searchHintNoScan")}</span>
           </label>
 
           {results && results.length === 0 && (

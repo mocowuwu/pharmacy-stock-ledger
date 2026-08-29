@@ -20,7 +20,8 @@
     "notes": "Catatan",
     "reason": "Alasan",
     "status": "Status",
-    "actions": "Tindakan"
+    "actions": "Tindakan",
+    "edit": "Ubah"
   },
   "nav": {
     "dashboard": "Beranda",
@@ -32,7 +33,7 @@
     "count": "Stok Opname",
     "sales": "Riwayat Penjualan",
     "reports": "Laporan",
-    "users": "Pengguna",
+    "users": "Akun",
     "settings": "Pengaturan",
     "signOut": "Keluar",
     "suppliers": "Pemasok",
@@ -262,7 +263,17 @@
     "already_posted": "Opname itu sudah diposting.",
     "line_not_found": "Baris opname tidak ditemukan.",
     "would_go_negative": "Itu akan membuat batch menjadi minus. Stok bergerak setelah lembar hitung dibuat.",
-    "nothing_to_dispose": "Batch itu sudah kosong."
+    "nothing_to_dispose": "Batch itu sudah kosong.",
+    "invalid_username": "Gunakan 3 sampai 32 huruf kecil, angka, titik, strip atau garis bawah.",
+    "username_taken": "Nama pengguna itu sudah dipakai.",
+    "user_not_found": "Akun tidak ditemukan.",
+    "cannot_suspend_owner": "Akun pemilik tidak bisa ditangguhkan.",
+    "cannot_suspend_self": "Anda tidak bisa menangguhkan akun Anda sendiri.",
+    "invalid_days": "Masukkan jumlah hari bulat antara 1 dan 3650.",
+    "urgent_window_too_wide": "Jendela merah harus lebih pendek daripada jendela kuning.",
+    "digest_email_required": "Isi alamat tujuan email harian.",
+    "invalid_rate": "Masukkan tarif antara 0 dan 100%.",
+    "invalid_date": "Tanggal itu tidak valid."
   },
   "receive": {
     "title": "Terima Barang",
@@ -354,7 +365,9 @@
     "fefoDefault": "Otomatis (kedaluwarsa terdekat)",
     "increase": "Tambah satu",
     "decrease": "Kurangi satu",
-    "exceedsStock": "Melebihi stok tersedia ({qty} {unit})."
+    "exceedsStock": "Melebihi stok tersedia ({qty} {unit}).",
+    "searchNoScan": "Cari barang",
+    "searchHintNoScan": "Ketik nama atau kode, lalu tekan Enter."
   },
   "sales": {
     "title": "Riwayat Penjualan",
@@ -626,5 +639,183 @@
       "note": "Kolom terakhir yang paling perlu diperhatikan. Stok yang datang mendekati kedaluwarsa tidak murah, apa pun kata fakturnya.",
       "systemSupplier": "Saldo awal"
     }
+  },
+  "users": {
+    "title": "Akun",
+    "subtitle": "Siapa yang bisa masuk, dan apa yang boleh mereka lakukan",
+    "new": "Tambah akun",
+    "newTitle": "Akun baru",
+    "editTitle": "Ubah akun",
+    "username": "Nama pengguna",
+    "usernameHint": "Huruf kecil, angka, titik, strip atau garis bawah. Tidak bisa diubah lagi nanti.",
+    "fullName": "Nama lengkap",
+    "fullNameHint": "Seperti yang akan muncul di log audit dan struk.",
+    "locale": "Bahasa antarmuka",
+    "role": "Akses",
+    "owner": "Pemilik",
+    "ownerAccess": "Semuanya, selalu",
+    "staff": "Staf",
+    "permissionCount": "{count} dari {total} izin",
+    "noPermissions": "Belum ada izin — akun ini bisa masuk tetapi tidak melihat apa pun.",
+    "status": "Status",
+    "active": "Aktif",
+    "suspended": "Ditangguhkan",
+    "lastLogin": "Terakhir masuk",
+    "never": "Belum pernah",
+    "lockedOut": "Terkunci sampai {time}",
+    "mustChange": "Harus membuat kata sandi baru",
+    "pharmacist": "Apoteker terdaftar",
+    "pharmacistHint": "Diperlukan untuk dicatat sebagai penanggung jawab obat keras, dan nanti untuk laporan narkotika.",
+    "sipa": "Nomor SIPA",
+    "stra": "Nomor STRA",
+    "template": "Mulai dari",
+    "templateHint": "Hanya titik awal, bukan peran tetap. Sesuaikan kotak di bawah sebelum menyimpan.",
+    "templateBlank": "Kosong",
+    "templateCashier": "Kasir",
+    "templateStockClerk": "Petugas Gudang",
+    "templateManager": "Manajer",
+    "permissions": "Izin",
+    "permissionsHint": "Menyembunyikan layar hanyalah kemudahan; inilah kendalinya. Setiap tindakan diperiksa di server.",
+    "sensitiveWarning": "Ini membuka akses ke harga modal, akun, atau pengaturan. Berikan dengan sengaja.",
+    "create": "Buat akun",
+    "save": "Simpan perubahan",
+    "created": "Akun dibuat",
+    "updated": "Perubahan tersimpan.",
+    "passwordTitle": "Kata sandi sekali pakai untuk {username}",
+    "passwordBody": "Catat dan serahkan sekarang. Kata sandi ini hanya ditampilkan sekali dan tidak bisa dilihat lagi — hanya bisa diganti. {name} harus membuat kata sandi sendiri sebelum layar lain bisa dibuka.",
+    "passwordDone": "Sudah saya serahkan",
+    "resetPassword": "Terbitkan kata sandi baru",
+    "resetHint": "Mengeluarkan akun dari semua sesi dan membuka kuncian.",
+    "resetConfirm": "Terbitkan",
+    "suspend": "Tangguhkan",
+    "suspendHint": "Langsung mengeluarkan dari sistem. Tidak ada yang dihapus; akun bisa diaktifkan lagi.",
+    "reactivate": "Aktifkan kembali",
+    "revokeSessions": "Keluarkan dari semua perangkat",
+    "sessionsRevoked": "Dikeluarkan dari {count} sesi.",
+    "activeSessions": "{count} sesi aktif",
+    "backToList": "Kembali ke daftar akun",
+    "empty": "Belum ada akun.",
+    "ownerNotice": "Pemilik memegang semua izin dan tidak bisa ditangguhkan. Jika akun ini terkunci, pemulihannya lewat perintah di komputer tempat basis data berjalan.",
+    "cannotEditOwn": "Anda tidak bisa menangguhkan akun Anda sendiri."
+  },
+  "settings": {
+    "title": "Pengaturan",
+    "subtitle": "Cara apotek bekerja, dan apa yang ditampilkan",
+    "saved": "Pengaturan tersimpan.",
+    "save": "Simpan pengaturan",
+    "business": "Apotek",
+    "businessName": "Nama",
+    "businessNameHint": "Dicetak di bagian atas setiap struk.",
+    "businessAddress": "Alamat",
+    "businessPhone": "Telepon",
+    "npwp": "NPWP",
+    "npwpHint": "Baru diperlukan setelah usaha berstatus PKP.",
+    "licence": "Nomor izin",
+    "licenceHint": "Dicetak di bagian bawah struk.",
+    "receipt": "Struk",
+    "receiptLocale": "Bahasa struk",
+    "receiptLocaleHint": "Keputusan usaha, bukan preferensi kasir. Kasir yang bekerja dalam bahasa Inggris tidak boleh menyerahkan struk berbahasa Inggris kepada pelanggan Indonesia.",
+    "receiptFooter": "Baris penutup",
+    "timezone": "Zona waktu",
+    "timezoneHint": "Menentukan kapan satu hari dimulai — yang menentukan kapan batch kedaluwarsa dan penjualan masuk hari yang mana.",
+    "modules": "Yang diaktifkan",
+    "modulesHint": "Ini menentukan apa yang dilihat staf, bukan apa yang boleh mereka lakukan. Izin tetap menjadi kendalinya, dan catatan yang sudah ada tidak disembunyikan.",
+    "module": {
+      "returns": "Retur",
+      "returnsHint": "Menerima obat kembali di kasir. Jika mati, layar retur dan tombol di penjualan disembunyikan.",
+      "barcodes": "Pemindaian barcode",
+      "barcodesHint": "Kolom pindai di penerimaan dan kasir. Sebaiknya mati sampai pemindai benar-benar terpasang.",
+      "tax": "PPN",
+      "taxHint": "Jika mati, tidak ada kolom pajak di mana pun dan struk berupa nota biasa. Apotek di bawah ambang PKP tidak memungut PPN.",
+      "narkotika": "Narkotika & psikotropika",
+      "narkotikaHint": "Nyalakan pada hari pertama menyimpannya. Barang yang sudah bergolongan ini tetap menampilkannya, menyala atau tidak."
+    },
+    "tax": "PPN",
+    "taxEnabled": "Pungut PPN",
+    "taxMode": "Harga sudah",
+    "taxInclusive": "Termasuk PPN",
+    "taxExclusive": "Belum termasuk PPN",
+    "taxRates": "Tarif",
+    "taxRateName": "Nama",
+    "taxRatePercent": "Tarif %",
+    "taxRateFrom": "Berlaku sejak",
+    "taxRateTo": "Sampai",
+    "taxRateCurrent": "Berlaku",
+    "addTaxRate": "Tambah tarif",
+    "taxRateAdded": "Tarif ditambahkan.",
+    "noTaxRates": "Belum ada tarif tercatat.",
+    "taxRateHistoryHint": "Tarif lama disimpan, tidak pernah diubah: struk yang dicetak ulang dari tahun lalu harus tetap menampilkan tarif yang berlaku saat itu.",
+    "noEffectiveRate": "PPN menyala tetapi tidak ada tarif yang berlaku hari ini, jadi penjualan tercatat tanpa PPN sama sekali. Tambahkan tarif di bawah.",
+    "alerts": "Ambang peringatan",
+    "alertsHint": "Dalam hari. Stok kedaluwarsa dan stok habis bukan ambang — itu fakta, dan selalu memicu peringatan.",
+    "expiringUrgent": "Segera kedaluwarsa (merah)",
+    "expiringNotice": "Mendekati kedaluwarsa (kuning)",
+    "deadStockNoSale": "Tidak terjual selama",
+    "deadStockExpiry": "dan kedaluwarsa dalam",
+    "returns": "Retur",
+    "allowRestock": "Izinkan stok bersegel kembali ke rak",
+    "allowRestockHint": "Hanya untuk obat bebas dan alat kesehatan. Obat keras, OWA, psikotropika dan narkotika selalu dikarantina, apa pun pengaturan ini.",
+    "digest": "Email harian",
+    "digestEnabled": "Kirim ringkasan pagi",
+    "digestEmail": "Kirim ke",
+    "digestNotBuilt": "Belum dibuat. Pengaturannya ada di sini supaya bisa dinyalakan pada harinya.",
+    "restricted": "Hanya pemilik yang bisa mengubah ini."
+  },
+  "permission": {
+    "items": {
+      "view": "Melihat barang dan sisa stok",
+      "create": "Menambah barang",
+      "edit": "Mengubah barang",
+      "set_price": "Menetapkan harga jual",
+      "archive": "Mengarsipkan barang"
+    },
+    "batches": {
+      "receive": "Menerima kiriman",
+      "edit": "Memperbaiki data batch"
+    },
+    "stock": {
+      "adjust": "Menyesuaikan jumlah",
+      "dispose": "Memusnahkan stok",
+      "count": "Menjalankan stok opname"
+    },
+    "suppliers": {
+      "manage": "Mengelola pemasok"
+    },
+    "sales": {
+      "create": "Menggunakan kasir",
+      "discount": "Memberi diskon",
+      "price_override": "Mengubah harga di kasir",
+      "batch_override": "Memilih batch selain yang paling cepat kedaluwarsa",
+      "return": "Memproses retur",
+      "void": "Membatalkan penjualan",
+      "view_all": "Melihat penjualan semua orang, bukan hanya miliknya"
+    },
+    "alerts": {
+      "view": "Melihat peringatan",
+      "manage": "Menandai dan menunda peringatan"
+    },
+    "reports": {
+      "sales": "Melihat laporan penjualan",
+      "financial": "Melihat harga modal, margin dan nilai stok"
+    },
+    "narkotika": {
+      "manage": "Mengelola narkotika dan psikotropika"
+    },
+    "users": {
+      "manage": "Mengelola akun"
+    },
+    "settings": {
+      "manage": "Mengubah pengaturan"
+    },
+    "audit": {
+      "view": "Membaca log audit"
+    }
+  },
+  "permissionGroup": {
+    "catalogue": "Katalog",
+    "stock": "Stok",
+    "selling": "Penjualan",
+    "alerts": "Peringatan",
+    "administration": "Administrasi"
   }
 }

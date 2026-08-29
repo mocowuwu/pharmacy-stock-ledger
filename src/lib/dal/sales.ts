@@ -5,6 +5,7 @@ import { getDb } from "@/db";
 import { batches, items, returns, returnLines, sales, saleLines, users } from "@/db/schema";
 import { assertPermission } from "./session";
 import { addDays, today } from "@/lib/format/date";
+import { getSettings } from "./settings";
 import { recordAudit } from "@/lib/audit";
 import {
   commitSale,
@@ -132,7 +133,9 @@ export async function listSales(opts: { limit?: number } = {}) {
 export async function todaysTakings() {
   await assertPermission("sales.create");
   const db = await getDb();
-  const [row] = await db
+  const { timezone } = await getSettings();
+
+  const [sold] = await db
     .select({
       total: sql<number>`coalesce(sum(${sales.total}), 0)::bigint`,
       count: sql<number>`count(*)::int`,
@@ -141,10 +144,24 @@ export async function todaysTakings() {
     .where(
       and(
         eq(sales.status, "completed"),
-        sql`${sales.soldAt}::date = current_date`,
+        sql`(${sales.soldAt} at time zone ${timezone})::date
+            = (now() at time zone ${timezone})::date`,
       ),
     );
-  return { total: Number(row?.total ?? 0), count: row?.count ?? 0 };
+
+  // Refunds come off, exactly as they do in the sales report. Two different
+  // answers to "what did we take today" would be worse than either.
+  const [refunded] = await db
+    .select({ total: sql<number>`coalesce(sum(${returns.refundTotal}), 0)::bigint` })
+    .from(returns)
+    .where(
+      sql`(${returns.returnedAt} at time zone ${timezone})::date
+          = (now() at time zone ${timezone})::date`,
+    );
+
+  const gross = Number(sold?.total ?? 0);
+  const refunds = Number(refunded?.total ?? 0);
+  return { total: gross - refunds, gross, refunds, count: sold?.count ?? 0 };
 }
 
 /**
@@ -156,10 +173,12 @@ export async function todaysTakings() {
 export async function dailyTakings(days = 30) {
   await assertPermission("sales.create");
   const db = await getDb();
+  // A day is a day in the pharmacy's timezone, as it is in the reports.
+  const { timezone } = await getSettings();
 
   const rows = await db
     .select({
-      day: sql<string>`${sales.soldAt}::date::text`,
+      day: sql<string>`(${sales.soldAt} at time zone ${timezone})::date::text`,
       total: sql<number>`coalesce(sum(${sales.total}), 0)::bigint`,
       count: sql<number>`count(*)::int`,
     })
@@ -170,7 +189,9 @@ export async function dailyTakings(days = 30) {
         sql`${sales.soldAt} >= current_date - make_interval(days => ${days - 1})`,
       ),
     )
-    .groupBy(sql`${sales.soldAt}::date`);
+    // By output position: the timezone is a bind parameter, and Postgres will
+    // not match `$1` in the GROUP BY against `$6` in the SELECT.
+    .groupBy(sql`1`);
 
   const byDay = new Map(rows.map((r) => [r.day, { total: Number(r.total), count: r.count }]));
   const series: Array<{ day: string; total: number; count: number }> = [];

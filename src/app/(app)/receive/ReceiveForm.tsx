@@ -20,10 +20,17 @@ export function ReceiveForm({
   items,
   suppliers,
   today,
+  scanning,
 }: {
   items: ItemOption[];
   suppliers: Array<{ id: string; name: string; isSystem: boolean }>;
   today: string;
+  /**
+   * Whether the scan field is shown at all. Off, the whole card goes: an
+   * autofocused field that swallows keystrokes is a nuisance on a counter with
+   * no scanner attached.
+   */
+  scanning: boolean;
 }) {
   const t = useTranslations();
   const [state, formAction] = useActionState<ReceiveState, FormData>(submitReceipt, {});
@@ -89,6 +96,7 @@ export function ReceiveForm({
         book in a half-filled delivery the moment someone scanned a box. Out
         here, Enter can only ever mean "look this up".
       */}
+      {scanning && (
       <Card className="p-5">
         <Field label={t("receive.scan")} hint={t("receive.scanHint")}>
           <div className="flex gap-2">
@@ -128,6 +136,7 @@ export function ReceiveForm({
           <p className="mt-2 text-sm text-critical">{t("receive.scanUnreadable")}</p>
         )}
       </Card>
+      )}
 
       <form action={formAction} className="flex flex-col gap-5">
         {state.formError && <Alert>{t(`errors.${state.formError}`)}</Alert>}

@@ -5,6 +5,9 @@ import { requirePermission } from "@/lib/dal/session";
 import { can } from "@/lib/auth/permissions";
 import { getItem, listCategories } from "@/lib/dal/catalogue";
 import { Alert, PageHeader } from "@/components/ui";
+import { DRUG_CLASSES } from "@/lib/catalogue/enums";
+import { MODULE_DRUG_CLASSES, moduleFlags } from "@/lib/catalogue/modules";
+import { getSettings } from "@/lib/dal/settings";
 import { ItemForm } from "../ItemForm";
 import { BarcodeSection } from "../BarcodeSection";
 import { StockPanel } from "../StockPanel";
@@ -20,6 +23,17 @@ export default async function ItemDetailPage({ params, searchParams }: PageProps
   if (!item) notFound();
 
   const categories = await listCategories();
+
+  // Classes whose module is switched off are not offered on the form. Nothing
+  // already saved is affected -- the form adds the item's own class back.
+  const settings = await getSettings();
+  const flags = moduleFlags(settings);
+  const gated = new Set(
+    Object.entries(MODULE_DRUG_CLASSES)
+      .filter(([module]) => !flags[module as keyof typeof flags])
+      .flatMap(([, classes]) => classes ?? []),
+  );
+  const drugClasses = DRUG_CLASSES.filter((value) => !gated.has(value));
   const canEdit = can(session.grant, "items.edit");
 
   return (
@@ -58,6 +72,7 @@ export default async function ItemDetailPage({ params, searchParams }: PageProps
       <div className="flex flex-col gap-6">
         {canEdit ? (
           <ItemForm
+            drugClasses={drugClasses}
             isEdit
             canSetPrice={can(session.grant, "items.set_price")}
             categories={categories}

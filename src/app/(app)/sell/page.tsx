@@ -44,6 +44,7 @@ export default async function SellPage() {
         canOverridePrice={can(session.grant, "sales.price_override")}
         canOverrideBatch={can(session.grant, "sales.batch_override")}
         tax={tax}
+        scanning={config?.barcodesEnabled ?? true}
       />
     </>
   );

@@ -20,7 +20,8 @@
     "notes": "Notes",
     "reason": "Reason",
     "status": "Status",
-    "actions": "Actions"
+    "actions": "Actions",
+    "edit": "Edit"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -32,7 +33,7 @@
     "count": "Stock count",
     "sales": "Sales history",
     "reports": "Reports",
-    "users": "Users",
+    "users": "Accounts",
     "settings": "Settings",
     "signOut": "Sign out",
     "suppliers": "Suppliers",
@@ -262,7 +263,17 @@
     "already_posted": "That count has already been posted.",
     "line_not_found": "Count line not found.",
     "would_go_negative": "That would take a batch below zero. Stock moved after the sheet was written.",
-    "nothing_to_dispose": "That batch has nothing left in it."
+    "nothing_to_dispose": "That batch has nothing left in it.",
+    "invalid_username": "Use 3 to 32 lowercase letters, numbers, dot, dash or underscore.",
+    "username_taken": "That username is already in use.",
+    "user_not_found": "Account not found.",
+    "cannot_suspend_owner": "The owner cannot be suspended.",
+    "cannot_suspend_self": "You cannot suspend your own account.",
+    "invalid_days": "Enter a whole number of days between 1 and 3650.",
+    "urgent_window_too_wide": "The red window must be shorter than the amber one.",
+    "digest_email_required": "Give an address to send the daily email to.",
+    "invalid_rate": "Enter a rate between 0 and 100%.",
+    "invalid_date": "That date is not valid."
   },
   "receive": {
     "title": "Receive stock",
@@ -354,7 +365,9 @@
     "fefoDefault": "Automatic (earliest expiry)",
     "increase": "Add one",
     "decrease": "Remove one",
-    "exceedsStock": "More than the {qty} {unit} available."
+    "exceedsStock": "More than the {qty} {unit} available.",
+    "searchNoScan": "Search for an item",
+    "searchHintNoScan": "Type a name or code, then press Enter."
   },
   "sales": {
     "title": "Sales history",
@@ -626,5 +639,183 @@
       "note": "The last column is the one worth watching. Stock that arrives close to its expiry is not cheap, whatever the invoice says.",
       "systemSupplier": "Opening balance"
     }
+  },
+  "users": {
+    "title": "Accounts",
+    "subtitle": "Who can sign in, and what each of them may do",
+    "new": "Add an account",
+    "newTitle": "New account",
+    "editTitle": "Edit account",
+    "username": "Username",
+    "usernameHint": "Lowercase letters, numbers, dot, dash or underscore. Cannot be changed later.",
+    "fullName": "Full name",
+    "fullNameHint": "As it should appear on the audit log and on receipts.",
+    "locale": "Interface language",
+    "role": "Access",
+    "owner": "Owner",
+    "ownerAccess": "Everything, always",
+    "staff": "Staff",
+    "permissionCount": "{count} of {total} permissions",
+    "noPermissions": "No permissions yet — this account can sign in and see nothing.",
+    "status": "Status",
+    "active": "Active",
+    "suspended": "Suspended",
+    "lastLogin": "Last signed in",
+    "never": "Never",
+    "lockedOut": "Locked out until {time}",
+    "mustChange": "Must set a new password",
+    "pharmacist": "Registered pharmacist",
+    "pharmacistHint": "Required to be recorded as responsible for obat keras, and for the narkotika register later.",
+    "sipa": "SIPA number",
+    "stra": "STRA number",
+    "template": "Start from",
+    "templateHint": "A starting point, not a fixed role. Adjust the boxes below before saving.",
+    "templateBlank": "Nothing ticked",
+    "templateCashier": "Cashier",
+    "templateStockClerk": "Stock clerk",
+    "templateManager": "Manager",
+    "permissions": "Permissions",
+    "permissionsHint": "Hiding a screen is a courtesy; these are the control. Every action checks them on the server.",
+    "sensitiveWarning": "This gives access to cost prices, accounts or settings. Grant it deliberately.",
+    "create": "Create the account",
+    "save": "Save changes",
+    "created": "Account created",
+    "updated": "Changes saved.",
+    "passwordTitle": "One-time password for {username}",
+    "passwordBody": "Write this down and hand it over now. It is shown once and cannot be recovered — only replaced. {name} must set their own password before anything else will load.",
+    "passwordDone": "I have given it to them",
+    "resetPassword": "Issue a new password",
+    "resetHint": "Signs the account out everywhere and clears any lockout.",
+    "resetConfirm": "Issue it",
+    "suspend": "Suspend",
+    "suspendHint": "Signs them out immediately. Nothing is deleted; the account can be brought back.",
+    "reactivate": "Reactivate",
+    "revokeSessions": "Sign out everywhere",
+    "sessionsRevoked": "Signed out of {count} sessions.",
+    "activeSessions": "{count} signed in now",
+    "backToList": "Back to accounts",
+    "empty": "No accounts yet.",
+    "ownerNotice": "The owner holds every permission and cannot be suspended. If this account is locked out, recovery is a command on the machine the database runs on.",
+    "cannotEditOwn": "You cannot suspend your own account."
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "How the pharmacy works, and what it shows",
+    "saved": "Settings saved.",
+    "save": "Save settings",
+    "business": "The pharmacy",
+    "businessName": "Name",
+    "businessNameHint": "Printed at the top of every receipt.",
+    "businessAddress": "Address",
+    "businessPhone": "Phone",
+    "npwp": "NPWP",
+    "npwpHint": "Only needed once the business is a PKP.",
+    "licence": "Licence number",
+    "licenceHint": "Printed in the receipt footer.",
+    "receipt": "Receipts",
+    "receiptLocale": "Receipt language",
+    "receiptLocaleHint": "A business decision, not the cashier's. A cashier working in English must not hand an Indonesian customer an English receipt.",
+    "receiptFooter": "Footer line",
+    "timezone": "Timezone",
+    "timezoneHint": "Decides when a day starts, which decides when a batch expires and which day a sale belongs to.",
+    "modules": "What is switched on",
+    "modulesHint": "This decides what staff are shown, not what they are allowed to do. Permissions remain the control, and nothing already recorded is hidden.",
+    "module": {
+      "returns": "Returns",
+      "returnsHint": "Taking medicine back over the counter. Off hides the returns screen and the button on a sale.",
+      "barcodes": "Barcode scanning",
+      "barcodesHint": "The scan fields on receiving and at the till. Worth leaving off until a scanner is plugged in.",
+      "tax": "PPN",
+      "taxHint": "Off means no tax fields anywhere and a plain nota. A pharmacy below the PKP threshold does not charge PPN.",
+      "narkotika": "Narkotika & psikotropika",
+      "narkotikaHint": "Switch on the day you first stock them. Items already carrying these classes keep showing them either way."
+    },
+    "tax": "PPN",
+    "taxEnabled": "Charge PPN",
+    "taxMode": "Prices are",
+    "taxInclusive": "Inclusive of PPN",
+    "taxExclusive": "Before PPN",
+    "taxRates": "Rates",
+    "taxRateName": "Name",
+    "taxRatePercent": "Rate %",
+    "taxRateFrom": "In force from",
+    "taxRateTo": "Until",
+    "taxRateCurrent": "Current",
+    "addTaxRate": "Add a rate",
+    "taxRateAdded": "Rate added.",
+    "noTaxRates": "No rates recorded.",
+    "taxRateHistoryHint": "Old rates are kept, never edited: a receipt reprinted from last year must still show the rate that applied on the day.",
+    "noEffectiveRate": "PPN is switched on but no rate covers today, so sales are being recorded with no PPN at all. Add a rate below.",
+    "alerts": "Alert thresholds",
+    "alertsHint": "In days. Expired stock and out-of-stock are not thresholds — they are facts, and they always alert.",
+    "expiringUrgent": "Expiring soon (red)",
+    "expiringNotice": "Expiring (amber)",
+    "deadStockNoSale": "No sale for",
+    "deadStockExpiry": "and expiring within",
+    "returns": "Returns",
+    "allowRestock": "Allow sealed stock back on the shelf",
+    "allowRestockHint": "Applies to over-the-counter items and devices only. Obat keras, OWA, psikotropika and narkotika are always quarantined, whatever this says.",
+    "digest": "Daily email",
+    "digestEnabled": "Send a morning summary",
+    "digestEmail": "Send it to",
+    "digestNotBuilt": "Not built yet. The setting is here so it can be switched on the day it is.",
+    "restricted": "Only the owner can change these."
+  },
+  "permission": {
+    "items": {
+      "view": "See items and stock levels",
+      "create": "Add items",
+      "edit": "Edit items",
+      "set_price": "Set selling prices",
+      "archive": "Archive items"
+    },
+    "batches": {
+      "receive": "Receive deliveries",
+      "edit": "Correct batch details"
+    },
+    "stock": {
+      "adjust": "Adjust quantities",
+      "dispose": "Write stock off",
+      "count": "Run a stock count"
+    },
+    "suppliers": {
+      "manage": "Manage suppliers"
+    },
+    "sales": {
+      "create": "Use the till",
+      "discount": "Give discounts",
+      "price_override": "Change a price at the till",
+      "batch_override": "Choose a batch other than the earliest",
+      "return": "Process returns",
+      "void": "Void a sale",
+      "view_all": "See everyone's sales, not only their own"
+    },
+    "alerts": {
+      "view": "See alerts",
+      "manage": "Acknowledge and snooze alerts"
+    },
+    "reports": {
+      "sales": "See sales reports",
+      "financial": "See cost prices, margins and stock value"
+    },
+    "narkotika": {
+      "manage": "Manage narkotika and psikotropika"
+    },
+    "users": {
+      "manage": "Manage accounts"
+    },
+    "settings": {
+      "manage": "Change settings"
+    },
+    "audit": {
+      "view": "Read the audit log"
+    }
+  },
+  "permissionGroup": {
+    "catalogue": "Catalogue",
+    "stock": "Stock",
+    "selling": "Selling",
+    "alerts": "Alerts",
+    "administration": "Administration"
   }
 }

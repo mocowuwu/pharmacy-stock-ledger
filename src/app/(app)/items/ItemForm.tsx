@@ -34,14 +34,26 @@ export function ItemForm({
   categories,
   canSetPrice,
   isEdit,
+  drugClasses,
 }: {
   values: ItemFormValues;
   categories: Array<{ id: string; name: string }>;
   canSetPrice: boolean;
   isEdit: boolean;
+  /**
+   * The classes offered. Narrower than the full list while the narkotika
+   * module is off -- but an item already carrying a hidden class keeps it in
+   * the list below, or editing that item would silently reclassify it.
+   */
+  drugClasses: readonly string[];
 }) {
   const t = useTranslations();
   const [state, formAction] = useActionState<ItemFormState, FormData>(saveItem, {});
+
+  // Whatever the item already is stays selectable, whatever the module says.
+  const offeredClasses = DRUG_CLASSES.filter(
+    (value) => drugClasses.includes(value) || value === values.drugClass,
+  );
 
   const err = (field: string) =>
     state.fieldErrors?.[field] ? t(`errors.${state.fieldErrors[field]}`) : null;
@@ -116,7 +128,7 @@ export function ItemForm({
               defaultValue={values.drugClass ?? "bebas"}
               className={inputClass}
             >
-              {DRUG_CLASSES.map((value) => (
+              {offeredClasses.map((value) => (
                 <option key={value} value={value}>
                   {t(`drugClass.${value}`)}
                 </option>

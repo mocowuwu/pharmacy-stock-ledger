@@ -42,3 +42,7 @@ next-env.d.ts
 
 # Local PGlite development database
 .data/
+
+# Editor swap files
+*.swp
+*.swo

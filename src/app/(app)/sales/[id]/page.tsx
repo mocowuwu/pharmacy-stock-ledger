@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/lib/dal/session";
 import { can } from "@/lib/auth/permissions";
 import { getSale, returnableUnits, returnsForSale } from "@/lib/dal/sales";
+import { getSettings } from "@/lib/dal/settings";
 import { Alert, Card, PageHeader } from "@/components/ui";
 import { formatDateTime, formatExpiry } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
@@ -23,7 +24,11 @@ export default async function SaleDetailPage({
   if (!sale) notFound();
 
   const refunds = await returnsForSale(id);
-  const mayReturn = can(session.grant, "sales.return");
+  // The module switch decides whether returns are offered here; it does not
+  // decide whether they are possible. A return already booked still appears
+  // below, and /sales/[id]/return still works if somebody has the link.
+  const settings = await getSettings();
+  const mayReturn = can(session.grant, "sales.return") && settings.returnsEnabled;
   // Only ask when the answer can matter: a cashier without the permission
   // never sees the card, so there is nothing to count for them.
   const returnable = mayReturn ? await returnableUnits(id) : 0;

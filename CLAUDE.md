@@ -65,6 +65,18 @@ relax one without saying so explicitly.
 - **A report day is a day in the pharmacy's timezone.** `localDate()` in
   `src/lib/reports/queries.ts`; casting a `timestamptz` to a date in UTC files
   an early-morning Jakarta sale under the previous day.
+- **There is exactly one owner, and they cannot be suspended, demoted or
+  stripped.** Nobody above them could rescue the account -- recovery is
+  `scripts/reset-password.ts` on the machine the database runs on. Nobody may
+  suspend themselves either. Both refusals live in `src/lib/accounts/rules.ts`.
+- **The owner issues a temporary password and never learns the working one.**
+  Shown once at creation or reset, never stored readably, never recoverable --
+  only replaceable. That is what lets a sale be attributed to the cashier who
+  rang it.
+- **A module switch is a courtesy, never a control.** `src/lib/catalogue/modules.ts`
+  hides menu entries and entry points; it never refuses a request, never hides
+  data already recorded, and never gates a safety rule. Permissions are the
+  control. A switched-off screen is still reachable by URL and still works.
 - **CSV writes money as a plain integer**, never a formatted amount: `15000`,
   not `Rp 15.000`. A formatted amount is text to a spreadsheet, so a column of
   them sums to zero -- `parseFloat("15.000")` arriving from the other direction.

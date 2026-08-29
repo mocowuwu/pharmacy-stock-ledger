@@ -64,6 +64,33 @@ export const settings = pgTable(
      */
     allowReturnRestock: boolean("allow_return_restock").notNull().default(false),
 
+    /*
+     * Module switches.
+     *
+     * These decide what the pharmacy is shown, not what it is allowed to do.
+     * Turning a module off hides its menu entry and its entry points; it never
+     * refuses a request, because a courtesy that starts refusing is a control
+     * with no audit trail, and it would strand records already in the system.
+     * Permissions remain the only control.
+     */
+
+    /** Taking medicine back over the counter. */
+    returnsEnabled: boolean("returns_enabled").notNull().default(true),
+
+    /**
+     * The scan fields on receiving and at the till. Worth off until a scanner
+     * is actually plugged in: the field is built to swallow fast keyboard
+     * input ending in Enter, which is a nuisance without one.
+     */
+    barcodesEnabled: boolean("barcodes_enabled").notNull().default(true),
+
+    /**
+     * Off until the pharmacy first stocks these classes. While off, the two
+     * classes are not offered when creating an item -- but any item already
+     * carrying one still displays it. A module switch never rewrites data.
+     */
+    narkotikaEnabled: boolean("narkotika_enabled").notNull().default(false),
+
     digestEnabled: boolean("digest_enabled").notNull().default(false),
     digestEmail: text("digest_email"),
 

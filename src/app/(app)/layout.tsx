@@ -2,6 +2,8 @@ import { getTranslations } from "next-intl/server";
 import { requireSession } from "@/lib/dal/session";
 import { canAny, type Permission } from "@/lib/auth/permissions";
 import { SidebarNav, TopNav, type NavEntry } from "@/components/Sidebar";
+import { getSettings } from "@/lib/dal/settings";
+import { MODULE_NAV, moduleFlags, type ModuleKey } from "@/lib/catalogue/modules";
 import { signOut } from "../actions";
 
 /**
@@ -26,14 +28,28 @@ const NAV: Array<{ key: string; href: string; permissions: Permission[] }> = [
   // Reports appears for anyone holding either half of the split: a manager may
   // be able to see what sold without being able to see what it cost.
   { key: "reports", href: "/reports", permissions: ["reports.sales", "reports.financial"] },
+  { key: "users", href: "/users", permissions: ["users.manage"] },
+  { key: "settings", href: "/settings", permissions: ["settings.manage"] },
 ];
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const session = await requireSession();
   const t = await getTranslations();
 
-  const entries: NavEntry[] = NAV.filter((entry) =>
-    canAny(session.grant, entry.permissions),
+  // Two filters, and they are not the same kind of thing. Permissions decide
+  // what somebody may do; the module switches only decide what is worth showing
+  // them. A hidden screen is still reachable by URL and still works -- that is
+  // the difference between a courtesy and a control.
+  const settings = await getSettings();
+  const flags = moduleFlags(settings);
+  const hidden = new Set(
+    (Object.keys(MODULE_NAV) as ModuleKey[])
+      .filter((module) => !flags[module])
+      .flatMap((module) => MODULE_NAV[module] ?? []),
+  );
+
+  const entries: NavEntry[] = NAV.filter(
+    (entry) => canAny(session.grant, entry.permissions) && !hidden.has(entry.key),
   ).map((entry) => ({ key: entry.key, href: entry.href, label: t(`nav.${entry.key}`) }));
 
   const initials = session.user.fullName

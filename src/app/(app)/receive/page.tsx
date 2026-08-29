@@ -5,6 +5,7 @@ import { listTodaysReceipts } from "@/lib/dal/stock";
 import { Card, EmptyState, PageHeader } from "@/components/ui";
 import { formatExpiry, today } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
+import { getSettings } from "@/lib/dal/settings";
 import { ReceiveForm } from "./ReceiveForm";
 
 export default async function ReceivePage() {
@@ -12,10 +13,11 @@ export default async function ReceivePage() {
   const t = await getTranslations();
   const locale = session.user.locale;
 
-  const [items, suppliers, receipts] = await Promise.all([
+  const [items, suppliers, receipts, settings] = await Promise.all([
     listItems({ status: "active" }),
     listSuppliers(),
     listTodaysReceipts(),
+    getSettings(),
   ]);
 
   const options = items.map((item) => ({
@@ -34,7 +36,12 @@ export default async function ReceivePage() {
         <EmptyState title={t("items.empty")} body={t("receive.needItems")} />
       ) : (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-          <ReceiveForm items={options} suppliers={suppliers} today={today()} />
+          <ReceiveForm
+            items={options}
+            suppliers={suppliers}
+            today={today()}
+            scanning={settings.barcodesEnabled}
+          />
 
           <div>
             <h2 className="mb-3 font-medium">{t("receive.todaysReceipts")}</h2>
