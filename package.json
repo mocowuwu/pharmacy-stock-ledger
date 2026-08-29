@@ -11,6 +11,7 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:concurrency": "CONCURRENCY_DATABASE_URL=${CONCURRENCY_DATABASE_URL:-postgres://127.0.0.1:5432/pharmacy_concurrency} vitest run",
     "test:watch": "vitest",
     "db:seed": "tsx scripts/seed.ts",
     "db:serve": "tsx scripts/db-server.ts",

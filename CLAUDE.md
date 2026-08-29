@@ -21,6 +21,12 @@ relax one without saying so explicitly.
 - **Nothing is deleted.** Items archive, sales void, users suspend, batches
   deplete or get disposed. There is no purge anywhere, including for the audit
   log — pharmacy records carry multi-year retention requirements.
+- **Document numbers are allocated under `lockNumberSeries`** in
+  `src/lib/stock/numbering.ts`. Every series -- sales, returns, disposals,
+  counts -- reads the day's highest number and adds one, which two simultaneous
+  transactions do identically; the unique index then refuses the loser, and the
+  cashier sees an opaque database error instead of a receipt. The advisory lock
+  makes that a queue. Take it as late as possible, immediately before the insert.
 - **Money is `BIGINT`, in whole rupiah.** An `INT` column overflows around
   Rp 2.1 billion, which this business passes in under a year.
 - **Every write carries a user id.** No system actions, no shared logins.
@@ -152,14 +158,32 @@ drives the database directly and asserts the constraint name — "something thre
 would also pass if the query failed for an unrelated reason.
 
 PGlite serves one connection, and the pool cap is per process while its limit is
-global -- so **stop the dev server before running data scripts**. Two further
-consequences: genuine concurrency (two
-cashiers selling the last box at once) has to be tested against a real Postgres
-server; and the development pool is capped at one connection, because
-overlapping queries otherwise reset the connection and wedge the instance.
-Do **not** avoid `Promise.all` in application code to work around this -- the
-cap handles it, and against production Postgres concurrent reads are correct
-and faster.
+global -- so **stop the dev server before running data scripts**. The
+development pool is capped at one connection, because overlapping queries
+otherwise reset the connection and wedge the instance. Do **not** avoid
+`Promise.all` in application code to work around this -- the cap handles it, and
+against production Postgres concurrent reads are correct and faster.
+
+**Concurrency is tested against a real Postgres server**, because PGlite serves
+one connection and never contends:
+
+```
+brew services start postgresql@18        # once
+createdb pharmacy_concurrency            # once
+CONCURRENCY_DATABASE_URL=postgres://127.0.0.1:5432/pharmacy_concurrency npm test
+```
+
+Without that variable `tests/concurrency.test.ts` skips. Run it before any
+release that touches `sale.ts`, `ledger.ts`, or anything that allocates a
+document number.
+
+**Contend deliberately; never hope for a race.** These tests take the batch lock
+themselves and start the contenders behind it, so the contended path is
+guaranteed. The first version fired concurrent sales and asserted the outcome --
+and passed with every row lock deleted, because each transaction finished in
+about a millisecond and they never overlapped. When changing them, delete a lock
+and confirm the test fails; a concurrency test that cannot fail is a claim of
+safety with nothing behind it.
 
 ## Regulatory
 

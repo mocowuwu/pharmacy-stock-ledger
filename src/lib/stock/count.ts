@@ -8,6 +8,7 @@ import {
   stockCounts,
 } from "@/db/schema";
 import { applyMovement, LedgerError } from "./ledger";
+import { lockNumberSeries } from "./numbering";
 import { today } from "@/lib/format/date";
 
 /**
@@ -35,6 +36,7 @@ export class CountError extends Error {
 }
 
 export async function nextCountNumber(tx: Database, on: string): Promise<string> {
+  await lockNumberSeries(tx, "count", on);
   const prefix = `SO${on.replaceAll("-", "").slice(2)}`; // SOYYMMDD
   const [last] = await tx
     .select({ number: stockCounts.countNumber })

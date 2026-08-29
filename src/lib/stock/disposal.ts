@@ -2,6 +2,7 @@ import { desc, eq, sql } from "drizzle-orm";
 import type { Database } from "@/db/client";
 import { batches, disposals } from "@/db/schema";
 import { applyMovement, LedgerError } from "./ledger";
+import { lockNumberSeries } from "./numbering";
 import { today } from "@/lib/format/date";
 
 /**
@@ -32,6 +33,7 @@ export type DisposeRequest = {
 
 /** Sequential per day and never reused, like the sale and return numbers. */
 export async function nextDisposalNumber(tx: Database, on: string): Promise<string> {
+  await lockNumberSeries(tx, "disposal", on);
   const prefix = `D${on.replaceAll("-", "").slice(2)}`; // DYYMMDD
   const [last] = await tx
     .select({ number: disposals.disposalNumber })

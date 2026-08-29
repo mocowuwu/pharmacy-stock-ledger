@@ -10,6 +10,7 @@ import {
   taxRates,
 } from "@/db/schema";
 import { applyMovement } from "./ledger";
+import { lockNumberSeries } from "./numbering";
 import { allocateFefo, isOverride } from "./fefo";
 import { applyRateBps, splitInclusiveTax } from "@/lib/format/money";
 import { today } from "@/lib/format/date";
@@ -70,8 +71,15 @@ async function activeTax(tx: Database, on: string) {
   return rate ? { rate, mode: config.taxMode } : null;
 }
 
-/** Sequential and never reused; the unique index makes a collision fail loudly. */
+/**
+ * Sequential and never reused.
+ *
+ * Serialised on the day's series: without that, two simultaneous sales build
+ * the same number and the unique index refuses one of them, which reaches the
+ * cashier as a failed sale rather than as a queue.
+ */
 export async function nextSaleNumber(tx: Database, on: string): Promise<string> {
+  await lockNumberSeries(tx, "sale", on);
   const prefix = on.replaceAll("-", "").slice(2); // YYMMDD
   const [last] = await tx
     .select({ number: sales.saleNumber })
@@ -97,7 +105,6 @@ export async function commitSale(tx: Database, request: CommitSaleRequest) {
 
   const saleDate = today();
   const tax = await activeTax(tx, saleDate);
-  const saleNumber = await nextSaleNumber(tx, saleDate);
   let needsPharmacist = false;
 
   const planned: Array<{
@@ -195,6 +202,10 @@ export async function commitSale(tx: Database, request: CommitSaleRequest) {
       total = net + taxAmount;
     }
   }
+
+  // Numbered here rather than at the top: everything above can run
+  // concurrently, and only this moment needs to be single-file.
+  const saleNumber = await nextSaleNumber(tx, saleDate);
 
   const [sale] = await tx
     .insert(sales)

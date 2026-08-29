@@ -10,6 +10,7 @@ import {
   settings,
 } from "@/db/schema";
 import { applyMovement } from "./ledger";
+import { lockNumberSeries } from "./numbering";
 import { SaleError } from "./sale";
 import { isExpired, today } from "@/lib/format/date";
 import { RESTRICTED_DRUG_CLASSES } from "@/lib/catalogue/enums";
@@ -53,6 +54,7 @@ export type CommitReturnRequest = {
 
 /** Sequential per day and never reused, like the sale number it mirrors. */
 export async function nextReturnNumber(tx: Database, on: string): Promise<string> {
+  await lockNumberSeries(tx, "return", on);
   const prefix = `R${on.replaceAll("-", "").slice(2)}`; // RYYMMDD
   const [last] = await tx
     .select({ number: returns.returnNumber })

@@ -48,6 +48,7 @@ Then open http://localhost:3000.
 | `npm run db:migrate` | Applies pending migrations |
 | `npm run db:seed` | Settings, the opening-balance supplier, starter categories, the owner |
 | `npm run test` | Unit and integration tests |
+| `npm run test:concurrency` | The same, plus the real-concurrency tests (needs Postgres) |
 | `npm run typecheck` | TypeScript, no emit |
 | `npm run build` | Production build |
 
