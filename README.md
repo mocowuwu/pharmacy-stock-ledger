@@ -163,6 +163,12 @@ Phase 1 (foundations) is complete: schema and migrations, sessions, sign-in,
 forced password change, the permission system, the audit log, the bilingual
 scaffolding and the currency and date formatting. Phases 2–9 are in the plan.
 
+## Running it in a clinic
+
+See [DEPLOY.md](DEPLOY.md): what hardware, installing Node and PostgreSQL,
+configuration, starting it on boot, and the nightly jobs. The plain-Node path
+has been tested end to end; the Docker path is written but unverified.
+
 ## Going live
 
 See [GO-LIVE.md](GO-LIVE.md): backup drill, settings, accounts, entering the

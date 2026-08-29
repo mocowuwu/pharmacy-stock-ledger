@@ -25,8 +25,10 @@ live one without an explicit flag. The third command is the one that matters:
 it proves the restored ledger still reconciles, rather than merely that files
 copied.
 
-**Also back up `.env.local` somewhere separate.** Without `SESSION_SECRET` a
-restored database is intact and nobody can sign in.
+**Also back up `.env.local` somewhere separate.** It holds the database
+password, and a dump you cannot connect to is not much use. There is no session
+secret to lose: sessions are opaque random tokens stored as hashes, so a
+restored database works on its own.
 
 Then decide how often. A pharmacy that trades six days a week should dump
 nightly, keep a week on the machine, and copy at least weekly to something that

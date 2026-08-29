@@ -12,10 +12,11 @@
  * Restore is `npm run restore -- <file>`, and **it must be rehearsed before
  * real data goes in, not after.** A backup nobody has restored is a hypothesis.
  *
- * This handles the database only. The other half of a restore is the
- * `.env.local` file: without `SESSION_SECRET` the restored database is intact
- * but nobody can sign in. Keep a copy of it somewhere separate, and treat it
- * as the secret it is.
+ * This handles the database only. Keep a copy of `.env.local` somewhere
+ * separate too: it holds the database password, and a dump you cannot connect
+ * to is not much use. There is no session secret to lose -- sessions are opaque
+ * random tokens stored as hashes, so a restored database keeps working with no
+ * key to reunite it with.
  */
 import "./env";
 import { spawn } from "node:child_process";
