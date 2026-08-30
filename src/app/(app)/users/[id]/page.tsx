@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/lib/dal/session";
 import { getUser } from "@/lib/dal/users";
-import { Alert, Card, Chip, PageHeader } from "@/components/ui";
+import { Alert, Card, Chip, PageHeader, buttonPrimary, buttonSecondary } from "@/components/ui";
 import { formatDateTime } from "@/lib/format/date";
 import { changeStatus, signOutEverywhere } from "../actions";
 import { EditUserForm } from "./EditUserForm";
@@ -91,7 +91,7 @@ export default async function UserPage({
               <input type="hidden" name="userId" value={user.id} />
               <button
                 type="submit"
-                className="rounded-lg border border-rule px-4 py-2 text-sm text-muted hover:border-accent hover:text-accent"
+                className={buttonSecondary}
               >
                 {t("users.revokeSessions")}
               </button>
@@ -121,7 +121,7 @@ export default async function UserPage({
               <input type="hidden" name="status" value="active" />
               <button
                 type="submit"
-                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+                className={buttonPrimary}
               >
                 {t("users.reactivate")}
               </button>

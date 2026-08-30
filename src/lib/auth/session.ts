@@ -43,6 +43,7 @@ export type SessionUser = {
   isPharmacist: boolean;
   mustChangePassword: boolean;
   locale: "id" | "en";
+  tutorialSeenAt: Date | null;
 };
 
 export type ActiveSession = {
@@ -96,6 +97,7 @@ export async function resolveSession(token: string): Promise<ActiveSession | nul
       isPharmacist: users.isPharmacist,
       mustChangePassword: users.mustChangePassword,
       locale: users.locale,
+      tutorialSeenAt: users.tutorialSeenAt,
       status: users.status,
     })
     .from(sessions)
@@ -138,6 +140,7 @@ export async function resolveSession(token: string): Promise<ActiveSession | nul
       isPharmacist: row.isPharmacist,
       mustChangePassword: row.mustChangePassword,
       locale: row.locale,
+      tutorialSeenAt: row.tutorialSeenAt,
     },
     grant: {
       isOwner: row.isOwner,

@@ -23,6 +23,8 @@ import {
   expiryLossByMonth,
   marginByItem,
   marginSummary,
+  movementLedger,
+  movementTotalsByItem,
   salesByCashier,
   salesByCategory,
   salesByItem,
@@ -393,5 +395,74 @@ describe("date windows", () => {
     expect(summary.transactions).toBe(0);
     expect(await expiryLoss(ex(), lastMonth)).toHaveLength(0);
     expect(await salesByItem(ex(), lastMonth)).toHaveLength(0);
+  });
+});
+
+/**
+ * The movement ledger, per item.
+ *
+ * Worked out from the same fixture, by hand:
+ *
+ *   Paracetamol  received 500, sold 10              -> in 500, out 10,  net 490
+ *   Amoxicillin  received 200, sold 5, 2 returned   -> in 202, out 5,   net 197
+ *                (the 2 come back as a quarantined child batch, so they are a
+ *                 movement in, not a smaller movement out)
+ *   Vitamin C    received 100, sold 4, sale voided  -> in 104, out 4,   net 100
+ *   Ibuprofen    received 20, all 20 disposed       -> in 20,  out 20,  net 0
+ */
+describe("movement reporting", () => {
+  it("splits each item's signed deltas into units in and units out", async () => {
+    const rows = await movementTotalsByItem(ex(), range());
+    const find = (id: string) => rows.find((row) => row.itemId === id)!;
+
+    expect(find(paracetamolId)).toMatchObject({ qtyIn: 500, qtyOut: 10, net: 490 });
+    expect(find(amoxicillinId)).toMatchObject({ qtyIn: 202, qtyOut: 5, net: 197 });
+    expect(find(vitaminId)).toMatchObject({ qtyIn: 104, qtyOut: 4, net: 100 });
+    expect(find(ibuprofenId)).toMatchObject({ qtyIn: 20, qtyOut: 20, net: 0 });
+  });
+
+  it("keeps a voided sale as stock coming back in, not as a sale that shrank", async () => {
+    const rows = await movementTotalsByItem(ex(), range());
+    const vitamin = rows.find((row) => row.itemId === vitaminId)!;
+
+    const sale = vitamin.byType.find((bucket) => bucket.type === "sale")!;
+    const undone = vitamin.byType.find((bucket) => bucket.type === "sale_void")!;
+
+    expect(sale).toMatchObject({ qtyOut: 4, qtyIn: 0 });
+    expect(undone).toMatchObject({ qtyIn: 4, qtyOut: 0 });
+  });
+
+  it("names the person and the document behind every movement", async () => {
+    const { rows } = await movementLedger(ex(), { ...range(), itemId: ibuprofenId });
+
+    const disposal = rows.find((row) => row.type === "dispose")!;
+    expect(disposal.qtyDelta).toBe(-20);
+    expect(disposal.performedBy).toBe("Siti Kasir");
+    expect(disposal.document).toMatch(/^D\d{6}-\d{4}$/u);
+    expect(disposal.reason).toBe("Kedaluwarsa");
+
+    // Receiving has no document of its own; the lot number is what identifies it.
+    const received = rows.find((row) => row.type === "receive")!;
+    expect(received).toMatchObject({ qtyDelta: 20, lotNumber: "I-1", document: null });
+  });
+
+  it("says when the list is capped instead of letting it look like a quiet period", async () => {
+    const capped = await movementLedger(ex(), { ...range(), limit: 2 });
+    expect(capped.rows).toHaveLength(2);
+    expect(capped.truncated).toBe(true);
+
+    // The totals are not capped with it: they come from the aggregate query.
+    const totals = await movementTotalsByItem(ex(), range());
+    expect(totals.reduce((sum, row) => sum + row.events, 0)).toBeGreaterThan(2);
+
+    const uncapped = await movementLedger(ex(), { ...range(), limit: null });
+    expect(uncapped.truncated).toBe(false);
+    expect(uncapped.rows.length).toBeGreaterThan(2);
+  });
+
+  it("counts nothing outside the window", async () => {
+    const past = { from: addDays(today(), -30), to: addDays(today(), -10) };
+    expect(await movementTotalsByItem(ex(), past)).toEqual([]);
+    expect((await movementLedger(ex(), past)).rows).toEqual([]);
   });
 });

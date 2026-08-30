@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { checkout, findForSale, type Candidate, type CheckoutState } from "./actions";
-import { Alert, Card, Chip, inputBase, inputClass } from "@/components/ui";
+import { Alert, Card, Chip, buttonPrimary, buttonPrimaryLarge, buttonSecondary, inputBase, inputClass } from "@/components/ui";
+import { ScanButton } from "@/components/BarcodeScanner";
 import { formatMoney, parseMoney, applyRateBps, splitInclusiveTax } from "@/lib/format/money";
 import { formatExpiry } from "@/lib/format/date";
 import type { Locale } from "@/i18n/config";
@@ -21,6 +22,9 @@ type Line = {
   preferBatchId: string | null;
   overrideReason: string;
 };
+
+/** The search field's id, so its label can point at it without wrapping it. */
+const SEARCH_FIELD_ID = "till-search";
 
 const PAYMENT_METHODS = [
   "tunai", "kartu_debit", "kartu_kredit", "qris", "transfer", "lainnya",
@@ -185,7 +189,7 @@ export function Till({
         <div className="mt-5 flex flex-wrap gap-3">
           <Link
             href={`/sales/${state.done.saleId}`}
-            className="rounded bg-accent px-4 py-2 text-sm font-medium text-accent-contrast"
+            className={buttonPrimary}
           >
             {t("sell.viewReceipt")}
           </Link>
@@ -195,7 +199,7 @@ export function Till({
               setState({});
               searchRef.current?.focus();
             }}
-            className="rounded border border-rule px-4 py-2 text-sm text-muted hover:border-accent hover:text-accent"
+            className={buttonSecondary}
           >
             {t("sell.newSale")}
           </button>
@@ -206,32 +210,62 @@ export function Till({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-      <div className="flex flex-col gap-4">
+      {/* `min-w-0` on both columns: a grid item's default minimum is its
+          content, so without it the basket row's fixed-width controls widen the
+          column past the screen and the whole page scrolls sideways. */}
+      <div className="flex min-w-0 flex-col gap-4">
         {/* Search sits outside any form: a scanner ends every read with Enter. */}
         <Card className="p-4">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-muted">{t(scanning ? "sell.search" : "sell.searchNoScan")}</span>
-            <input
-              ref={searchRef}
-              value={query}
-              autoFocus
-              autoComplete="off"
-              onChange={(e) => {
-                const next = e.target.value;
-                setQuery(next);
-                // Cleared here rather than in the effect: clearing state
-                // synchronously inside an effect causes a cascading render.
-                if (next.trim().length < 2) setResults(null);
-              }}
-              onKeyDown={(e) => {
-                if (e.key !== "Enter") return;
-                e.preventDefault();
-                runSearch(query, true);
-              }}
-              className={inputClass}
-            />
+          {/*
+            The label points at the field by id rather than wrapping it.
+            Wrapping put the scan button inside the label, and a tap on a label
+            is forwarded to the control it labels: on a phone the button did
+            nothing and the keyboard opened instead.
+          */}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor={SEARCH_FIELD_ID} className="text-sm font-medium text-muted">
+              {t(scanning ? "sell.search" : "sell.searchNoScan")}
+            </label>
+            {/* Stacked on a phone: sharing the row leaves the search box too
+                narrow to read what has been typed into it. */}
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                id={SEARCH_FIELD_ID}
+                ref={searchRef}
+                value={query}
+                autoFocus
+                autoComplete="off"
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setQuery(next);
+                  // Cleared here rather than in the effect: clearing state
+                  // synchronously inside an effect causes a cascading render.
+                  if (next.trim().length < 2) setResults(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  e.preventDefault();
+                  runSearch(query, true);
+                }}
+                className={inputClass}
+              />
+              {/*
+                The camera is the phone's scanner. It hands its payload to the
+                same search the keyboard feeds, so a GS1 code read off the box
+                resolves exactly as a USB scanner's would.
+              */}
+              {scanning && (
+                <ScanButton
+                  className="w-full shrink-0 py-3 sm:w-auto sm:py-2.5"
+                  onScan={(code) => {
+                    setQuery(code);
+                    runSearch(code, true);
+                  }}
+                />
+              )}
+            </div>
             <span className="text-xs text-faint">{t(scanning ? "sell.searchHint" : "sell.searchHintNoScan")}</span>
-          </label>
+          </div>
 
           {results && results.length === 0 && (
             <p className="mt-3 text-sm text-muted">{t("sell.noResults")}</p>
@@ -245,7 +279,7 @@ export function Till({
                     type="button"
                     disabled={candidate.onHand === 0}
                     onClick={() => addToBasket(candidate)}
-                    className="flex w-full items-center justify-between gap-3 py-2 text-left disabled:opacity-60"
+                    className="flex w-full items-center justify-between gap-3 py-3 text-left disabled:opacity-60"
                   >
                     <span>
                       <span className="font-medium">{candidate.name}</span>
@@ -281,14 +315,17 @@ export function Till({
                   key={line.key}
                   className={`py-3 ${line.qty === 0 ? "opacity-50" : ""}`}
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="min-w-0">
+                  {/* Two rows on a phone, one on a desktop. The controls keep
+                      their order either way, so the cashier's hand goes to the
+                      same place on both. */}
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                    <div className="min-w-0 flex-1">
                       <div className="font-medium">{line.name}</div>
                       <div className="text-xs text-muted">
                         {t("sell.available", { qty: `${line.onHand} ${line.unit}` })}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
                       {/*
                         The quantity is allowed to reach zero, and the field is
                         shown empty when it does. Clamping to a minimum of one
@@ -308,7 +345,7 @@ export function Till({
                           onClick={() =>
                             update(line.key, { qty: Math.max(0, line.qty - 1) })
                           }
-                          className="rounded-l border border-r-0 border-rule px-2.5 text-muted hover:border-accent hover:text-accent"
+                          className="rounded-l border border-r-0 border-rule px-3.5 text-muted hover:border-accent hover:text-accent sm:px-2.5"
                         >
                           &minus;
                         </button>
@@ -320,28 +357,40 @@ export function Till({
                             const digits = e.target.value.replace(/\D/gu, "");
                             update(line.key, { qty: digits === "" ? 0 : Number(digits) });
                           }}
-                          className={`${inputBase} tabular w-24 rounded-none px-2 text-center`}
+                          className={`${inputBase} tabular w-16 rounded-none px-2 text-center sm:w-24`}
                         />
                         <button
                           type="button"
                           aria-label={t("sell.increase")}
                           onClick={() => update(line.key, { qty: line.qty + 1 })}
-                          className="rounded-r border border-l-0 border-rule px-2.5 text-muted hover:border-accent hover:text-accent"
+                          className="rounded-r border border-l-0 border-rule px-3.5 text-muted hover:border-accent hover:text-accent sm:px-2.5"
                         >
                           +
                         </button>
                       </div>
-                      <input
-                        inputMode="numeric"
-                        disabled={!canOverridePrice}
-                        defaultValue={formatMoney(line.unitPrice, { bare: true })}
-                        onBlur={(e) => {
-                          const parsed = parseMoney(e.target.value);
-                          if (parsed != null) update(line.key, { unitPrice: parsed });
-                        }}
-                        className={`${inputBase} tabular w-28 text-right`}
-                      />
-                      <span className="tabular w-28 text-right font-medium">
+                      {/* The unit price drops to its own line on a phone. It is
+                          an override, used rarely and by few; the quantity and
+                          the line total are what the cashier looks at, and they
+                          keep the first line to themselves. */}
+                      <label className="order-last flex w-full items-center gap-2 sm:order-none sm:w-28">
+                        {/* Named on a phone, where it stands alone on its own
+                            line and a bare box of digits means nothing. */}
+                        <span className="text-xs text-muted sm:hidden">
+                          {t("common.price")}
+                        </span>
+                        <input
+                          inputMode="numeric"
+                          aria-label={t("common.price")}
+                          disabled={!canOverridePrice}
+                          defaultValue={formatMoney(line.unitPrice, { bare: true })}
+                          onBlur={(e) => {
+                            const parsed = parseMoney(e.target.value);
+                            if (parsed != null) update(line.key, { unitPrice: parsed });
+                          }}
+                          className={`${inputBase} tabular w-full min-w-0 text-right`}
+                        />
+                      </label>
+                      <span className="tabular ml-auto shrink-0 text-right font-medium sm:ml-0 sm:w-28">
                         {formatMoney(line.qty * line.unitPrice)}
                       </span>
                       <button
@@ -349,7 +398,7 @@ export function Till({
                         onClick={() =>
                           setLines((c) => c.filter((l) => l.key !== line.key))
                         }
-                        className="text-xs text-muted hover:text-critical"
+                        className="shrink-0 px-1 py-2 text-xs text-muted hover:text-critical"
                       >
                         {t("sell.remove")}
                       </button>
@@ -408,7 +457,7 @@ export function Till({
         </Card>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
         <Card className="p-4">
           <dl className="flex flex-col gap-2 text-sm">
             <div className="flex justify-between">
@@ -494,7 +543,7 @@ export function Till({
             type="button"
             onClick={complete}
             disabled={!canCheckout}
-            className="rounded bg-accent px-4 py-3 font-medium text-accent-contrast disabled:opacity-60"
+            className={buttonPrimaryLarge}
           >
             {isPending ? t("sell.processing") : t("sell.checkout")}
           </button>

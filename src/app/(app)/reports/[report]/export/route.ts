@@ -3,6 +3,7 @@ import {
   expiryLossReport,
   isReportSlug,
   marginReport,
+  movementsReport,
   resolveRange,
   salesReport,
   supplierReport,
@@ -41,7 +42,11 @@ export async function GET(
   });
 
   try {
-    const { header, rows, name } = await build(report, range);
+    const { header, rows, name } = await build(
+      report,
+      range,
+      url.searchParams.get("item") ?? undefined,
+    );
     const filename = csvFilename(
       name,
       report === "valuation" ? today() : range.from,
@@ -60,6 +65,7 @@ export async function GET(
 async function build(
   report: ReportSlug,
   range: { from: string; to: string },
+  itemId?: string,
 ): Promise<{ header: CsvRow; rows: CsvRow[]; name: string }> {
   const t = await getTranslations();
 
@@ -89,6 +95,54 @@ async function build(
           row.revenue,
           row.refunded,
           row.revenueNet,
+        ]),
+      };
+    }
+
+    /**
+     * One row per movement, not per item.
+     *
+     * The screen collapses the ledger under each product; a spreadsheet has no
+     * dropdown, and the point of downloading this one is to sort and filter the
+     * individual movements. Quantities stay signed -- positive in, negative out
+     * -- so a column of them sums to the net change.
+     */
+    case "movements": {
+      const data = await movementsReport(range, itemId, null);
+      const names = new Map(
+        data.byItem.map((row) => [
+          row.itemId,
+          { code: row.code, label: `${row.name}${row.strength ? ` ${row.strength}` : ""}` },
+        ]),
+      );
+
+      return {
+        name: t("reports.nav.movements").toLowerCase(),
+        header: [
+          t("reports.movements.when"),
+          t("items.code"),
+          t("sell.item"),
+          t("reports.movements.type"),
+          t("common.quantity"),
+          t("receive.lot"),
+          t("receive.expiry"),
+          t("reports.movements.document"),
+          t("reports.movements.by"),
+          t("reports.movements.reason"),
+        ],
+        rows: data.movements.map((movement) => [
+          // ISO, not a formatted date: a spreadsheet sorts this correctly and a
+          // localised one sorts alphabetically.
+          movement.createdAt.toISOString(),
+          names.get(movement.itemId)?.code ?? "",
+          names.get(movement.itemId)?.label ?? "",
+          t(`movementType.${movement.type}`),
+          movement.qtyDelta,
+          movement.lotNumber ?? "",
+          movement.expiryDate,
+          movement.document ?? "",
+          movement.performedBy,
+          movement.reason ?? "",
         ]),
       };
     }

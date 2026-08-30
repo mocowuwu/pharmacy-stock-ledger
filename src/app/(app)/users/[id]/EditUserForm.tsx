@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { useTranslations } from "next-intl";
-import { Alert, Card, Field, inputClass } from "@/components/ui";
+import { Alert, Card, Field, buttonPrimary, buttonSecondary, inputClass } from "@/components/ui";
 import { PermissionPicker } from "../PermissionPicker";
 import { TemporaryPassword } from "../TemporaryPassword";
 import { issueNewPassword, submitEditUser, type EditUserState } from "../actions";
@@ -59,12 +59,17 @@ export function EditUserForm({ user }: { user: EditableUser }) {
               className={inputClass}
             />
           </Field>
-          {/* The username is fixed. It is what the audit log records, and
-              changing it would quietly rewrite who appears to have done what. */}
-          <Field label={t("users.username")} hint={t("users.usernameHint")}>
+          {/* Renaming only changes how the account signs in from now on: past
+              audit entries keep the username as it was typed at the time,
+              since actorLabel is a snapshot rather than a live join. */}
+          <Field label={t("users.username")} hint={t("users.usernameHint")} required>
             <input
+              name="username"
+              required
               defaultValue={user.username}
-              disabled
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               className={`${inputClass} font-mono`}
             />
           </Field>
@@ -120,7 +125,7 @@ export function EditUserForm({ user }: { user: EditableUser }) {
           <button
             type="submit"
             disabled={pending}
-            className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+            className={buttonPrimary}
           >
             {pending ? t("common.loading") : t("users.save")}
           </button>
@@ -141,7 +146,7 @@ export function EditUserForm({ user }: { user: EditableUser }) {
           <button
             type="submit"
             disabled={resetting}
-            className="rounded-lg border border-rule px-4 py-2 text-sm text-muted hover:border-accent hover:text-accent disabled:opacity-50"
+            className={buttonSecondary}
           >
             {resetting ? t("common.loading") : t("users.resetConfirm")}
           </button>

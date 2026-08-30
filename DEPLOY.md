@@ -216,6 +216,14 @@ volume, `pgdata`, and is not published to the host — only the app reaches it.
 Neither is required to start. Get it running, use it, add TLS when you have a
 quiet afternoon.
 
+**One feature does need it.** Scanning a barcode with a phone's camera is only
+offered over `https` (or on `localhost`): browsers refuse camera access to an
+insecure page, and no server setting changes that. Over plain `http` on the LAN
+the scan button is still there, and says so when tapped rather than failing
+silently. Everything else -- including a USB scanner, which is a keyboard --
+works either way. If the pharmacy runs the till on a phone, that
+moves TLS from "nice" to "the reason the camera is missing".
+
 ---
 
 ## Before real data goes in

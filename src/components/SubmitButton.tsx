@@ -2,6 +2,7 @@
 
 import { useFormStatus } from "react-dom";
 import type { ReactNode } from "react";
+import { buttonPrimary, buttonSecondary } from "./ui";
 
 /**
  * Disables itself while the form is in flight. On a shared till a double-click
@@ -21,17 +22,13 @@ export function SubmitButton({
   value?: string;
 }) {
   const { pending } = useFormStatus();
-  const styles =
-    variant === "primary"
-      ? "bg-accent text-accent-contrast"
-      : "border border-rule text-muted hover:border-accent hover:text-accent";
   return (
     <button
       type="submit"
       name={name}
       value={value}
       disabled={pending}
-      className={`rounded px-4 py-2 font-medium disabled:opacity-60 ${styles}`}
+      className={variant === "primary" ? buttonPrimary : buttonSecondary}
     >
       {pending && pendingLabel ? pendingLabel : children}
     </button>

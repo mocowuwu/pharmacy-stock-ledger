@@ -5,15 +5,7 @@ import {
   getSettings,
   listTaxRates,
 } from "@/lib/dal/settings";
-import {
-  Alert,
-  Card,
-  Field,
-  PageHeader,
-  SectionHeading,
-  inputBase,
-  inputClass,
-} from "@/components/ui";
+import { Alert, Card, Field, PageHeader, SectionHeading, buttonPrimary, buttonSecondary, inputBase, inputClass } from "@/components/ui";
 import { formatDate } from "@/lib/format/date";
 import { MODULES, moduleFlags, type ModuleKey } from "@/lib/catalogue/modules";
 import {
@@ -75,6 +67,10 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
     barcodes: "barcodesEnabled",
     tax: "taxEnabled",
     narkotika: "narkotikaEnabled",
+    suppliers: "suppliersEnabled",
+    categories: "categoriesEnabled",
+    counts: "countsEnabled",
+    dispose: "disposeEnabled",
   };
 
   return (
@@ -406,7 +402,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
         <div>
           <button
             type="submit"
-            className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+            className={buttonPrimary}
           >
             {t("settings.save")}
           </button>
@@ -422,7 +418,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
           <form action={testMailSettings}>
             <button
               type="submit"
-              className="rounded-lg border border-rule px-4 py-2 text-sm text-muted hover:border-accent hover:text-accent"
+              className={buttonSecondary}
             >
               {t("settings.mailTestRun")}
             </button>
@@ -507,7 +503,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
             </Field>
             <button
               type="submit"
-              className="rounded-lg border border-rule px-4 py-2 text-sm text-muted hover:border-accent hover:text-accent"
+              className={buttonSecondary}
             >
               {t("settings.addTaxRate")}
             </button>

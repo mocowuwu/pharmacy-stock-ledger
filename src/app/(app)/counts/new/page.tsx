@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/lib/dal/session";
 import { countableCategories } from "@/lib/dal/counts";
-import { Alert, Card, Field, PageHeader, inputClass } from "@/components/ui";
+import { Alert, Card, Field, PageHeader, buttonPrimary, inputClass } from "@/components/ui";
 import { createCount } from "../actions";
 
 export default async function NewCountPage({
@@ -55,7 +55,7 @@ export default async function NewCountPage({
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="submit"
-              className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+              className={buttonPrimary}
             >
               {t("counts.create")}
             </button>

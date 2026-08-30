@@ -6,15 +6,7 @@ import {
   listDisposals,
   recentDisposalLoss,
 } from "@/lib/dal/disposal";
-import {
-  Alert,
-  Card,
-  Chip,
-  DrugClassMark,
-  EmptyState,
-  PageHeader,
-  SectionHeading,
-} from "@/components/ui";
+import { Alert, Card, Chip, DrugClassMark, EmptyState, PageHeader, SectionHeading, buttonSecondarySmall } from "@/components/ui";
 import { formatDateTime, formatExpiry, isExpired } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 
@@ -112,7 +104,7 @@ export default async function DisposePage({ searchParams }: PageProps<"/dispose"
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <Link
                       href={`/dispose/${batch.id}`}
-                      className="rounded border border-rule px-3 py-1.5 text-xs text-muted hover:border-accent hover:text-accent"
+                      className={buttonSecondarySmall}
                     >
                       {t("dispose.disposeThis")}
                     </Link>

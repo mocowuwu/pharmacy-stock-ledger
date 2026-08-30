@@ -12,6 +12,7 @@ import type { DateRange } from "./queries";
 
 export const REPORTS = [
   "sales",
+  "movements",
   "margin",
   "valuation",
   "expiry",
@@ -27,6 +28,10 @@ export type ReportSlug = (typeof REPORTS)[number];
  */
 export const REPORT_PERMISSION = {
   sales: "reports.sales",
+  // Quantities and names, no cost prices: the movement ledger is the check a
+  // manager runs on the shop floor, so it sits on the same side of the split
+  // as the sales report rather than behind the financial half.
+  movements: "reports.sales",
   margin: "reports.financial",
   valuation: "reports.financial",
   expiry: "reports.financial",

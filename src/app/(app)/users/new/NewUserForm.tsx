@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { useTranslations } from "next-intl";
-import { Alert, Card, Field, inputClass } from "@/components/ui";
+import { Alert, Card, Field, buttonPrimary, inputClass } from "@/components/ui";
 import { PermissionPicker } from "../PermissionPicker";
 import { TemporaryPassword } from "../TemporaryPassword";
 import { submitNewUser, type NewUserState } from "../actions";
@@ -83,7 +83,7 @@ export function NewUserForm() {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+          className={buttonPrimary}
         >
           {pending ? t("common.loading") : t("users.create")}
         </button>

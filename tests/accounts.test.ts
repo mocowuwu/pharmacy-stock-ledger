@@ -150,12 +150,20 @@ describe("module switches", () => {
       barcodesEnabled: false,
       taxEnabled: false,
       narkotikaEnabled: true,
+      suppliersEnabled: true,
+      categoriesEnabled: false,
+      countsEnabled: true,
+      disposeEnabled: false,
     });
     expect(flags).toEqual({
       returns: true,
       barcodes: false,
       tax: false,
       narkotika: true,
+      suppliers: true,
+      categories: false,
+      counts: true,
+      dispose: false,
     });
   });
 

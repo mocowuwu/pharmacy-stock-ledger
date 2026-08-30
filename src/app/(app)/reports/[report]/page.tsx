@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/ui";
 import { formatDate } from "@/lib/format/date";
 import { ExportLink, RangePicker } from "../RangePicker";
 import { SalesReport } from "../_reports/Sales";
+import { MovementsReport } from "../_reports/Movements";
 import { MarginReport } from "../_reports/Margin";
 import { ValuationReport } from "../_reports/Valuation";
 import { ExpiryReport } from "../_reports/Expiry";
@@ -61,6 +62,7 @@ export default async function ReportPage({
             basePath={`/reports/${report}`}
             from={range.from}
             to={range.to}
+            extra={{ item: typeof query.item === "string" ? query.item : undefined }}
           />
         }
       />
@@ -91,6 +93,18 @@ export default async function ReportPage({
       )}
 
       {report === "sales" && <SalesReport range={range} locale={locale} />}
+      {report === "movements" && (
+        <MovementsReport
+          range={range}
+          locale={locale}
+          itemId={typeof query.item === "string" ? query.item : undefined}
+          query={
+            range.preset === "custom"
+              ? { from: range.from, to: range.to }
+              : { preset: range.preset }
+          }
+        />
+      )}
       {report === "margin" && <MarginReport range={range} locale={locale} />}
       {report === "valuation" && <ValuationReport locale={locale} />}
       {report === "expiry" && <ExpiryReport range={range} />}

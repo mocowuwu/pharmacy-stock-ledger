@@ -51,6 +51,50 @@ export async function salesReport(range: DateRange) {
   };
 }
 
+/* -------------------------------------------------------------- movements */
+
+/**
+ * The stock ledger, per item, for the window.
+ *
+ * Same permission as the sales report -- it carries quantities and names, not
+ * cost prices -- because the person who should be checking that what left the
+ * shelf matches what was rung up is the manager on the floor.
+ */
+export async function movementsReport(
+  range: DateRange,
+  itemId?: string,
+  /** `null` lifts the row cap; the CSV export passes it, the screen does not. */
+  limit?: number | null,
+) {
+  await assertPermission("reports.sales");
+  const db = await getDb();
+  const options = await withTimezone(range);
+
+  const all = await reports.movementTotalsByItem(db, options);
+  const ledger = await reports.movementLedger(db, { ...options, itemId, limit });
+  // The totals follow the filter: with one item selected the headline figures
+  // are that item's, not the pharmacy's, which is what the screen is showing.
+  const byItem = itemId ? all.filter((row) => row.itemId === itemId) : all;
+
+  return {
+    byItem,
+    /** Every item that moved, for the filter -- not only the ones listed. */
+    choices: all
+      .map((row) => ({
+        itemId: row.itemId,
+        code: row.code,
+        label: `${row.name}${row.strength ? ` ${row.strength}` : ""}`,
+      }))
+      // Alphabetical: a dropdown is scanned by name, not by how much moved.
+      .sort((a, b) => a.label.localeCompare(b.label)),
+    movements: ledger.rows,
+    truncated: ledger.truncated,
+    itemId: itemId ?? null,
+    qtyIn: byItem.reduce((sum, row) => sum + row.qtyIn, 0),
+    qtyOut: byItem.reduce((sum, row) => sum + row.qtyOut, 0),
+  };
+}
+
 /* ----------------------------------------------------------------- margin */
 
 export async function marginReport(range: DateRange) {

@@ -76,6 +76,12 @@ relax one without saying so explicitly.
 - **Margin reads `sale_lines.unit_cost_snapshot`, never the batch.** That column
   is why last month's margin does not move when this month's delivery costs
   more. A report that joins `batches` for cost has undone it.
+- **`reports.movements` is the fraud report and holds no money.** It reads the
+  signed `stock_movements.qty_delta` -- positive in, negative out -- per item,
+  and every row names the person and the document behind it. It sits on the
+  `reports.sales` side of the split deliberately: the manager who should be
+  checking that what left the shelf matches what was rung up works on the shop
+  floor, and cost prices are not needed to do it.
 - **`reports.sales` shows what sold; `reports.financial` shows what it cost.**
   The split is deliberate and off for managers by default, so cost prices and
   margins need not be visible on the shop floor. `REPORT_PERMISSION` in
@@ -130,6 +136,16 @@ the arithmetic testable against a real database. Note that Postgres will not
 match a `GROUP BY` expression containing a bind parameter against the same
 expression in the `SELECT`; group by output position (`groupBy(sql`1`)`) when
 the timezone is interpolated.
+
+**The camera is a scanner, not a second entry path.** `ScanButton` in
+`src/components/BarcodeScanner.tsx` hands its payload to the same `findForSale`
+the keyboard feeds, so a GS1 code read off a box resolves exactly as a USB
+scanner's would. It uses the browser's own `BarcodeDetector` -- no bundled
+decoder, because one that misreads drug packaging is worse than no camera. Where
+it cannot scan it says which of the three things is missing -- https, the camera
+API, the decoder -- rather than hiding the button. A button that is simply absent
+is indistinguishable from a feature that was never built, and nobody can act on
+that; "the camera needs https" is something the owner can fix.
 
 **Money and dates go through `src/lib/format/`.** Never `parseFloat` a price:
 `parseFloat("15.000")` is 15, and in Indonesian that string means fifteen

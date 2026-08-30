@@ -372,7 +372,16 @@
     "decrease": "Remove one",
     "exceedsStock": "More than the {qty} {unit} available.",
     "searchNoScan": "Search for an item",
-    "searchHintNoScan": "Type a name or code, then press Enter."
+    "searchHintNoScan": "Type a name or code, then press Enter.",
+    "scanCamera": "Scan with camera",
+    "scanAim": "Hold the barcode inside the frame.",
+    "scanTypeInstead": "You can still type the name or the code into the search box.",
+    "scanUnsupported": "This browser cannot read barcodes with the camera.",
+    "scanDenied": "Camera access was refused. Allow it in the browser's site settings, and note that the camera only works over https or on this machine.",
+    "scanNoCamera": "No camera was found on this device.",
+    "scanInsecure": "The camera is blocked because this page is not on https. Open the till over https, or over localhost on this machine.",
+    "scanDiagnosis": "https: {secure} · camera: {camera} · barcode reader: {decoder}",
+    "scanFailed": "The camera could not be started."
   },
   "sales": {
     "title": "Sales history",
@@ -562,6 +571,7 @@
     },
     "nav": {
       "sales": "Sales",
+      "movements": "Stock movements",
       "margin": "Margin",
       "valuation": "Stock value",
       "expiry": "Expiry loss",
@@ -569,6 +579,7 @@
     },
     "blurb": {
       "sales": "Revenue by day, item, category, cashier and payment method",
+      "movements": "Every unit in and every unit out, per product, with who recorded it",
       "margin": "What was sold against what it cost",
       "valuation": "What is on the shelf right now, at cost",
       "expiry": "What was written off, and why",
@@ -594,6 +605,26 @@
       "returned": "Returned",
       "netUnits": "Net units",
       "netRevenue": "Net revenue"
+    },
+    "movements": {
+      "unitsIn": "Units in",
+      "unitsOut": "Units out",
+      "products": "Products moved",
+      "events": "Movements",
+      "byItem": "By product",
+      "note": "Open a product to see every movement behind its totals: what came in, what went out, when, and who recorded it.",
+      "product": "Product",
+      "allProducts": "All products",
+      "clearFilter": "Show all",
+      "in": "in",
+      "out": "out",
+      "when": "When",
+      "type": "Movement",
+      "document": "Document",
+      "by": "Recorded by",
+      "reason": "Reason",
+      "truncated": "There are more movements in this period than the screen lists. The totals are complete; the lists below show the most recent ones. Download the CSV for every row.",
+      "listTruncated": "Older movements for this product are not listed here. Choose it above, shorten the period, or download the CSV."
     },
     "margin": {
       "revenue": "Revenue",
@@ -652,7 +683,7 @@
     "newTitle": "New account",
     "editTitle": "Edit account",
     "username": "Username",
-    "usernameHint": "Lowercase letters, numbers, dot, dash or underscore. Cannot be changed later.",
+    "usernameHint": "Lowercase letters, numbers, dot, dash or underscore.",
     "fullName": "Full name",
     "fullNameHint": "As it should appear on the audit log and on receipts.",
     "locale": "Interface language",
@@ -733,7 +764,15 @@
       "tax": "PPN",
       "taxHint": "Off means no tax fields anywhere and a plain nota. A pharmacy below the PKP threshold does not charge PPN.",
       "narkotika": "Narkotika & psikotropika",
-      "narkotikaHint": "Switch on the day you first stock them. Items already carrying these classes keep showing them either way."
+      "narkotikaHint": "Switch on the day you first stock them. Items already carrying these classes keep showing them either way.",
+      "suppliers": "Suppliers",
+      "suppliersHint": "Supplier records and the picker on receiving. Off hides the Suppliers screen from the menu.",
+      "categories": "Categories",
+      "categoriesHint": "Item categories, for organizing and filtering the catalogue. Off hides the Categories screen from the menu.",
+      "counts": "Stock counts",
+      "countsHint": "Physical counts and posting the difference found. Off hides the Counts screen from the menu.",
+      "dispose": "Disposal",
+      "disposeHint": "Recording expired or damaged stock as a loss. Off hides the Dispose screen from the menu."
     },
     "tax": "PPN",
     "taxEnabled": "Charge PPN",
@@ -854,5 +893,44 @@
     "selling": "Selling",
     "alerts": "Alerts",
     "administration": "Administration"
+  },
+  "tutorial": {
+    "launcher": "Tutorial",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Done",
+    "step": "Step {current} of {total}",
+    "prompt": {
+      "title": "New here?",
+      "body": "Take a two-minute walkthrough of the screens set up for your account.",
+      "start": "Start tutorial",
+      "later": "Maybe later"
+    },
+    "intro": {
+      "title": "Welcome",
+      "owner": "This walkthrough covers every screen in the pharmacy system, since your account holds every permission. You can reopen it any time from this button.",
+      "staff": "This walkthrough only covers the screens set up for your account -- if something you use is missing here, ask the owner about your permissions. You can reopen it any time from this button."
+    },
+    "chapters": {
+      "dashboard": "The first screen after signing in: what needs attention today, at a glance.",
+      "sell": "Scan or search for an item, add it to the sale, and take payment. An expired batch is refused automatically, never just flagged.",
+      "items": "The medicine catalogue: names, prices and drug classes. Stock itself lives on batches, not here, so quantities are never edited from this screen.",
+      "receive": "Record a delivery from a supplier. Each delivery becomes its own batch, with its own expiry date and cost, so stock and cost tracking stay accurate down to the lot.",
+      "sales": "Every past sale, with its receipt. A sale can be voided here where that is still allowed -- not once it has been returned against.",
+      "returns": "Process a customer return. Returned medicine is quarantined rather than put straight back on the shelf, and controlled classes are never resold at all.",
+      "dispose": "Record expired or damaged stock leaving inventory as a loss, kept separate from ordinary corrections so the expiry-loss report stays honest.",
+      "counts": "Do a physical stock count and post the difference the count found, rather than overwriting what the system has on hand.",
+      "alerts": "Expiring batches, low stock and other warnings. Critical alerts, like expired stock still on the shelf, cannot be snoozed by anyone.",
+      "suppliers": "Keep supplier names and contact details for use when receiving stock.",
+      "categories": "Group items into categories to keep the catalogue and reports organised.",
+      "reports": "What sold, and -- for those with permission to see cost prices -- what it cost and what it made.",
+      "users": "Create staff accounts, set what each one can do, and issue or reset passwords.",
+      "settings": "The pharmacy's name, timezone, tax rate and which optional screens are switched on."
+    },
+    "outro": {
+      "title": "That's everything",
+      "body": "You can come back to this walkthrough any time using the Tutorial button."
+    }
   }
 }

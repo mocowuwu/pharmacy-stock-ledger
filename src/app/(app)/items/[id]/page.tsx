@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/lib/dal/session";
 import { can } from "@/lib/auth/permissions";
 import { getItem, listCategories } from "@/lib/dal/catalogue";
-import { Alert, PageHeader } from "@/components/ui";
+import { Alert, PageHeader, buttonSecondarySmall } from "@/components/ui";
 import { DRUG_CLASSES } from "@/lib/catalogue/enums";
 import { MODULE_DRUG_CLASSES, moduleFlags } from "@/lib/catalogue/modules";
 import { getSettings } from "@/lib/dal/settings";
@@ -52,7 +52,7 @@ export default async function ItemDetailPage({ params, searchParams }: PageProps
               />
               <button
                 type="submit"
-                className="rounded border border-rule px-3 py-1.5 text-sm text-muted hover:border-accent hover:text-accent"
+                className={buttonSecondarySmall}
               >
                 {item.status === "active" ? t("items.archive") : t("items.restore")}
               </button>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Alert, Card, Field, inputBase, inputClass } from "@/components/ui";
+import { Alert, Card, Field, buttonPrimary, inputBase, inputClass } from "@/components/ui";
 import { formatExpiry } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import { PAYMENT_METHODS } from "@/lib/catalogue/enums";
@@ -212,7 +212,7 @@ export function ReturnForm({
           <button
             type="submit"
             disabled={pending || chosen.length === 0}
-            className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+            className={buttonPrimary}
           >
             {pending ? t("common.loading") : t("returns.submit")}
           </button>

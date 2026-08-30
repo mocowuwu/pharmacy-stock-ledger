@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { useTranslations } from "next-intl";
 import { signIn, type SignInState } from "./actions";
+import { buttonPrimaryLarge } from "@/components/ui";
 
 export function LoginForm({ next }: { next: string }) {
   const t = useTranslations("auth");
@@ -61,7 +62,7 @@ export function LoginForm({ next }: { next: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="mt-1 rounded-lg bg-accent px-4 py-2.5 font-medium text-accent-contrast disabled:opacity-60"
+        className={`mt-1 ${buttonPrimaryLarge}`}
       >
         {pending ? t("signingIn") : t("signIn")}
       </button>

@@ -6,14 +6,7 @@ import { listCategories, listItems, type DrugClass } from "@/lib/dal/catalogue";
 import { onHandByItem } from "@/lib/dal/stock";
 import { DRUG_CLASSES } from "@/lib/catalogue/enums";
 import { formatMoney } from "@/lib/format/money";
-import {
-  Card,
-  Chip,
-  DrugClassMark,
-  EmptyState,
-  PageHeader,
-  inputClass,
-} from "@/components/ui";
+import { Card, Chip, DrugClassMark, EmptyState, PageHeader, buttonPrimary, buttonSecondary, inputClass } from "@/components/ui";
 
 export default async function ItemsPage({ searchParams }: PageProps<"/items">) {
   const session = await requirePermission("items.view");
@@ -53,7 +46,7 @@ export default async function ItemsPage({ searchParams }: PageProps<"/items">) {
           can(session.grant, "items.create") && (
             <Link
               href="/items/new"
-              className="rounded bg-accent px-4 py-2 text-sm font-medium text-accent-contrast"
+              className={buttonPrimary}
             >
               {t("items.new")}
             </Link>
@@ -87,7 +80,7 @@ export default async function ItemsPage({ searchParams }: PageProps<"/items">) {
         </select>
         <button
           type="submit"
-          className="rounded border border-rule px-4 py-2 text-sm text-muted hover:border-accent hover:text-accent"
+          className={buttonSecondary}
         >
           {t("common.search")}
         </button>

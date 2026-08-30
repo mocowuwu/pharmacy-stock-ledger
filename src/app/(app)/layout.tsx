@@ -4,7 +4,9 @@ import { canAny, type Permission } from "@/lib/auth/permissions";
 import { SidebarNav, TopNav, type NavEntry } from "@/components/Sidebar";
 import { getSettings } from "@/lib/dal/settings";
 import { MODULE_NAV, moduleFlags, type ModuleKey } from "@/lib/catalogue/modules";
+import { TutorialLauncher, TutorialProvider } from "@/components/Tutorial";
 import { signOut } from "../actions";
+import { markTutorialSeenAction } from "./tutorial-actions";
 
 /**
  * Navigation is generated from the signed-in user's permissions: a cashier does
@@ -60,66 +62,91 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     .toUpperCase();
 
   return (
-    <div className="flex min-h-screen">
-      {/* The sidebar keeps its dark scale in both themes, so the content area
-          carries the theme and the navigation stays a constant anchor. */}
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col bg-sidebar py-5 md:flex">
-        <div className="px-6 pb-6">
-          <span className="text-lg font-semibold tracking-tight text-sidebar-ink">
-            {settings.businessName || t("app.name")}
-          </span>
-          <span className="mt-0.5 block text-xs text-sidebar-muted">
-            {settings.businessTagline || t("app.tagline")}
-          </span>
-        </div>
-
-        <SidebarNav entries={entries} />
-
-        <div className="mt-4 border-t border-sidebar-rule px-3 pt-4">
-          <div className="flex items-center gap-3 px-3 pb-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent">
-              {initials}
+    <TutorialProvider
+      chapters={entries}
+      isOwner={session.user.isOwner}
+      seen={session.user.tutorialSeenAt !== null}
+      onSeen={markTutorialSeenAction}
+    >
+      <div className="flex min-h-screen">
+        {/* The sidebar keeps its dark scale in both themes, so the content area
+            carries the theme and the navigation stays a constant anchor. */}
+        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-sidebar py-5 md:flex">
+          <div className="flex items-center gap-3 px-5 pb-6">
+            {/* The mark is the business's own initial, not a logo we invented:
+                the name is the owner's, and a fixed glyph would go stale the
+                moment they rename the pharmacy in Settings. */}
+            <span
+              aria-hidden="true"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-base font-bold text-accent-contrast"
+            >
+              {(settings.businessName || t("app.name")).trim().charAt(0).toUpperCase()}
             </span>
             <span className="min-w-0">
-              <span className="block truncate text-sm text-sidebar-ink">
-                {session.user.fullName}
+              <span className="block truncate text-[0.95rem] leading-tight font-semibold tracking-tight text-sidebar-ink">
+                {settings.businessName || t("app.name")}
               </span>
-              <span className="block text-xs text-sidebar-muted">
-                {session.user.isOwner ? t("account.owner") : t("account.staff")}
+              <span className="mt-0.5 block truncate text-xs text-sidebar-muted">
+                {settings.businessTagline || t("app.tagline")}
               </span>
             </span>
           </div>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="w-full rounded-lg px-3 py-2 text-left text-sm text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-ink"
-            >
-              {t("nav.signOut")}
-            </button>
-          </form>
+
+          <SidebarNav entries={entries} />
+
+          <div className="mt-4 shrink-0 border-t border-sidebar-rule px-3 pt-4">
+            <div className="flex items-center gap-3 px-3 pb-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent">
+                {initials}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm text-sidebar-ink">
+                  {session.user.fullName}
+                </span>
+                <span className="block text-xs text-sidebar-muted">
+                  {session.user.isOwner ? t("account.owner") : t("account.staff")}
+                </span>
+              </span>
+            </div>
+            <TutorialLauncher variant="block" />
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="w-full rounded-xl px-3 py-2 text-left text-sm text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-ink"
+              >
+                {t("nav.signOut")}
+              </button>
+            </form>
+          </div>
+        </aside>
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* Sticky on a phone: the section links are how you move around when
+              there is no sidebar, and hunting for them means scrolling a long
+              table back to the top. */}
+          <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-sidebar-rule bg-sidebar px-4 py-3 md:hidden">
+            <span className="font-semibold text-sidebar-ink">
+              {settings.businessName || t("app.name")}
+            </span>
+            <div className="flex items-center gap-1">
+              <TutorialLauncher variant="compact" />
+              <form action={signOut}>
+                <button
+                  type="submit"
+                  className="rounded-lg px-3 py-1.5 text-sm text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-ink"
+                >
+                  {t("nav.signOut")}
+                </button>
+              </form>
+            </div>
+          </header>
+          <TopNav entries={entries} />
+
+          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-7 sm:px-8 sm:py-9">
+            {children}
+          </main>
         </div>
-      </aside>
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between gap-3 bg-sidebar px-4 py-3 md:hidden">
-          <span className="font-semibold text-sidebar-ink">
-            {settings.businessName || t("app.name")}
-          </span>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="rounded-lg px-3 py-1.5 text-sm text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-ink"
-            >
-              {t("nav.signOut")}
-            </button>
-          </form>
-        </header>
-        <TopNav entries={entries} />
-
-        <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-7 sm:px-8">
-          {children}
-        </main>
       </div>
-    </div>
+    </TutorialProvider>
   );
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/lib/dal/session";
 import { listCounts } from "@/lib/dal/counts";
-import { Card, Chip, EmptyState, PageHeader } from "@/components/ui";
+import { Card, Chip, EmptyState, PageHeader, buttonPrimary, buttonSecondarySmall } from "@/components/ui";
 import { formatDateTime } from "@/lib/format/date";
 
 const STATUS_TONE = {
@@ -28,7 +28,7 @@ export default async function CountsPage() {
         actions={
           <Link
             href="/counts/new"
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+            className={buttonPrimary}
           >
             {t("counts.start")}
           </Link>
@@ -102,7 +102,7 @@ export default async function CountsPage() {
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <Link
                       href={`/counts/${count.id}`}
-                      className="rounded border border-rule px-3 py-1.5 text-xs text-muted hover:border-accent hover:text-accent"
+                      className={buttonSecondarySmall}
                     >
                       {t("counts.openSheet")}
                     </Link>

@@ -53,6 +53,13 @@ export const users = pgTable(
     failedLoginCount: integer("failed_login_count").notNull().default(0),
     lockedUntil: ts("locked_until"),
 
+    /**
+     * Null until the in-app tutorial has been started or dismissed once. Drives
+     * the one-time "try the tutorial?" prompt; the tutorial itself stays
+     * reachable afterwards from the sidebar, so this only ever gates the prompt.
+     */
+    tutorialSeenAt: ts("tutorial_seen_at"),
+
     createdBy: uuid("created_by"),
     createdAt: ts("created_at").notNull().defaultNow(),
     updatedAt: ts("updated_at").notNull().defaultNow(),

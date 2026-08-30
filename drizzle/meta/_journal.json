@@ -22,6 +22,20 @@
       "when": 1788016420559,
       "tag": "0002_owner_configurable",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788069325925,
+      "tag": "0003_more_module_switches",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788069794375,
+      "tag": "0004_tutorial_seen_at",
+      "breakpoints": true
     }
   ]
 }

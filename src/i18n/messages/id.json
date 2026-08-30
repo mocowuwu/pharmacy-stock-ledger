@@ -372,7 +372,16 @@
     "decrease": "Kurangi satu",
     "exceedsStock": "Melebihi stok tersedia ({qty} {unit}).",
     "searchNoScan": "Cari barang",
-    "searchHintNoScan": "Ketik nama atau kode, lalu tekan Enter."
+    "searchHintNoScan": "Ketik nama atau kode, lalu tekan Enter.",
+    "scanCamera": "Pindai dengan kamera",
+    "scanAim": "Arahkan barcode ke dalam bingkai.",
+    "scanTypeInstead": "Nama atau kode barang tetap bisa diketik di kolom pencarian.",
+    "scanUnsupported": "Peramban ini tidak bisa membaca barcode lewat kamera.",
+    "scanDenied": "Akses kamera ditolak. Izinkan lewat pengaturan situs di peramban; kamera hanya bisa dipakai lewat https atau di komputer ini sendiri.",
+    "scanNoCamera": "Tidak ada kamera pada perangkat ini.",
+    "scanInsecure": "Kamera diblokir karena halaman ini bukan https. Buka kasir lewat https, atau lewat localhost di komputer ini.",
+    "scanDiagnosis": "https: {secure} · kamera: {camera} · pembaca barcode: {decoder}",
+    "scanFailed": "Kamera tidak bisa dijalankan."
   },
   "sales": {
     "title": "Riwayat Penjualan",
@@ -562,6 +571,7 @@
     },
     "nav": {
       "sales": "Penjualan",
+      "movements": "Kartu stok",
       "margin": "Margin",
       "valuation": "Nilai stok",
       "expiry": "Kerugian kedaluwarsa",
@@ -569,6 +579,7 @@
     },
     "blurb": {
       "sales": "Pendapatan per hari, barang, kategori, kasir dan metode pembayaran",
+      "movements": "Setiap unit masuk dan keluar per produk, beserta siapa yang mencatat",
       "margin": "Yang terjual dibandingkan dengan modalnya",
       "valuation": "Isi rak saat ini, dinilai dengan harga beli",
       "expiry": "Yang dimusnahkan, dan alasannya",
@@ -594,6 +605,26 @@
       "returned": "Diretur",
       "netUnits": "Unit bersih",
       "netRevenue": "Pendapatan bersih"
+    },
+    "movements": {
+      "unitsIn": "Unit masuk",
+      "unitsOut": "Unit keluar",
+      "products": "Produk bergerak",
+      "events": "Pergerakan",
+      "byItem": "Per produk",
+      "note": "Buka satu produk untuk melihat setiap pergerakan di balik angkanya: apa yang masuk, apa yang keluar, kapan, dan siapa yang mencatatnya.",
+      "product": "Produk",
+      "allProducts": "Semua produk",
+      "clearFilter": "Tampilkan semua",
+      "in": "masuk",
+      "out": "keluar",
+      "when": "Waktu",
+      "type": "Jenis",
+      "document": "Dokumen",
+      "by": "Dicatat oleh",
+      "reason": "Alasan",
+      "truncated": "Pergerakan pada periode ini lebih banyak daripada yang ditampilkan. Angka totalnya tetap lengkap; daftar di bawah hanya menampilkan yang terbaru. Unduh CSV untuk seluruh barisnya.",
+      "listTruncated": "Pergerakan lama untuk produk ini tidak ditampilkan di sini. Pilih produknya di atas, persempit periodenya, atau unduh CSV."
     },
     "margin": {
       "revenue": "Pendapatan",
@@ -652,7 +683,7 @@
     "newTitle": "Akun baru",
     "editTitle": "Ubah akun",
     "username": "Nama pengguna",
-    "usernameHint": "Huruf kecil, angka, titik, strip atau garis bawah. Tidak bisa diubah lagi nanti.",
+    "usernameHint": "Huruf kecil, angka, titik, strip atau garis bawah.",
     "fullName": "Nama lengkap",
     "fullNameHint": "Seperti yang akan muncul di log audit dan struk.",
     "locale": "Bahasa antarmuka",
@@ -733,7 +764,15 @@
       "tax": "PPN",
       "taxHint": "Jika mati, tidak ada kolom pajak di mana pun dan struk berupa nota biasa. Apotek di bawah ambang PKP tidak memungut PPN.",
       "narkotika": "Narkotika & psikotropika",
-      "narkotikaHint": "Nyalakan pada hari pertama menyimpannya. Barang yang sudah bergolongan ini tetap menampilkannya, menyala atau tidak."
+      "narkotikaHint": "Nyalakan pada hari pertama menyimpannya. Barang yang sudah bergolongan ini tetap menampilkannya, menyala atau tidak.",
+      "suppliers": "Pemasok",
+      "suppliersHint": "Data pemasok dan pilihannya di penerimaan. Jika mati, layar Pemasok disembunyikan dari menu.",
+      "categories": "Kategori",
+      "categoriesHint": "Kategori barang, untuk mengatur dan menyaring katalog. Jika mati, layar Kategori disembunyikan dari menu.",
+      "counts": "Stok opname",
+      "countsHint": "Penghitungan fisik dan pencatatan selisihnya. Jika mati, layar Opname disembunyikan dari menu.",
+      "dispose": "Pemusnahan",
+      "disposeHint": "Mencatat barang kedaluwarsa atau rusak sebagai kerugian. Jika mati, layar Pemusnahan disembunyikan dari menu."
     },
     "tax": "PPN",
     "taxEnabled": "Pungut PPN",
@@ -854,5 +893,44 @@
     "selling": "Penjualan",
     "alerts": "Peringatan",
     "administration": "Administrasi"
+  },
+  "tutorial": {
+    "launcher": "Tutorial",
+    "close": "Tutup",
+    "back": "Kembali",
+    "next": "Lanjut",
+    "finish": "Selesai",
+    "step": "Langkah {current} dari {total}",
+    "prompt": {
+      "title": "Baru di sini?",
+      "body": "Ikuti panduan singkat dua menit untuk layar-layar yang tersedia untuk akun Anda.",
+      "start": "Mulai tutorial",
+      "later": "Nanti saja"
+    },
+    "intro": {
+      "title": "Selamat datang",
+      "owner": "Panduan ini mencakup semua layar dalam sistem apotek, karena akun Anda memegang semua izin. Anda bisa membukanya lagi kapan saja lewat tombol ini.",
+      "staff": "Panduan ini hanya mencakup layar yang tersedia untuk akun Anda -- jika ada yang Anda pakai tapi tidak muncul di sini, tanyakan pemilik tentang izin Anda. Anda bisa membukanya lagi kapan saja lewat tombol ini."
+    },
+    "chapters": {
+      "dashboard": "Layar pertama setelah masuk: apa yang perlu diperhatikan hari ini, sekilas.",
+      "sell": "Pindai atau cari barang, tambahkan ke penjualan, lalu terima pembayaran. Batch yang sudah kedaluwarsa otomatis ditolak, bukan sekadar diberi peringatan.",
+      "items": "Katalog obat: nama, harga dan golongan obat. Stok sendiri ada pada batch, bukan di sini, jadi jumlah stok tidak pernah diubah dari layar ini.",
+      "receive": "Catat pengiriman dari pemasok. Setiap pengiriman menjadi batch tersendiri, dengan tanggal kedaluwarsa dan harga modalnya sendiri, sehingga stok dan biaya tetap akurat sampai ke tingkat lot.",
+      "sales": "Semua penjualan sebelumnya, lengkap dengan struknya. Penjualan bisa dibatalkan di sini selama masih diizinkan -- tidak lagi bisa setelah pernah diretur.",
+      "returns": "Proses retur pelanggan. Obat yang diretur dikarantina, bukan langsung dijual kembali, dan golongan obat terkontrol sama sekali tidak pernah dijual ulang.",
+      "dispose": "Catat stok kedaluwarsa atau rusak yang keluar dari inventaris sebagai kerugian, dipisahkan dari koreksi biasa agar laporan kerugian kedaluwarsa tetap akurat.",
+      "counts": "Lakukan stock opname fisik dan bukukan selisih yang ditemukan, bukan menimpa angka yang sudah tercatat di sistem.",
+      "alerts": "Batch yang mendekati kedaluwarsa, stok menipis, dan peringatan lainnya. Peringatan kritis, seperti stok kedaluwarsa yang masih di rak, tidak bisa ditunda oleh siapa pun.",
+      "suppliers": "Simpan nama dan kontak pemasok untuk digunakan saat menerima stok.",
+      "categories": "Kelompokkan barang ke dalam kategori agar katalog dan laporan tetap rapi.",
+      "reports": "Apa yang terjual, dan -- bagi yang berizin melihat harga modal -- berapa biayanya dan berapa keuntungannya.",
+      "users": "Buat akun staf, atur apa saja yang boleh mereka lakukan, dan terbitkan atau atur ulang kata sandi.",
+      "settings": "Nama apotek, zona waktu, tarif pajak, dan layar opsional mana saja yang diaktifkan."
+    },
+    "outro": {
+      "title": "Sekian semuanya",
+      "body": "Anda bisa kembali ke panduan ini kapan saja lewat tombol Tutorial."
+    }
   }
 }

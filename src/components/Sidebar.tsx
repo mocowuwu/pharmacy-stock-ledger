@@ -135,7 +135,15 @@ export function SidebarNav({ entries }: { entries: NavEntry[] }) {
   const pathname = usePathname();
 
   return (
-    <nav className="flex flex-1 flex-col gap-0.5 px-3">
+    // The link list scrolls, the sections around it do not: with every module
+    // switched on this is fourteen entries, which is taller than a laptop
+    // screen, and the sidebar is sticky -- so anything past the fold could not
+    // be reached by scrolling the page either, sign-out included.
+    //
+    // `min-h-0` is what makes it scroll rather than overflow: a flex child's
+    // default minimum is its content height, so without it the list refuses to
+    // shrink and pushes the bottom section off the screen exactly as before.
+    <nav className="sidebar-scroll flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3">
       {entries.map((entry) => {
         const active = isActive(pathname, entry.href, entries);
         return (
@@ -143,9 +151,15 @@ export function SidebarNav({ entries }: { entries: NavEntry[] }) {
             key={entry.key}
             href={entry.href}
             aria-current={active ? "page" : undefined}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+            // The active fill stays solid rather than becoming a tinted pill.
+            // The sidebar is dark in *both* themes while the accent is not --
+            // it darkens to #6d3beb in light mode -- so a translucent accent on
+            // this background would be legible in one theme and mud in the
+            // other. A solid fill with `--accent-contrast` is the only
+            // treatment that holds up in both.
+            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors duration-150 ${
               active
-                ? "bg-accent text-accent-contrast font-medium"
+                ? "bg-accent text-accent-contrast font-medium shadow-[0_2px_10px_-2px_var(--accent)]"
                 : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-ink"
             }`}
           >
@@ -163,7 +177,7 @@ export function TopNav({ entries }: { entries: NavEntry[] }) {
   const pathname = usePathname();
 
   return (
-    <nav className="overflow-x-auto border-b border-sidebar-rule bg-sidebar md:hidden">
+    <nav className="sidebar-scroll sticky top-[3.25rem] z-30 overflow-x-auto border-b border-sidebar-rule bg-sidebar md:hidden">
       <ul className="flex gap-1 px-3 py-2">
         {entries.map((entry) => {
           const active = isActive(pathname, entry.href, entries);
@@ -172,7 +186,7 @@ export function TopNav({ entries }: { entries: NavEntry[] }) {
               <Link
                 href={entry.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm ${
+                className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm whitespace-nowrap transition-colors duration-150 ${
                   active
                     ? "bg-accent text-accent-contrast font-medium"
                     : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-ink"

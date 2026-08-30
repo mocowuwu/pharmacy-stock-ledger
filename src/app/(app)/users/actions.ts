@@ -30,6 +30,10 @@ function readProfile(formData: FormData) {
   };
 }
 
+function readEditableProfile(formData: FormData) {
+  return { username: String(formData.get("username") ?? ""), ...readProfile(formData) };
+}
+
 export type NewUserState = {
   formError?: string;
   /**
@@ -75,7 +79,7 @@ export async function submitEditUser(
 ): Promise<EditUserState> {
   const id = String(formData.get("userId") ?? "");
   try {
-    await updateUser(id, readProfile(formData));
+    await updateUser(id, readEditableProfile(formData));
     revalidatePath("/users");
     revalidatePath(`/users/${id}`);
     return { saved: true };

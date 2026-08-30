@@ -17,7 +17,16 @@
  * records every movement, whatever is switched on.
  */
 
-export const MODULES = ["returns", "barcodes", "tax", "narkotika"] as const;
+export const MODULES = [
+  "returns",
+  "barcodes",
+  "tax",
+  "narkotika",
+  "suppliers",
+  "categories",
+  "counts",
+  "dispose",
+] as const;
 
 export type ModuleKey = (typeof MODULES)[number];
 
@@ -27,6 +36,10 @@ export const MODULE_SETTING = {
   barcodes: "barcodesEnabled",
   tax: "taxEnabled",
   narkotika: "narkotikaEnabled",
+  suppliers: "suppliersEnabled",
+  categories: "categoriesEnabled",
+  counts: "countsEnabled",
+  dispose: "disposeEnabled",
 } as const satisfies Record<ModuleKey, string>;
 
 export type ModuleFlags = Record<ModuleKey, boolean>;
@@ -37,12 +50,20 @@ export function moduleFlags(settings: {
   barcodesEnabled: boolean;
   taxEnabled: boolean;
   narkotikaEnabled: boolean;
+  suppliersEnabled: boolean;
+  categoriesEnabled: boolean;
+  countsEnabled: boolean;
+  disposeEnabled: boolean;
 }): ModuleFlags {
   return {
     returns: settings.returnsEnabled,
     barcodes: settings.barcodesEnabled,
     tax: settings.taxEnabled,
     narkotika: settings.narkotikaEnabled,
+    suppliers: settings.suppliersEnabled,
+    categories: settings.categoriesEnabled,
+    counts: settings.countsEnabled,
+    dispose: settings.disposeEnabled,
   };
 }
 
@@ -54,6 +75,10 @@ export function moduleFlags(settings: {
  */
 export const MODULE_NAV: Partial<Record<ModuleKey, readonly string[]>> = {
   returns: ["returns"],
+  suppliers: ["suppliers"],
+  categories: ["categories"],
+  counts: ["counts"],
+  dispose: ["dispose"],
 };
 
 /**

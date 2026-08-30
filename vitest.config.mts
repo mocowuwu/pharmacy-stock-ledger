@@ -10,6 +10,11 @@ export default defineConfig({
     // Each integration test builds its own in-memory database; running files in
     // parallel processes keeps them isolated without any shared fixture.
     testTimeout: 30_000,
+    // Each file's `beforeAll` builds a database: PGlite's wasm has to compile
+    // and the migrations have to run, and on a cold cache with 19 files
+    // starting at once that passes vitest's 10s default and the whole file
+    // fails on a timeout rather than on anything it was testing.
+    hookTimeout: 60_000,
   },
   resolve: {
     alias: {

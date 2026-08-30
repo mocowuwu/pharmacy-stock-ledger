@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { PRESETS, type Preset } from "@/lib/reports/catalogue";
-import { inputBase } from "@/components/ui";
+import { buttonSecondarySmall, inputBase } from "@/components/ui";
 
 /**
  * The period control, shared by every report.
@@ -87,16 +87,24 @@ export async function ExportLink({
   basePath,
   from,
   to,
+  extra,
 }: {
   basePath: string;
   from: string;
   to: string;
+  /** Anything else the screen is filtered by, so the file matches the view. */
+  extra?: Record<string, string | undefined>;
 }) {
   const t = await getTranslations();
+  const query = new URLSearchParams({ from, to });
+  for (const [key, value] of Object.entries(extra ?? {})) {
+    if (value) query.set(key, value);
+  }
+
   return (
     <a
-      href={`${basePath}/export?from=${from}&to=${to}`}
-      className="rounded-lg border border-rule px-3 py-1.5 text-sm text-muted hover:border-accent hover:text-accent"
+      href={`${basePath}/export?${query.toString()}`}
+      className={buttonSecondarySmall}
       title={t("reports.exportHint")}
     >
       {t("reports.export")}

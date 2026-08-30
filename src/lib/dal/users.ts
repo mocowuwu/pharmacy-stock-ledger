@@ -57,7 +57,7 @@ export type NewUserInput = {
   permissions: readonly string[];
 };
 
-export type EditUserInput = Omit<NewUserInput, "username">;
+export type EditUserInput = NewUserInput;
 
 /* ------------------------------------------------------------------ reading */
 
@@ -200,6 +200,19 @@ export async function updateUser(id: string, input: EditUserInput) {
   const target = await requireTarget(id);
   const permissions = permissionsToStore(target, input.permissions);
 
+  const username = normaliseUsername(input.username);
+  if (!isValidUsername(username)) throw new UserError("invalid_username");
+  if (!input.fullName.trim()) throw new UserError("name_required");
+
+  if (username !== target.username) {
+    const [existing] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(sql`lower(${users.username}) = ${username}`, ne(users.id, id)))
+      .limit(1);
+    if (existing) throw new UserError("username_taken");
+  }
+
   const before = await db
     .select({ permission: userPermissions.permission })
     .from(userPermissions)
@@ -209,6 +222,7 @@ export async function updateUser(id: string, input: EditUserInput) {
     await tx
       .update(users)
       .set({
+        username,
         fullName: input.fullName.trim(),
         locale: input.locale,
         isPharmacist: input.isPharmacist,
@@ -240,8 +254,16 @@ export async function updateUser(id: string, input: EditUserInput) {
     action: "user.updated",
     entityType: "users",
     entityId: id,
-    before: { fullName: target.fullName, permissions: before.map((p) => p.permission) },
-    after: { fullName: input.fullName, permissions: target.isOwner ? null : permissions },
+    before: {
+      username: target.username,
+      fullName: target.fullName,
+      permissions: before.map((p) => p.permission),
+    },
+    after: {
+      username,
+      fullName: input.fullName,
+      permissions: target.isOwner ? null : permissions,
+    },
   });
 
   return { userId: id };

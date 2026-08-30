@@ -104,6 +104,42 @@
   --sidebar-rule: #2b2440;
 }
 
+/*
+ * Elevation, rings and motion.
+ * -------
+ * Kept separate from the palette above on purpose: none of these carry
+ * meaning, so none of them went through the data-viz validator. Shadows are
+ * two-stop -- a tight contact shadow plus a wide soft one -- because a single
+ * blurred box reads as a smudge at these radii. In dark mode light does not
+ * fall from above, so the lift comes from a hairline highlight on the top edge
+ * and the shadow only deepens the separation.
+ */
+:root {
+  --shadow-card: 0 1px 2px rgba(23, 20, 31, 0.04), 0 1px 3px rgba(23, 20, 31, 0.03);
+  --shadow-raised: 0 1px 2px rgba(23, 20, 31, 0.04), 0 6px 16px -4px rgba(23, 20, 31, 0.08);
+  --shadow-pop: 0 2px 4px rgba(23, 20, 31, 0.05), 0 12px 28px -8px rgba(23, 20, 31, 0.14);
+  --edge: inset 0 1px 0 rgba(255, 255, 255, 0);
+  --ring: color-mix(in oklab, var(--accent) 22%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.45), 0 8px 20px -6px rgba(0, 0, 0, 0.5);
+    --shadow-pop: 0 2px 6px rgba(0, 0, 0, 0.5), 0 16px 36px -10px rgba(0, 0, 0, 0.65);
+    --edge: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    --ring: color-mix(in oklab, var(--accent) 30%, transparent);
+  }
+}
+
+:root[data-theme="dark"] {
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.45), 0 8px 20px -6px rgba(0, 0, 0, 0.5);
+  --shadow-pop: 0 2px 6px rgba(0, 0, 0, 0.5), 0 16px 36px -10px rgba(0, 0, 0, 0.65);
+  --edge: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --ring: color-mix(in oklab, var(--accent) 30%, transparent);
+}
+
 @theme inline {
   --color-background: var(--bg);
   --color-surface: var(--surface);
@@ -134,6 +170,12 @@
 body {
   background: var(--bg);
   color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Slightly tighter than the browser default: the app is mostly labels and
+     figures, and the stock default leaves headings looking loose at these
+     sizes. */
+  letter-spacing: -0.011em;
 }
 
 /* Quantities, prices and dates line up in columns throughout the app. */
@@ -141,10 +183,103 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Visible keyboard focus everywhere: the till is operated without a mouse. */
+/* Visible keyboard focus everywhere: the till is operated without a mouse.
+   The solid outline is what carries it -- the soft ring behind is decoration
+   and is allowed to be invisible to anyone whose browser lacks color-mix. */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+/* Interactive surfaces settle rather than snap. Suppressed wholesale by the
+   reduced-motion block below. */
+.lift {
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    border-color 140ms ease;
+}
+
+.lift:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-raised);
+}
+
+/* A card that is a link should not move under a click that is already landing. */
+.lift:active {
+  transform: translateY(0);
+}
+
+/*
+ * Stat tiles. The hover treatment is conditional on the tile actually being
+ * inside a link, which most but not all of them are -- a tile that rises under
+ * the cursor and then goes nowhere reads as a broken button.
+ */
+.stat {
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    border-color 140ms ease;
+}
+
+a:hover > .stat {
+  transform: translateY(-1px);
+  border-color: color-mix(in oklab, var(--accent) 32%, var(--rule));
+  box-shadow: var(--shadow-raised), var(--edge);
+}
+
+a:active > .stat {
+  transform: translateY(0);
+}
+
+/*
+ * The nav list scrolls, and the platform scrollbar is drawn for a light page --
+ * a bright track down the side of a permanently dark sidebar. Thin and
+ * self-coloured instead. Firefox gets the standard properties, WebKit the
+ * prefixed pseudo-elements; a browser that honours neither still scrolls.
+ */
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sidebar-rule) transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: var(--sidebar-rule);
+  border-radius: 999px;
+}
+
+.sidebar-scroll:hover::-webkit-scrollbar-thumb {
+  background: var(--sidebar-muted);
+}
+
+/*
+ * Row hover on every data table. Global rather than per-table: there are a
+ * dozen of them and they are all the same kind of thing -- a dense list a
+ * person is tracking across with their eye. Only header rows carry a
+ * background of their own, and those live in `thead`.
+ */
+tbody tr {
+  transition: background-color 120ms ease;
+}
+
+tbody tr:hover {
+  background: var(--surface-2);
+}
+
+@media print {
+  tbody tr:hover {
+    background: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -153,6 +288,13 @@ body {
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* Not just instant -- absent. A hover that jumps a pixel with no transition
+     is worse than one that never moves. */
+  .lift:hover,
+  a:hover > .stat {
+    transform: none;
   }
 }
 

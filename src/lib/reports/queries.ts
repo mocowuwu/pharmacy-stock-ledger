@@ -9,6 +9,8 @@ import {
   returnLines,
   sales,
   saleLines,
+  stockCounts,
+  stockMovements,
   suppliers,
   users,
 } from "@/db/schema";
@@ -569,4 +571,211 @@ export async function supplierHistory(tx: Database, options: ReportOptions) {
       };
     })
     .sort((a, b) => b.value - a.value);
+}
+
+/* ------------------------------------------------------------- movements */
+
+/**
+ * Every unit in and every unit out, per item.
+ *
+ * This is the fraud report. The other five say what the business did; this one
+ * says what happened to the stock, which is where a discrepancy shows up:
+ * received 100, sold 60, adjusted away 40 is a different story from received
+ * 100 and sold 100, and no revenue figure can tell them apart.
+ *
+ * `qty_delta` is signed, so "in" and "out" are the positive and negative halves
+ * of the same column rather than a guess from the movement type -- a voided
+ * sale is a `sale_void` putting units back, and it belongs in the in column.
+ */
+
+/** The ledger's own types, kept as data so a caller can pivot on them. */
+export type MovementBucket = {
+  type: string;
+  qtyIn: number;
+  qtyOut: number;
+  events: number;
+};
+
+export type MovementTotals = {
+  itemId: string;
+  code: string;
+  name: string;
+  strength: string | null;
+  unit: string;
+  categoryName: string | null;
+  qtyIn: number;
+  qtyOut: number;
+  /** In minus out. Not the on-hand figure -- only what moved in the window. */
+  net: number;
+  events: number;
+  byType: MovementBucket[];
+};
+
+function movedWithin({ from, to, timezone = DEFAULT_TIMEZONE }: ReportOptions) {
+  return sql`${localDate(sql`${stockMovements.createdAt}`, timezone)} between ${from} and ${to}`;
+}
+
+/**
+ * Totals per item, split by movement type.
+ *
+ * Aggregated in SQL down to one row per item and type -- a handful of rows per
+ * item -- and folded into a per-item shape here. The fold is arithmetic on an
+ * already-complete result, not a summation of a limited row set.
+ */
+export async function movementTotalsByItem(
+  tx: Database,
+  options: ReportOptions,
+): Promise<MovementTotals[]> {
+  const rows = await tx
+    .select({
+      itemId: items.id,
+      code: items.code,
+      name: items.genericName,
+      strength: items.strength,
+      unit: items.unit,
+      categoryName: categories.name,
+      type: stockMovements.type,
+      qtyIn: sql<number>`coalesce(sum(greatest(${stockMovements.qtyDelta}, 0)), 0)::int`,
+      qtyOut: sql<number>`coalesce(sum(-least(${stockMovements.qtyDelta}, 0)), 0)::int`,
+      events: sql<number>`count(*)::int`,
+    })
+    .from(stockMovements)
+    .innerJoin(items, eq(items.id, stockMovements.itemId))
+    .leftJoin(categories, eq(categories.id, items.categoryId))
+    .where(movedWithin(options))
+    .groupBy(items.id, categories.name, stockMovements.type);
+
+  const byItem = new Map<string, MovementTotals>();
+  for (const row of rows) {
+    const existing =
+      byItem.get(row.itemId) ??
+      ({
+        itemId: row.itemId,
+        code: row.code,
+        name: row.name,
+        strength: row.strength,
+        unit: row.unit,
+        categoryName: row.categoryName,
+        qtyIn: 0,
+        qtyOut: 0,
+        net: 0,
+        events: 0,
+        byType: [],
+      } satisfies MovementTotals);
+
+    existing.qtyIn += row.qtyIn;
+    existing.qtyOut += row.qtyOut;
+    existing.net = existing.qtyIn - existing.qtyOut;
+    existing.events += row.events;
+    existing.byType.push({
+      type: row.type,
+      qtyIn: row.qtyIn,
+      qtyOut: row.qtyOut,
+      events: row.events,
+    });
+    byItem.set(row.itemId, existing);
+  }
+
+  return [...byItem.values()]
+    .map((row) => ({
+      ...row,
+      byType: row.byType.sort((a, b) => b.qtyIn + b.qtyOut - (a.qtyIn + a.qtyOut)),
+    }))
+    .sort((a, b) => b.qtyOut - a.qtyOut || b.qtyIn - a.qtyIn);
+}
+
+export type MovementRow = {
+  id: string;
+  itemId: string;
+  type: string;
+  qtyDelta: number;
+  reason: string | null;
+  createdAt: Date;
+  lotNumber: string | null;
+  expiryDate: string;
+  performedBy: string;
+  /** The sale, return, disposal or count this movement came from, if any. */
+  document: string | null;
+};
+
+/**
+ * The movements themselves, newest first.
+ *
+ * Every row carries who did it and which document it belongs to, because a
+ * quantity with no name against it is exactly the row somebody would want to
+ * be anonymous. The document numbers are joined per reference table rather
+ * than stored on the movement -- `ref_type`/`ref_id` is the ledger's own
+ * pointer and this is the only place that has to read it.
+ *
+ * `limit` is a display cap, not part of any total: the figures above the list
+ * come from `movementTotalsByItem`, which counts every row. `truncated` says
+ * plainly when the list is not the whole window rather than letting a short
+ * list imply a quiet period. `limit: null` lifts the cap entirely, which is
+ * what the CSV export wants -- a spreadsheet has no scroll problem, and a
+ * download that quietly stopped at 2.000 rows would be worse than a slow one.
+ */
+export async function movementLedger(
+  tx: Database,
+  options: ReportOptions & { itemId?: string; limit?: number | null },
+): Promise<{ rows: MovementRow[]; truncated: boolean }> {
+  const limit = options.limit === null ? null : (options.limit ?? 2000);
+
+  const where = options.itemId
+    ? and(movedWithin(options), eq(stockMovements.itemId, options.itemId))
+    : movedWithin(options);
+
+  const rows = await tx
+    .select({
+      id: stockMovements.id,
+      itemId: stockMovements.itemId,
+      type: stockMovements.type,
+      qtyDelta: stockMovements.qtyDelta,
+      reason: stockMovements.reason,
+      createdAt: stockMovements.createdAt,
+      lotNumber: batches.lotNumber,
+      expiryDate: batches.expiryDate,
+      performedBy: users.fullName,
+      document: sql<string | null>`coalesce(
+        ${sales.saleNumber},
+        ${returns.returnNumber},
+        ${disposals.disposalNumber},
+        ${stockCounts.countNumber}
+      )`,
+    })
+    .from(stockMovements)
+    .innerJoin(batches, eq(batches.id, stockMovements.batchId))
+    .innerJoin(users, eq(users.id, stockMovements.performedBy))
+    .leftJoin(
+      sales,
+      and(eq(stockMovements.refType, sql`'sales'`), eq(sales.id, stockMovements.refId)),
+    )
+    .leftJoin(
+      returns,
+      and(
+        eq(stockMovements.refType, sql`'returns'`),
+        eq(returns.id, stockMovements.refId),
+      ),
+    )
+    .leftJoin(
+      disposals,
+      and(
+        eq(stockMovements.refType, sql`'disposals'`),
+        eq(disposals.id, stockMovements.refId),
+      ),
+    )
+    .leftJoin(
+      stockCounts,
+      and(
+        eq(stockMovements.refType, sql`'stock_counts'`),
+        eq(stockCounts.id, stockMovements.refId),
+      ),
+    )
+    .where(where)
+    .orderBy(sql`${stockMovements.createdAt} desc`)
+    // One more than asked for, so "there are more" is known rather than guessed
+    // from a full page.
+    .limit(limit === null ? Number.MAX_SAFE_INTEGER : limit + 1);
+
+  if (limit === null) return { rows, truncated: false };
+  return { rows: rows.slice(0, limit), truncated: rows.length > limit };
 }

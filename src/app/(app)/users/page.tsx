@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/lib/dal/session";
 import { listUsers } from "@/lib/dal/users";
 import { ALL_PERMISSIONS } from "@/lib/auth/permissions";
-import { Card, Chip, EmptyState, PageHeader } from "@/components/ui";
+import { Card, Chip, EmptyState, PageHeader, buttonPrimary, buttonSecondarySmall } from "@/components/ui";
 import { formatDateTime } from "@/lib/format/date";
 
 export default async function UsersPage() {
@@ -21,7 +21,7 @@ export default async function UsersPage() {
         actions={
           <Link
             href="/users/new"
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+            className={buttonPrimary}
           >
             {t("users.new")}
           </Link>
@@ -106,7 +106,7 @@ export default async function UsersPage() {
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <Link
                       href={`/users/${user.id}`}
-                      className="rounded border border-rule px-3 py-1.5 text-xs text-muted hover:border-accent hover:text-accent"
+                      className={buttonSecondarySmall}
                     >
                       {t("common.edit")}
                     </Link>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Alert, Card } from "@/components/ui";
+import { Alert, Card, buttonPrimary } from "@/components/ui";
 
 /**
  * The one-time password, shown once.
@@ -39,7 +39,7 @@ export function TemporaryPassword({
 
       <Link
         href={done.href}
-        className="mt-4 inline-block rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+        className={`mt-4 ${buttonPrimary}`}
       >
         {done.label ?? t("users.passwordDone")}
       </Link>

@@ -5,7 +5,7 @@ import { requirePermission } from "@/lib/dal/session";
 import { can } from "@/lib/auth/permissions";
 import { getSale, returnableUnits, returnsForSale } from "@/lib/dal/sales";
 import { getSettings } from "@/lib/dal/settings";
-import { Alert, Card, PageHeader } from "@/components/ui";
+import { Alert, Card, PageHeader, buttonSecondary } from "@/components/ui";
 import { formatDateTime, formatExpiry } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import { voidSaleAction } from "../actions";
@@ -191,7 +191,7 @@ export default async function SaleDetailPage({
             </div>
             <Link
               href={`/sales/${sale.id}/return`}
-              className="rounded-lg border border-accent/40 px-4 py-2 text-sm text-accent hover:bg-accent-soft"
+              className={buttonSecondary}
             >
               {t("returns.start")}
             </Link>

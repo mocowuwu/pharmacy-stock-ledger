@@ -97,6 +97,18 @@ export const settings = pgTable(
      */
     narkotikaEnabled: boolean("narkotika_enabled").notNull().default(false),
 
+    /** Supplier records and the receiving screen's supplier picker. */
+    suppliersEnabled: boolean("suppliers_enabled").notNull().default(true),
+
+    /** Item categories, used for organizing the catalogue and filtering. */
+    categoriesEnabled: boolean("categories_enabled").notNull().default(true),
+
+    /** Physical stock counts and their posting screen. */
+    countsEnabled: boolean("counts_enabled").notNull().default(true),
+
+    /** Disposing expired or damaged stock as a loss. */
+    disposeEnabled: boolean("dispose_enabled").notNull().default(true),
+
     digestEnabled: boolean("digest_enabled").notNull().default(false),
     digestEmail: text("digest_email"),
     /** Local hour the digest is sent, 0-23. The job decides; nothing polls. */

@@ -3,14 +3,7 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/lib/dal/session";
 import { getCount } from "@/lib/dal/counts";
-import {
-  Alert,
-  Card,
-  Chip,
-  DrugClassMark,
-  PageHeader,
-  inputBase,
-} from "@/components/ui";
+import { Alert, Card, Chip, DrugClassMark, PageHeader, buttonPrimary, inputBase } from "@/components/ui";
 import { PrintButton } from "@/components/PrintButton";
 import { formatDateTime, formatExpiry } from "@/lib/format/date";
 import { cancelCountAction, postCountAction, saveSheet } from "../actions";
@@ -227,7 +220,7 @@ export default async function CountSheetPage({
           <div className="mt-4 flex flex-wrap items-center gap-3 print:hidden">
             <button
               type="submit"
-              className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+              className={buttonPrimary}
             >
               {t("counts.saveLine")}
             </button>
@@ -252,7 +245,7 @@ export default async function CountSheetPage({
               <button
                 type="submit"
                 disabled={unexplained.length > 0}
-                className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                className={buttonPrimary}
               >
                 {t("counts.post")}
               </button>

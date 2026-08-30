@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/dal/session";
 import { can } from "@/lib/auth/permissions";
 import { listAlerts } from "@/lib/dal/alerts";
 import { canSnooze, type AlertType } from "@/lib/alerts/rules";
-import { Alert, Card, Chip, EmptyState, PageHeader, inputBase } from "@/components/ui";
+import { Alert, Card, Chip, EmptyState, PageHeader, buttonSecondary, buttonSecondarySmall, inputBase } from "@/components/ui";
 import { daysBetween, formatDate, formatExpiry, today } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import { acknowledge, refresh, snooze } from "./actions";
@@ -43,7 +43,7 @@ export default async function AlertsPage({ searchParams }: PageProps<"/alerts">)
           <form action={refresh}>
             <button
               type="submit"
-              className="rounded border border-rule px-3 py-1.5 text-sm text-muted hover:border-accent hover:text-accent"
+              className={buttonSecondarySmall}
             >
               {t("alerts.refresh")}
             </button>
@@ -65,7 +65,7 @@ export default async function AlertsPage({ searchParams }: PageProps<"/alerts">)
         </select>
         <button
           type="submit"
-          className="rounded border border-rule px-4 py-2 text-sm text-muted hover:border-accent hover:text-accent"
+          className={buttonSecondary}
         >
           {t("common.search")}
         </button>
@@ -186,7 +186,7 @@ export default async function AlertsPage({ searchParams }: PageProps<"/alerts">)
                           <input type="hidden" name="alertId" value={alert.id} />
                           <button
                             type="submit"
-                            className="rounded border border-rule px-3 py-1.5 text-xs text-muted hover:border-accent hover:text-accent"
+                            className={buttonSecondarySmall}
                           >
                             {t("alerts.acknowledge")}
                           </button>
@@ -201,7 +201,7 @@ export default async function AlertsPage({ searchParams }: PageProps<"/alerts">)
                           <input type="hidden" name="days" value="7" />
                           <button
                             type="submit"
-                            className="rounded border border-rule px-3 py-1.5 text-xs text-muted hover:border-accent hover:text-accent"
+                            className={buttonSecondarySmall}
                           >
                             {t("alerts.snooze")} · {t("alerts.snoozeDays", { days: 7 })}
                           </button>

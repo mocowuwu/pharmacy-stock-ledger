@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { useTranslations } from "next-intl";
 import { changePassword, type ChangePasswordState } from "./actions";
 import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
+import { buttonPrimaryLarge } from "@/components/ui";
 
 export function ChangePasswordForm() {
   const t = useTranslations("auth");
@@ -76,7 +77,7 @@ export function ChangePasswordForm() {
       <button
         type="submit"
         disabled={pending}
-        className="mt-1 rounded-lg bg-accent px-4 py-2.5 font-medium text-accent-contrast disabled:opacity-60"
+        className={`mt-1 ${buttonPrimaryLarge}`}
       >
         {t("changePasswordTitle")}
       </button>
