@@ -27,7 +27,11 @@ import {
   waitUntilReady,
 } from "./postgres.mjs";
 import { installService } from "./service.mjs";
-import { ensureVisualCppRuntime, stopWindowsService } from "./windows.mjs";
+import {
+  ensureVisualCppRuntime,
+  installPanelShortcut,
+  stopWindowsService,
+} from "./windows.mjs";
 
 /**
  * The installer.
@@ -80,7 +84,13 @@ async function stopRunningInstance(paths, pgPort) {
     // pharmacy belongs to SYSTEM and the operator cannot stop it unaided.
     // Swallowing that failure here is what produced a "Permission denied" on a
     // log file three steps later. See stopWindowsService.
-    await stopWindowsService(paths, pgPort);
+    //
+    // It reports rather than exits, because the control panel calls it too and
+    // must not be killed by a declined prompt. For the installer, though, a
+    // pharmacy that will not stop is the end of the road: the next step
+    // overwrites the files it is running from.
+    const stopped = await stopWindowsService(paths, pgPort);
+    if (!stopped.ok) ui.fail(stopped.reason, stopped.remedy);
   }
   ui.detail("stopped the running pharmacy");
 }
@@ -358,6 +368,39 @@ export async function install() {
     );
   }
   ui.ok(`${controlPath} created`);
+
+  // The same thing with a face on it, for the owner who is not going to type
+  // any of the above. It only ever reads and drives what the command does.
+  const panelModule = join(paths.app, "installer", "panel.mjs");
+  const panelPath = join(root, isWindows ? "pharmacy-panel.cmd" : "pharmacy-panel");
+
+  if (isWindows) {
+    await writeFile(
+      panelPath,
+      [
+        "@echo off",
+        "REM Opens the pharmacy control panel. Written by the installer.",
+        `set "PHARMACY_ROOT=${root}"`,
+        `"${process.execPath}" "${panelModule}"`,
+        "",
+      ].join("\r\n"),
+      "utf8",
+    );
+    await installPanelShortcut(paths, panelPath);
+  } else {
+    await writeFile(
+      panelPath,
+      [
+        "#!/bin/sh",
+        "# Opens the pharmacy control panel. Written by the installer.",
+        `PHARMACY_ROOT=${JSON.stringify(root)} exec ${JSON.stringify(process.execPath)} \\`,
+        `  ${JSON.stringify(panelModule)}`,
+        "",
+      ].join("\n"),
+      { mode: 0o755 },
+    );
+  }
+  ui.ok(`${panelPath} created`);
 
   /* -------------------------------------------------------- 10. service */
 

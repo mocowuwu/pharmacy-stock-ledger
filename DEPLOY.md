@@ -58,6 +58,33 @@ Afterwards, `~/pharmacy/pharmacy` is the control command — on Windows,
 ~/pharmacy/pharmacy uninstall  # removes the software, keeps the records
 ```
 
+## The control panel
+
+The same things with a face on them, for an owner who is not going to type any
+of the above. On Windows the installer puts **Panel Kontrol Apotek** on the
+Desktop and in the Start Menu; everywhere else it is `~/pharmacy/pharmacy-panel`.
+
+Opening it starts a small server and opens one page in the default browser:
+whether the pharmacy and the database are running, the address to type at the
+till, the real path to the database, backups and logs with a button that opens
+each in the file manager, and buttons for start, stop, restart and back up now.
+It is in Indonesian, because the owner is who opens it.
+
+It is a **panel over a service, not a launcher for one**. The boot task owns the
+pharmacy so it returns after a power cut with nobody logged in; closing the page
+stops nothing, and the panel's own process exits by itself once nobody has
+looked at it for five minutes.
+
+It is bound to `127.0.0.1` on a port chosen at random, behind a token minted per
+launch and checked on every request, with a `Host` check against DNS rebinding
+and `POST` required for anything that changes something. That is not
+belt-and-braces: it is a page with a "stop the pharmacy" button on a machine
+that also runs a browser. Nothing about it is reachable from the network, and it
+needs no firewall rule.
+
+Adding nothing to `package.json` was a constraint, not a coincidence — it is
+served by the Node the installer already brings.
+
 Running the installer again over an existing install upgrades it: the database,
 its records and the owner account are left exactly as they are.
 

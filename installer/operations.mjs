@@ -1,0 +1,262 @@
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { exists, isWindows, lanAddress, npm, pathWith, run } from "./lib.mjs";
+import {
+  binDirectory,
+  connectionUrl,
+  isAccepting,
+  startServer,
+  stopServer,
+  waitUntilReady,
+} from "./postgres.mjs";
+import { startWindowsService, stopWindowsService } from "./windows.mjs";
+
+/**
+ * What the owner can do to a running pharmacy, as data rather than as printing.
+ *
+ * The same split the rest of the project uses: `src/lib/stock/*` holds the
+ * rules and takes an executor, `src/lib/dal/*` wraps permissions and audit
+ * around it. Here the rules take `(paths, config)` and return a result;
+ * `control.mjs` prints it to a terminal and `panel.mjs` serialises it to a
+ * browser. Neither has its own idea of what "stopped" means.
+ *
+ * Every function returns a plain object and throws only for genuinely
+ * exceptional failures. "The pharmacy is down" is a value, not an exception --
+ * it is the normal thing the owner opened this to find out.
+ */
+
+/** How the platform is asked to start and stop the supervisor. */
+const SERVICE = {
+  darwin: {
+    start: ["launchctl", ["kickstart", `gui/${process.getuid?.() ?? 501}/id.apotek.pharmacy`]],
+    stop: ["launchctl", ["kill", "SIGTERM", `gui/${process.getuid?.() ?? 501}/id.apotek.pharmacy`]],
+  },
+  linux: {
+    start: ["systemctl", ["--user", "start", "pharmacy.service"]],
+    stop: ["systemctl", ["--user", "stop", "pharmacy.service"]],
+  },
+  // Windows is deliberately absent. Both halves of it need to elevate -- the
+  // task runs as SYSTEM, so `schtasks /Run` and `/End` are alike refused for
+  // the operator -- and that does not fit a pair of argument arrays. It is
+  // handled by startWindowsService and stopWindowsService before this map is
+  // ever consulted.
+};
+
+/* ------------------------------------------------------------------ status */
+
+/**
+ * Whether each half is up, and where to open the pharmacy from the till.
+ *
+ * The app is asked over HTTP rather than by looking for a process: a Node that
+ * is running but wedged is down as far as the till is concerned, and that is
+ * the question being asked.
+ */
+export async function status(paths, config) {
+  const database = await isAccepting(paths, config.pgPort);
+
+  let app = false;
+  try {
+    const response = await fetch(`http://127.0.0.1:${config.appPort}/login`, {
+      signal: AbortSignal.timeout(3_000),
+    });
+    app = response.ok;
+  } catch {
+    app = false;
+  }
+
+  return {
+    database,
+    app,
+    pgPort: config.pgPort,
+    appPort: config.appPort,
+    address: `http://${lanAddress()}:${config.appPort}`,
+  };
+}
+
+/* --------------------------------------------------------- start and stop */
+
+/**
+ * Waits for the app itself, not merely for the database under it.
+ *
+ * `waitUntilReady` answers for PostgreSQL, and Next needs several more seconds
+ * after that. Returning at the database's readiness made `start` report success
+ * while the panel beside it still said the pharmacy was not running -- true,
+ * briefly, and exactly the kind of contradiction that makes somebody press the
+ * button again.
+ */
+async function waitForApp(paths, config, seconds = 90) {
+  for (let attempt = 0; attempt < seconds; attempt += 1) {
+    const state = await status(paths, config);
+    if (state.app) return state;
+    await new Promise((done) => setTimeout(done, 1_000));
+  }
+  return status(paths, config);
+}
+
+export async function start(paths, config) {
+  if (isWindows) {
+    // Elevates if it has to -- `schtasks /Run` on a SYSTEM task is refused for
+    // the operator exactly as `/End` is. See startWindowsService.
+    const started = await startWindowsService(paths);
+    if (!started.ok) {
+      return {
+        ok: false,
+        reason: `${started.reason}\n\n${started.remedy}`,
+        status: await status(paths, config),
+      };
+    }
+    await waitUntilReady(paths, config.pgPort, 60).catch(() => false);
+    return { ok: true, status: await waitForApp(paths, config) };
+  }
+
+  const service = SERVICE[process.platform];
+  if (!service) {
+    return { ok: false, reason: `no service integration for ${process.platform}` };
+  }
+
+  await run(...service.start);
+  // Asking the service to run is not the same as the pharmacy being up; the
+  // supervisor still has to bring PostgreSQL round. Report what is true when
+  // the waiting is over, not what was true a millisecond after asking.
+  await waitUntilReady(paths, config.pgPort, 60).catch(() => false);
+  return { ok: true, status: await status(paths, config) };
+}
+
+/**
+ * Stops both halves.
+ *
+ * On Windows this is the operation that cannot be done unaided once the machine
+ * has booted: the boot task runs the pharmacy as SYSTEM, and `schtasks /End`
+ * and `pg_ctl stop` are both refused for the operator. `stopWindowsService`
+ * elevates for exactly that and fails loudly rather than silently, so callers
+ * get a truthful answer instead of a stop that did not happen.
+ */
+export async function stop(paths, config) {
+  if (isWindows) {
+    const stopped = await stopWindowsService(paths, config.pgPort);
+    return {
+      ok: stopped.ok,
+      // The remedy is the useful half -- the two commands to run as an
+      // administrator -- so it travels with the refusal rather than being
+      // printed somewhere the operator is not looking.
+      reason: stopped.ok ? undefined : `${stopped.reason}\n\n${stopped.remedy}`,
+      status: await status(paths, config),
+    };
+  }
+
+  const service = SERVICE[process.platform];
+  if (service) await run(...service.stop).catch(() => {});
+  await stopServer(paths).catch(() => {});
+  return { ok: true, status: await status(paths, config) };
+}
+
+export async function restart(paths, config) {
+  await stop(paths, config);
+  return start(paths, config);
+}
+
+/** Whether stopping will raise a UAC prompt, so the page can say so first. */
+export function stoppingNeedsAdministrator() {
+  return isWindows;
+}
+
+/* ------------------------------------------------------------------ backup */
+
+/**
+ * A backup, now.
+ *
+ * Starts the database if it is not up, because the most likely moment somebody
+ * runs this by hand is when something is wrong.
+ */
+export async function backup(paths, config, { inherit = false } = {}) {
+  const started = !(await isAccepting(paths, config.pgPort));
+  if (started) {
+    await startServer(paths, config.pgPort);
+    await waitUntilReady(paths, config.pgPort);
+  }
+
+  const output = await npm(["run", "backup", "--", "--out", paths.backups], {
+    cwd: paths.app,
+    env: {
+      DATABASE_URL: connectionUrl(config.pgPort, config.dbPassword),
+      // The bundled pg_dump, not whatever may be on PATH: a version mismatch
+      // between dump and server is a restore that fails when it is needed.
+      // The bundled bin first, then the directory holding the Node that is
+      // running this -- npm lives beside it, and cron has no useful PATH.
+      PATH: pathWith(binDirectory(paths), dirname(process.execPath)),
+    },
+    inherit,
+  });
+
+  // The script prints the path it wrote. Reporting the file by name is the
+  // difference between "a backup happened somewhere" and one the owner can
+  // carry off the machine, which is the only kind that counts.
+  const file = /Dumping to\s+(.+\.dump)/u.exec(output ?? "")?.[1]?.trim() ?? null;
+  return { ok: true, startedDatabase: started, file, output: output ?? "" };
+}
+
+/* -------------------------------------------------------------------- logs */
+
+export async function logs(paths, lines = 60) {
+  const file = join(paths.logs, "pharmacy.log");
+  if (!(await exists(file))) return { file, lines: [], missing: true };
+
+  const text = await readFile(file, "utf8");
+  return {
+    file,
+    missing: false,
+    lines: text.split(/\r?\n/u).filter(Boolean).slice(-lines),
+  };
+}
+
+/* ----------------------------------------------------------------- folders */
+
+/**
+ * The places the owner is otherwise told to find by reading a document.
+ *
+ * `data` is the one that matters and the one nobody can name: the pharmacy's
+ * records live there and nowhere else, and a backup that has not been copied
+ * off this machine is not a backup.
+ */
+export function folders(paths) {
+  return [
+    { key: "data", path: paths.data },
+    { key: "backups", path: paths.backups },
+    { key: "logs", path: paths.logs },
+    { key: "root", path: paths.root },
+  ];
+}
+
+const REVEAL = {
+  win32: "explorer.exe",
+  darwin: "open",
+  linux: "xdg-open",
+};
+
+/** Opens one of those folders in the platform's file manager. */
+export async function reveal(paths, key) {
+  const folder = folders(paths).find((entry) => entry.key === key);
+  if (!folder) return { ok: false, reason: `unknown folder: ${key}` };
+
+  const command = REVEAL[process.platform];
+  if (!command) return { ok: false, reason: `no file manager for ${process.platform}` };
+
+  // Checked here rather than inferred from the exit code, because on Windows
+  // the exit code cannot carry it -- see below. A folder that is not there is
+  // the only way this realistically fails, and it is worth saying out loud:
+  // `logs` does not exist until the pharmacy has run once.
+  if (!(await exists(folder.path))) {
+    return { ok: false, reason: `not there (yet): ${folder.path}` };
+  }
+
+  try {
+    await run(command, [folder.path]);
+  } catch (error) {
+    // `explorer.exe` exits 1 on success -- verified, not assumed. It is
+    // documented nowhere and has been that way for decades, so treating its
+    // exit code as meaningful would report every window that plainly opened as
+    // a failure. The existence check above is what makes ignoring it safe.
+    if (!isWindows) return { ok: false, reason: error.message };
+  }
+  return { ok: true, path: folder.path };
+}

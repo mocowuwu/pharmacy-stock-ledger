@@ -1,14 +1,7 @@
 import { readFile, readdir, rm } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
-import { exists, has, lanAddress, layout, npm, pathWith, run, ui } from "./lib.mjs";
-import {
-  binDirectory,
-  connectionUrl,
-  isAccepting,
-  startServer,
-  stopServer,
-  waitUntilReady,
-} from "./postgres.mjs";
+import { resolve } from "node:path";
+import { exists, layout, ui } from "./lib.mjs";
+import * as operations from "./operations.mjs";
 import { removeService } from "./service.mjs";
 
 /**
@@ -17,6 +10,10 @@ import { removeService } from "./service.mjs";
  * Deliberately short: start, stop, status, backup, logs, uninstall. Anything
  * more is a thing to remember, and this is used perhaps once a month by
  * somebody whose job is dispensing medicine.
+ *
+ * The work itself is in `operations.mjs`; this file only prints. The control
+ * panel drives the same operations and renders them as a page, and neither is
+ * allowed its own opinion about what "running" means.
  */
 
 const root = resolve(process.env.PHARMACY_ROOT ?? process.cwd());
@@ -32,71 +29,42 @@ async function config() {
   return JSON.parse(await readFile(paths.config, "utf8"));
 }
 
-const SERVICE = {
-  darwin: {
-    start: ["launchctl", ["kickstart", `gui/${process.getuid?.() ?? 501}/id.apotek.pharmacy`]],
-    stop: ["launchctl", ["kill", "SIGTERM", `gui/${process.getuid?.() ?? 501}/id.apotek.pharmacy`]],
-  },
-  linux: {
-    start: ["systemctl", ["--user", "start", "pharmacy.service"]],
-    stop: ["systemctl", ["--user", "stop", "pharmacy.service"]],
-  },
-  win32: {
-    // /End stops the whole task tree, which matters: the wrapper the task runs
-    // is a restart loop, so killing only the Node process would start another.
-    start: ["schtasks", ["/Run", "/TN", "PharmacyStockLedger"]],
-    stop: ["schtasks", ["/End", "/TN", "PharmacyStockLedger"]],
-  },
-};
+/** Prints a status result. Shared by `status`, `start` and `restart`. */
+function report(state) {
+  ui.info(`database   ${state.database ? "running" : "not running"}  (127.0.0.1:${state.pgPort})`);
+  ui.info(`pharmacy   ${state.app ? "running" : "not running"}  (port ${state.appPort})`);
+  ui.blank();
+  if (state.app) ui.info(`Open from the till:  ${state.address}`);
+  else ui.info("Not answering. Look at the log:  pharmacy logs");
+}
 
 const commands = {
   async start() {
-    const service = SERVICE[process.platform];
-    if (service) {
-      await run(...service.start);
-      ui.ok("started");
-    } else {
-      ui.fail("no service integration on this platform; run installer/run.mjs yourself");
+    const result = await operations.start(paths, await config());
+    if (!result.ok) {
+      ui.fail(`${result.reason}; run installer/run.mjs yourself`);
     }
-    await commands.status();
+    ui.ok("started");
+    report(result.status);
   },
 
   async stop() {
-    const service = SERVICE[process.platform];
-    if (service) await run(...service.stop).catch(() => {});
-    await stopServer(paths).catch(() => {});
+    if (operations.stoppingNeedsAdministrator()) {
+      ui.detail("this may ask for administrator rights");
+    }
+    const result = await operations.stop(paths, await config());
+    if (!result.ok) ui.fail(result.reason);
     ui.ok("stopped");
   },
 
   async restart() {
-    await commands.stop();
-    await commands.start();
+    const result = await operations.restart(paths, await config());
+    ui.ok("restarted");
+    report(result.status);
   },
 
   async status() {
-    const { pgPort, appPort } = await config();
-
-    const db = await isAccepting(paths, pgPort);
-    ui.info(`database   ${db ? "running" : "not running"}  (127.0.0.1:${pgPort})`);
-
-    let app = false;
-    try {
-      const response = await fetch(`http://127.0.0.1:${appPort}/login`, {
-        signal: AbortSignal.timeout(3_000),
-      });
-      app = response.ok;
-    } catch {
-      app = false;
-    }
-    ui.info(`pharmacy   ${app ? "running" : "not running"}  (port ${appPort})`);
-
-    if (app) {
-      ui.blank();
-      ui.info(`Open from the till:  http://${lanAddress()}:${appPort}`);
-    } else {
-      ui.blank();
-      ui.info("Not answering. Look at the log:  pharmacy logs");
-    }
+    report(await operations.status(paths, await config()));
   },
 
   /**
@@ -106,39 +74,19 @@ const commands = {
    * somebody runs this by hand is when something is wrong.
    */
   async backup() {
-    const { pgPort, dbPassword } = await config();
-
-    if (!(await isAccepting(paths, pgPort))) {
-      ui.info("database was not running; starting it for the backup");
-      await startServer(paths, pgPort);
-      await waitUntilReady(paths, pgPort);
-    }
-
-    await npm(["run", "backup", "--", "--out", paths.backups], {
-      cwd: paths.app,
-      env: {
-        DATABASE_URL: connectionUrl(pgPort, dbPassword),
-        // The bundled pg_dump, not whatever may be on PATH: a version mismatch
-        // between dump and server is a restore that fails when it is needed.
-        // The bundled bin first, then the directory holding the Node that is
-        // running this -- npm lives beside it, and cron has no useful PATH.
-        PATH: pathWith(binDirectory(paths), dirname(process.execPath)),
-      },
-      inherit: true,
-    });
+    // `inherit` so the backup script's own instructions -- copy it off the
+    // machine, rehearse the restore -- reach the operator unchanged.
+    const result = await operations.backup(paths, await config(), { inherit: true });
+    if (result.startedDatabase) ui.detail("the database was not running; it was started for this");
   },
 
   async logs() {
-    const file = join(paths.logs, "pharmacy.log");
-    if (!(await exists(file))) {
+    const { lines, missing } = await operations.logs(paths);
+    if (missing) {
       ui.info("no log yet — the pharmacy has not started since it was installed");
       return;
     }
-    if (await has("tail")) {
-      await run("tail", ["-n", "60", file], { inherit: true });
-    } else {
-      console.log((await readFile(file, "utf8")).split("\n").slice(-60).join("\n"));
-    }
+    console.log(lines.join("\n"));
   },
 
   /**

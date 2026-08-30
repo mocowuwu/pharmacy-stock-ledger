@@ -244,6 +244,105 @@ export async function installWindowsService(paths, nodePath, runner, appPort) {
 }
 
 /**
+ * A double-clickable icon for the control panel, on the Desktop and in the
+ * Start Menu.
+ *
+ * A `.lnk` rather than putting the `.cmd` on the Desktop, for two reasons: a
+ * shortcut can be told to start minimised, so a console window does not flash
+ * up and sit there behind the browser, and it can carry a name with a space in
+ * it. `WScript.Shell` is the only way to write one without a compiler, and it
+ * has been present on every Windows for twenty years.
+ *
+ * Failing to create it is not failing to install. The panel is still there as
+ * `pharmacy-panel.cmd`; the shortcut is a convenience and is reported as one.
+ */
+/**
+ * A string PowerShell will read back exactly as given.
+ *
+ * Single-quoted, because PowerShell does not interpret anything inside those
+ * -- no `$`, no backtick, and above all no backslash escapes. `JSON.stringify`
+ * looks like it would do for this and does not: it is JavaScript escaping, so
+ * `C:\Users\...` goes out as `C:\\Users\\...` and comes back as a path with
+ * every separator eaten. The only character that needs care here is `'`, which
+ * is escaped by doubling it.
+ */
+function quote(value) {
+  return `'${String(value).replaceAll("'", "''")}'`;
+}
+
+export async function installPanelShortcut(paths, target) {
+  // Plain ASCII deliberately. This name is handed to PowerShell through a
+  // command line, and a non-ASCII character there depends on the console code
+  // page -- which is how you get a shortcut called "Apotek ΓÇô Panel".
+  const shortcut = "Panel Kontrol Apotek.lnk";
+
+  // 7 is minimised. The wrapper has nothing to show; the browser is the UI.
+  const script = [
+    "$shell = New-Object -ComObject WScript.Shell",
+    "foreach ($dir in @([Environment]::GetFolderPath('Desktop'), " +
+      "[Environment]::GetFolderPath('StartMenu'))) {",
+    `  if (-not $dir) { continue }`,
+    `  $link = $shell.CreateShortcut((Join-Path $dir ${quote(shortcut)}))`,
+    `  $link.TargetPath = ${quote(target)}`,
+    `  $link.WorkingDirectory = ${quote(paths.root)}`,
+    "  $link.WindowStyle = 7",
+    "  $link.Description = 'Panel kontrol Apotek'",
+    "  $link.Save()",
+    "}",
+  ].join("\n");
+
+  try {
+    await run("powershell", [
+      "-NoProfile",
+      "-NonInteractive",
+      "-ExecutionPolicy", "Bypass",
+      "-Command", script,
+    ]);
+    ui.detail("a shortcut was added to the Desktop and Start Menu");
+    return true;
+  } catch {
+    ui.warn("could not create the Desktop shortcut; open pharmacy-panel.cmd instead");
+    return false;
+  }
+}
+
+/**
+ * Starts the boot task, elevating if the operator is not allowed to.
+ *
+ * The exact mirror of stopping, and for the same reason: the task runs as
+ * SYSTEM with `/RL HIGHEST`, so `schtasks /Run` is refused with "Access is
+ * denied" for anyone who is not an administrator. The installer never noticed
+ * because its `/Run` happens inside the elevated batch that registers the task
+ * in the first place -- so this only bites afterwards, from the control panel
+ * or `pharmacy start`, which is exactly when the pharmacy is already down.
+ *
+ * Tried unelevated first: a task registered by the fallback path runs as the
+ * operator, and that one needs no prompt at all.
+ */
+export async function startWindowsService(paths) {
+  try {
+    await run("schtasks", ["/Run", "/TN", TASK_NAME]);
+    return { ok: true };
+  } catch {
+    ui.detail("starting the pharmacy needs administrator rights");
+  }
+
+  try {
+    await elevate(paths, [`schtasks /Run /TN "${TASK_NAME}"`, "exit /b %ERRORLEVEL%"]);
+  } catch {
+    return {
+      ok: false,
+      reason: "the pharmacy could not be started.",
+      remedy:
+        "It runs as SYSTEM, so only an administrator can start it. Right-click\n" +
+        "Command Prompt, choose \"Run as administrator\", and run:\n\n" +
+        `  schtasks /Run /TN "${TASK_NAME}"`,
+    };
+  }
+  return { ok: true };
+}
+
+/**
  * Stops a pharmacy that the boot task started, which the operator cannot.
  *
  * Once the ONSTART task has run, the pharmacy and its PostgreSQL belong to
@@ -267,7 +366,7 @@ export async function stopWindowsService(paths, pgPort) {
   await run("schtasks", ["/End", "/TN", TASK_NAME]).catch(() => {});
   await run(pgCtl, ["--pgdata", paths.data, "--mode", "fast", "stop"]).catch(() => {});
 
-  if (!(await portInUse(pgPort))) return true;
+  if (!(await portInUse(pgPort))) return { ok: true };
 
   ui.detail("the pharmacy is running as SYSTEM; stopping it needs administrator rights");
   try {
@@ -282,20 +381,25 @@ export async function stopWindowsService(paths, pgPort) {
 
   // Stopping is asynchronous enough that the port outlives the command.
   for (let attempt = 0; attempt < 20; attempt += 1) {
-    if (!(await portInUse(pgPort))) return true;
+    if (!(await portInUse(pgPort))) return { ok: true };
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
-  ui.fail(
-    "the pharmacy is still running, and its files cannot be replaced while it is.",
-    "It was started by the boot task, so it belongs to SYSTEM and only an\n" +
+  // Returned, not `ui.fail`ed. `ui.fail` exits the process, which is right for
+  // an installer and fatal for the control panel: a declined UAC prompt would
+  // kill the server mid-request and the operator would get a dead connection
+  // instead of the sentence below. The caller decides how to say it.
+  return {
+    ok: false,
+    reason: "the pharmacy is still running, and its files cannot be replaced while it is.",
+    remedy:
+      "It was started by the boot task, so it belongs to SYSTEM and only an\n" +
       "administrator can stop it. Right-click Command Prompt, choose \"Run as\n" +
       "administrator\", and run:\n\n" +
       `  schtasks /End /TN "${TASK_NAME}"\n` +
       `  "${pgCtl}" --pgdata "${paths.data}" --mode fast stop\n\n` +
-      "Then run this installer again.",
-  );
-  return false;
+      "Then try again.",
+  };
 }
 
 export async function removeWindowsService() {
