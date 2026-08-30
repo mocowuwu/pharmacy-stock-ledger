@@ -437,7 +437,18 @@ export async function install() {
 
   ui.info(`Open this from the till:  ${address}`);
   ui.blank();
-  ui.info("Useful afterwards:");
+
+  // Named before the commands, because for the person who owns this pharmacy
+  // it replaces all three of them. An icon nobody is told about is an icon
+  // nobody clicks.
+  ui.info("On this machine, to check on it:");
+  if (isWindows) {
+    ui.detail("Panel Kontrol Apotek, on the Desktop and in the Start Menu");
+  } else {
+    ui.detail(`${panelPath}`);
+  }
+  ui.blank();
+  ui.info("Or from a terminal:");
   ui.detail(`${controlPath} status     is it running?`);
   ui.detail(`${controlPath} backup     take a backup now`);
   ui.detail(`${controlPath} logs       what it has been doing`);
