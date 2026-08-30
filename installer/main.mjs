@@ -14,6 +14,7 @@ import {
   run,
   targetTriple,
   ui,
+  updateEnv,
 } from "./lib.mjs";
 import {
   connectionUrl,
@@ -26,6 +27,7 @@ import {
   stopServer,
   waitUntilReady,
 } from "./postgres.mjs";
+import { backup } from "./operations.mjs";
 import { installService } from "./service.mjs";
 import {
   ensureVisualCppRuntime,
@@ -171,6 +173,25 @@ export async function install() {
     // the pharmacy itself, so stop it rather than refusing to proceed.
     ui.warn("an installation is already here; updating it");
     ui.detail("the database and its records are left exactly as they are");
+
+    // Before anything is stopped or replaced, and while the database is still
+    // up. An upgrade runs migrations against the pharmacy's live records; going
+    // into that without a backup taken minutes ago is the one part of this
+    // program that could lose a year of the ledger.
+    //
+    // A failure here warns rather than refuses, deliberately. The likeliest
+    // reason a backup cannot be taken is a half-finished previous upgrade --
+    // exactly the state whose fix is to run this again. Refusing would make a
+    // broken install unrepairable by the only tool that repairs it.
+    try {
+      const existing = JSON.parse(await readFile(paths.config, "utf8"));
+      const taken = await backup(paths, existing);
+      ui.ok(`backed up first: ${taken.file ?? paths.backups}`);
+    } catch (error) {
+      ui.warn(`could not take a backup before upgrading: ${error.message}`);
+      ui.detail("continuing, but there is no fresh backup of what is about to change");
+    }
+
     await stopRunningInstance(paths, pgPort);
   } else {
     // A first install refuses a port somebody else holds, rather than
@@ -298,10 +319,27 @@ export async function install() {
     "",
   ].join("\n");
 
-  await writeFile(join(paths.app, ".env.local"), env, "utf8");
+  const envFile = join(paths.app, ".env.local");
+
+  if (alreadyInstalled) {
+    // An upgrade updates only what the installer owns, and leaves the rest of
+    // the file alone. Writing the template again would reset three settings the
+    // operator is invited to change on the line above -- and `COOKIE_SECURE`
+    // back to false, which silently breaks `pharmacy remote` sign-in on every
+    // upgrade in a way that looks like the password being wrong.
+    await updateEnv(envFile, {
+      DATABASE_URL: connectionUrl(config.pgPort, config.dbPassword),
+      PORT: config.appPort,
+    });
+    ui.ok("configuration updated");
+    ui.detail("your settings in .env.local were left as they are");
+  } else {
+    await writeFile(envFile, env, "utf8");
+    ui.ok("configuration written");
+    ui.detail("timezone is Asia/Jakarta; change it in Settings once you sign in");
+  }
+
   await writeFile(paths.config, JSON.stringify(config, null, 2), { mode: 0o600 });
-  ui.ok("configuration written");
-  ui.detail("timezone is Asia/Jakarta; change it in Settings once you sign in");
 
   /* ----------------------------------------------------------- 6. build */
 
