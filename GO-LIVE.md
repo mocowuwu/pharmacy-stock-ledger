@@ -124,20 +124,32 @@ Switch over only when they agree without anyone having to explain a difference.
 This is the step people skip, and it is the step that finds the misunderstanding
 that would otherwise be discovered three months later in a stock take.
 
-## 8. Turn on the scheduled jobs
+## 8. Check the daily jobs are running
 
-Two plain processes, ordered — the digest reports on the alert list the first
-job has just reconciled:
+Nothing to turn on. The supervisor runs alerts, then the backup, then the
+digest — ordered that way because the digest reports on the list the alert job
+has just reconciled — whenever each has not run for twenty hours.
 
-```cron
-0 1 * * *  cd /srv/pharmacy && npm run alerts
-0 7 * * *  cd /srv/pharmacy && npm run digest
-0 2 * * *  cd /srv/pharmacy && npm run backup
+That is a gap rather than a clock on purpose. These used to be cron lines at
+01:00 and 02:00, which never fired on a clinic machine that is switched off at
+closing, and could not fire at all on Windows, which has no cron. A machine
+switched on at eight runs them at eight.
+
+So this step is a check, not a task:
+
+```bash
+~/pharmacy/pharmacy status          # or open the control panel
+cat ~/pharmacy/logs/jobs.log        # what ran, and what failed
 ```
 
-Leave the digest switched off until the mail settings are filled in and
-**Test the connection** succeeds. Until then it writes to `.data/digest/` and
-you can read exactly what would have arrived.
+The control panel shows the last backup on its front page. **Look at it in the
+first week** — the failure this is guarding against is a backup that silently
+stopped working, and the only way to catch that is to have looked once.
+
+Leave the digest's mail settings until you are ready: until **Test the
+connection** succeeds it writes to `.data/digest/` and you can read exactly what
+would have arrived. It will be recorded as failing in `jobs.log` until then,
+which is honest and harmless.
 
 ## 9. Hosting
 
@@ -148,6 +160,12 @@ Still undecided, and it can stay that way until this point. Both paths work:
   counter. Backups go to an external drive plus an encrypted upload.
 - **VPS.** Reachable from home, nothing to maintain physically, and the counter
   stops when the connection does.
+- **On-premise, reached over Tailscale** — `pharmacy remote on`; see DEPLOY.md.
+  The answer when the counter and the machine are in *different buildings*, and
+  the only one of the three that also gets you HTTPS for free, which is what the
+  phone camera scanner needs. Understand what it costs first: every till needs
+  Tailscale signed in, and the counter now stops if either end's internet does.
+  If they are in the same building, a cable or an access point beats this.
 
 Either way it is Docker Compose, environment variables, and the same backup
 script. Nothing in the code assumes a host.

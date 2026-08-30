@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
-import { access, cp, mkdir, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { createWriteStream } from "node:fs";
 import { networkInterfaces } from "node:os";
 import { Readable } from "node:stream";
@@ -398,6 +398,41 @@ export async function freeSpaceGb(path) {
 }
 
 /** Layout of an installation. One place, so nothing has to guess. */
+/**
+ * Changes named keys in a `.env` file and touches nothing else.
+ *
+ * Deliberately not a rewrite. That file says "Edit it and restart" at the top
+ * and means it -- the timezone and the session length are the owner's to
+ * change. Regenerating it from a template to flip one flag would throw their
+ * edits away, and they would find out at the moment the receipt printed the
+ * wrong day.
+ *
+ * A key that is not there is appended; a key that is there keeps its place, and
+ * so does the comment above it.
+ */
+export async function updateEnv(file, updates) {
+  let lines = [];
+  try {
+    lines = (await readFile(file, "utf8")).split("\n");
+  } catch {
+    // No file yet: the caller is creating one, and the keys are all it wants.
+  }
+
+  const remaining = new Map(Object.entries(updates));
+  const updated = lines.map((line) => {
+    const key = /^\s*([A-Z0-9_]+)\s*=/u.exec(line)?.[1];
+    if (!key || !remaining.has(key)) return line;
+    const value = remaining.get(key);
+    remaining.delete(key);
+    return `${key}=${value}`;
+  });
+
+  for (const [key, value] of remaining) updated.push(`${key}=${value}`);
+  if (updated.at(-1) !== "") updated.push("");
+
+  await writeFile(file, updated.join("\n"), "utf8");
+}
+
 export function layout(root) {
   return {
     root,

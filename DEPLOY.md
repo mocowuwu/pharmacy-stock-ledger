@@ -222,20 +222,34 @@ WantedBy=multi-user.target
 sudo systemctl enable --now pharmacy
 ```
 
-### 8. The nightly jobs
+### 8. The daily jobs — nothing to do
+
+The supervisor runs them. There is no crontab to edit and **you should not add
+one**: two schedulers racing to take the same backup is a question nobody can
+answer at the moment it matters.
+
+It used to be three cron lines at 01:00, 02:00 and 07:00. That was written for a
+server, and this is usually a clinic PC — switched on in the morning and off at
+closing, so nothing scheduled for one o'clock ever ran. On Windows it was worse:
+there is no cron at all, so the jobs had never run once, and an installation
+that looked healthy had no backups whatsoever.
+
+The rule is now a gap rather than a clock: **each job runs when it has not run
+for twenty hours**, checked shortly after startup and hourly after. A machine
+switched on at eight runs them at eight; a VPS that never reboots runs them once
+a day. Order is still alerts → backup → digest, because the digest reports on
+the list the alert job has just reconciled.
+
+Check them:
 
 ```bash
-crontab -e
+cat ~/pharmacy/logs/jobs.log     # what ran, and what failed
+cat ~/pharmacy/jobs.json         # when each last ran
 ```
 
-```cron
-0 1 * * *  cd /srv/pharmacy && npm run alerts
-0 2 * * *  cd /srv/pharmacy && npm run backup
-0 7 * * *  cd /srv/pharmacy && npm run digest
-```
-
-Alerts first, then the backup, then the digest — the digest reports on the alert
-list the first job has just reconciled.
+The control panel shows the last backup on its front page, which is the version
+of this an owner will actually look at. A failed run says so rather than showing
+a time — a date beside a backup that did not happen is worse than no date.
 
 ---
 
@@ -258,8 +272,10 @@ volume, `pgdata`, and is not published to the host — only the app reaches it.
 
 ## TLS, if you want it
 
-`COOKIE_SECURE=false` is a compromise. Two ways out, both fine for a clinic:
+`COOKIE_SECURE=false` is a compromise. Three ways out, all fine for a clinic:
 
+- **`pharmacy remote on`** — Tailscale, below. The least work of the three and
+  the only one that also solves the counter being in another building.
 - **Caddy in front**, with a certificate from a private CA you install on the
   till machines once. Caddy takes about five lines of config and renews nothing.
 - **A real domain and Let's Encrypt**, if the machine is reachable from the
@@ -275,6 +291,61 @@ the scan button is still there, and says so when tapped rather than failing
 silently. Everything else -- including a USB scanner, which is a keyboard --
 works either way. If the pharmacy runs the till on a phone, that
 moves TLS from "nice" to "the reason the camera is missing".
+
+---
+
+## Reaching it from another building
+
+Where the counter and the machine are not in the same place, the till needs a
+route in. The two obvious ones are both wrong: a port forwarded on the clinic
+router puts a pharmacy's dispensing records on the public internet, and a plain
+LAN does not reach another building at all.
+
+```bash
+~/pharmacy/pharmacy remote on      # prints https://<machine>.<tailnet>.ts.net
+~/pharmacy/pharmacy remote off     # back to the LAN shape
+```
+
+or the button on the control panel, which is where the owner already is.
+
+It needs [Tailscale](https://tailscale.com/download) installed on this machine
+and signed in. The command will not sign in for you — that is an account
+credential — but it says so plainly rather than failing.
+
+What it does:
+
+- `tailscale serve` puts a **real HTTPS certificate** in front of the app, so
+  `COOKIE_SECURE` goes back to `true` and the phone camera scanner works;
+- the app is rebound to **127.0.0.1**, so nothing on the clinic network can
+  reach it at all and the firewall rule stops mattering;
+- the address becomes a name on your tailnet, which is what the till types.
+
+This is not a hole in a router. A tailnet is WireGuard between devices you have
+explicitly added, so done this way the deployment is **more** private than the
+LAN one it replaces. Tailnet ACLs can narrow it further; the pharmacy's own
+sign-in remains the control either way.
+
+If HTTPS certificates are not enabled for your tailnet (a switch in the
+Tailscale admin console), it falls back to `http://100.x.y.z:3000` and says so.
+That is still WireGuard-encrypted end to end — it is the certificate that is
+missing, not the encryption — but the cookie stays non-secure and the camera
+scanner stays unavailable, so it is worth enabling.
+
+**What it costs, said plainly:**
+
+- **Every till needs Tailscale installed and signed in.** That is the real
+  operational price of this choice and it should not be a surprise on the first
+  morning.
+- **The counter now depends on the internet** — the clinic's, and the till's.
+  `GO-LIVE.md` chose an on-premise machine precisely so that "when the internet
+  drops, the till keeps selling". With the counter in another building that is
+  no longer available, and the parallel-run habit from go-live step 7 stops
+  being a rehearsal and becomes the fallback for that morning. Keep paper.
+- **Do not let the machine sleep**, or the counter in the other building simply
+  stops: `powercfg /change standby-timeout-ac 0`.
+
+If the counter and the machine *are* in the same building, do not use this. A
+cable or a cheap access point is more reliable than anybody's internet.
 
 ---
 

@@ -2,6 +2,7 @@ import { readFile, readdir, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import { exists, layout, ui } from "./lib.mjs";
 import * as operations from "./operations.mjs";
+import * as remote from "./remote.mjs";
 import { removeService } from "./service.mjs";
 
 /**
@@ -65,6 +66,49 @@ const commands = {
 
   async status() {
     report(await operations.status(paths, await config()));
+  },
+
+  /**
+   * Puts the pharmacy on the tailnet, or takes it off again.
+   *
+   * The command list is deliberately short and this earns a place: where the
+   * counter is in a different building from the machine, it is the difference
+   * between a working till and a support call, and there is no other way to
+   * do it.
+   */
+  async remote() {
+    const wanted = process.argv[3];
+    if (wanted !== "on" && wanted !== "off") {
+      ui.fail("say which: pharmacy remote on   or   pharmacy remote off");
+    }
+
+    const current = await config();
+    const result =
+      wanted === "on"
+        ? await remote.enableRemote(paths, current)
+        : await remote.disableRemote(paths, current);
+
+    if (!result.ok) ui.fail(result.reason, result.remedy);
+
+    // Restarted rather than left to be restarted: the bind address and the
+    // cookie flag are both read at startup, so until this happens the pharmacy
+    // is still answering the old way and the address just printed is a lie.
+    ui.info("restarting the pharmacy so the change takes effect");
+    await operations.restart(paths, result.config);
+
+    if (wanted === "off") {
+      ui.ok("remote access off");
+      return report(await operations.status(paths, result.config));
+    }
+
+    ui.ok("remote access on");
+    if (result.note) {
+      ui.blank();
+      ui.warn(result.note);
+    }
+    ui.blank();
+    ui.info(`Open this from the till:  ${result.address}`);
+    ui.detail("every till needs Tailscale installed and signed in");
   },
 
   /**
@@ -142,6 +186,7 @@ async function main() {
     ui.info("status     is it running, and where to open it");
     ui.info("backup     take a backup now");
     ui.info("logs       the last 60 lines");
+    ui.info("remote     on | off -- reach it from another building, via Tailscale");
     ui.info("uninstall  remove the software, keeping the records");
     ui.blank();
     process.exit(command === "help" || command === "--help" ? 0 : 1);

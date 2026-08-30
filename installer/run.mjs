@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { layout, pathWith } from "./lib.mjs";
+import { startDailyJobs } from "./jobs.mjs";
 import { startServer, stopServer, waitUntilReady } from "./postgres.mjs";
 
 /**
@@ -24,6 +25,7 @@ const log = (message) =>
   console.log(`${new Date().toISOString()}  ${message}`);
 
 let app = null;
+let jobs = null;
 let shuttingDown = false;
 
 async function main() {
@@ -49,7 +51,14 @@ async function main() {
   // `-H 0.0.0.0` is Next's default, said out loud. This is the pharmacy's whole
   // reason for existing on the network -- the till is a different machine --
   // and it must not be a default that a future version is free to change.
-  app = spawn(process.execPath, [next, "start", "-H", "0.0.0.0", "-p", String(config.appPort)], {
+  //
+  // The one thing that may move it is `pharmacy remote on`, which puts Tailscale
+  // in front and sets `bind` to 127.0.0.1: the till then arrives over the
+  // tailnet, and the clinic network has no business reaching this at all.
+  const bind = config.bind ?? "0.0.0.0";
+  log(`binding to ${bind}`);
+
+  app = spawn(process.execPath, [next, "start", "-H", bind, "-p", String(config.appPort)], {
     cwd: paths.app,
     env: {
       ...process.env,
@@ -62,6 +71,11 @@ async function main() {
   });
 
   log(`pharmacy starting on port ${config.appPort}`);
+
+  // The daily jobs live here rather than in cron, because this machine is
+  // switched off at closing time and nothing scheduled for one in the morning
+  // would ever run. See jobs.mjs.
+  jobs = startDailyJobs(paths, config, log);
 
   app.on("exit", async (code) => {
     if (shuttingDown) return;
@@ -77,6 +91,10 @@ async function shutdown(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
   log(`${signal} received; shutting down`);
+
+  // Before the app, so a backup cannot be started into a database that is
+  // about to be stopped underneath it.
+  if (jobs) clearInterval(jobs);
 
   if (app) {
     app.kill("SIGTERM");

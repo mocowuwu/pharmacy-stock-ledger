@@ -4,6 +4,7 @@ import { createServer } from "node:http";
 import { resolve } from "node:path";
 import { exists, layout, run, ui } from "./lib.mjs";
 import * as operations from "./operations.mjs";
+import * as remote from "./remote.mjs";
 
 /**
  * The control panel — the pharmacy's own face, for the person at the machine.
@@ -45,6 +46,37 @@ const T = {
   database: "Basis data",
   addressLabel: "Alamat untuk komputer kasir",
   addressHint: "Ketik alamat ini di peramban komputer kasir.",
+  remoteOnHint:
+    "Akses jarak jauh aktif. Alamat ini hanya bisa dibuka dari perangkat yang " +
+    "sudah masuk ke Tailscale. Apotek tidak lagi bisa dijangkau dari jaringan " +
+    "kabel klinik.",
+  remoteTitle: "Akses jarak jauh",
+  remoteOff: "Nonaktifkan akses jarak jauh",
+  remoteOn: "Aktifkan akses jarak jauh (Tailscale)",
+  remoteHint:
+    "Untuk kasir yang berada di gedung lain. Setiap perangkat kasir harus " +
+    "memasang Tailscale dan masuk terlebih dahulu.",
+  /**
+   * Refusals from remote.mjs, by code. The English prose it also returns is for
+   * the terminal; the owner reads this page, and a technical sentence in the
+   * wrong language at the moment something has failed is no help at all.
+   */
+  remoteErrors: {
+    "tailscale-missing":
+      "Tailscale belum terpasang di komputer ini. Pasang dari " +
+      "https://tailscale.com/download/windows, masuk, lalu coba lagi.",
+    "tailscale-signed-out":
+      "Tailscale sudah terpasang tetapi belum masuk. Buka Tailscale, masuk " +
+      "dengan akun Anda, lalu coba lagi.",
+    "tailscale-serve-failed":
+      "Tailscale tidak dapat menyajikan apotek. Periksa Tailscale di komputer " +
+      "ini, lalu coba lagi.",
+  },
+  remoteNoHttps:
+    "Sertifikat HTTPS belum diaktifkan untuk jaringan Tailscale Anda, jadi " +
+    "alamat ini memakai nomor IP. Lalu lintasnya tetap terenkripsi antar " +
+    "perangkat. Aktifkan HTTPS Certificates di konsol admin Tailscale untuk " +
+    "alamat yang lebih rapi dan agar pemindai kamera berfungsi.",
   copy: "Salin",
   copied: "Tersalin",
   openPharmacy: "Buka apotek",
@@ -68,6 +100,9 @@ const T = {
   },
   logs: "Catatan terakhir",
   noLogs: "Belum ada catatan — apotek belum pernah dijalankan sejak dipasang.",
+  lastBackup: "Cadangan terakhir:",
+  lastBackupNever: "Cadangan otomatis belum pernah berjalan.",
+  lastBackupFailed: "Cadangan otomatis terakhir GAGAL:",
   backupDone: "Cadangan dibuat:",
   backupStarted: "Basis data tidak berjalan; dijalankan dulu untuk pencadangan.",
   failed: "Gagal:",
@@ -234,7 +269,15 @@ function page(folders, needsAdministrator) {
       <button class="ghost" id="copy">${T.copy}</button>
       <button class="ghost" id="open-app">${T.openPharmacy}</button>
     </div>
-    <p class="hint">${T.addressHint}</p>
+    <p class="hint" id="address-hint">${T.addressHint}</p>
+  </section>
+
+  <section>
+    <h2>${T.remoteTitle}</h2>
+    <div class="actions">
+      <button data-action="remote">${T.remoteOn}</button>
+    </div>
+    <p class="hint">${T.remoteHint}</p>
   </section>
 
   <section>
@@ -245,6 +288,7 @@ function page(folders, needsAdministrator) {
       <button data-action="restart">${T.restart}</button>
       <button data-action="backup">${T.backup}</button>
     </div>
+    <p class="hint" id="last-backup">—</p>
     ${needsAdministrator ? `<p class="hint">${T.adminWarning}</p>` : ""}
   </section>
 
@@ -294,6 +338,26 @@ function page(folders, needsAdministrator) {
     $("chip-db").className = "chip " + (state.database ? "up" : "down");
     $("address").textContent = state.address;
     $("open-app").disabled = !state.app;
+
+    // The button says what pressing it will do, not what is currently true --
+    // a toggle labelled with its own state is the classic way to turn a thing
+    // off while believing you turned it on.
+    const button = document.querySelector('button[data-action="remote"]');
+    button.textContent = state.remote ? T.remoteOff : T.remoteOn;
+    button.dataset.remote = state.remote ? "on" : "off";
+    $("address-hint").textContent = state.remote ? T.remoteOnHint : T.addressHint;
+  }
+
+  function paintBackup(jobs) {
+    const last = (jobs || {}).backup;
+    const box = $("last-backup");
+    if (!last) { box.textContent = T.lastBackupNever; return; }
+    // A failed run shows as failed. Printing its timestamp as though it were a
+    // backup is the one thing this line must never do.
+    const when = new Date(last.at).toLocaleString("id-ID");
+    box.textContent = last.ok
+      ? T.lastBackup + " " + when
+      : T.lastBackupFailed + " " + when;
   }
 
   function paintLogs(log) {
@@ -308,6 +372,7 @@ function page(folders, needsAdministrator) {
       const data = await api("/api/state");
       paint(data.status);
       paintLogs(data.logs);
+      paintBackup(data.jobs);
     } catch { /* a refresh that fails is not worth shouting about */ }
   }
 
@@ -322,13 +387,24 @@ function page(folders, needsAdministrator) {
       const original = button.textContent;
       button.textContent = T.working;
       try {
-        const result = await api("/api/" + button.dataset.action, "POST");
+        // Remote is a toggle, so the path carries the direction rather than
+        // the server guessing from current state -- two clicks racing must not
+        // be able to leave it in the state neither of them asked for.
+        const path =
+          button.dataset.action === "remote"
+            ? "/api/remote/" + (button.dataset.remote === "on" ? "off" : "on")
+            : "/api/" + button.dataset.action;
+        const result = await api(path, "POST");
         if (result.status) paint(result.status);
         // An operation that refused is a 200 carrying ok:false -- a declined
         // administrator prompt is an answer, not a server error. Saying so is
         // the whole point; a button that silently did nothing is worse than
         // one that failed.
-        if (result.ok === false) say(T.failed + " " + (result.reason || ""), false);
+        if (result.ok === false) {
+          say(T.remoteErrors[result.code] || T.failed + " " + (result.reason || ""), false);
+        }
+        else if (result.message) say(T.remoteNoHttps, true);
+        else if (result.address) say(result.address, true);
         else if (result.file) say(T.backupDone + " " + result.file, true);
         else if (result.startedDatabase) say(T.backupStarted, true);
         else $("message").className = "";
@@ -426,6 +502,7 @@ async function main() {
         return send(200, {
           status: await operations.status(paths, config),
           logs: await operations.logs(paths),
+          jobs: await operations.jobHistory(paths),
         });
       }
 
@@ -441,6 +518,39 @@ async function main() {
 
       const folder = url.pathname.match(/^\/api\/reveal\/([a-z]+)$/u)?.[1];
       if (folder) return send(200, await operations.reveal(paths, folder));
+
+      const direction = url.pathname.match(/^\/api\/remote\/(on|off)$/u)?.[1];
+      if (direction) {
+        const result =
+          direction === "on"
+            ? await remote.enableRemote(paths, config)
+            : await remote.disableRemote(paths, config);
+
+        if (!result.ok) {
+          // The code travels; the page picks the words. `reason` is kept as the
+          // fallback for anything that has not been given a code yet.
+          return send(200, {
+            ok: false,
+            code: result.code,
+            reason: `${result.reason}\n\n${result.remedy}`,
+          });
+        }
+
+        // The bind address and the cookie flag are both read at startup, so
+        // until this restart the pharmacy is still answering the old way and
+        // the address about to be shown would be a lie. Everything the page
+        // sees afterwards comes from the config this returned, not the one
+        // this process started with.
+        Object.assign(config, result.config);
+        const restarted = await operations.restart(paths, config);
+
+        return send(200, {
+          ok: true,
+          status: restarted.status,
+          message: result.note,
+          address: result.address,
+        });
+      }
 
       return send(404, "not found", "text/plain");
     } catch (error) {

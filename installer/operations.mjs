@@ -64,12 +64,20 @@ export async function status(paths, config) {
     app = false;
   }
 
+  const lan = `http://${lanAddress()}:${config.appPort}`;
+
   return {
     database,
     app,
     pgPort: config.pgPort,
     appPort: config.appPort,
-    address: `http://${lanAddress()}:${config.appPort}`,
+    // `address` is whatever the till should actually type. On a remote install
+    // that is the tailnet URL and the LAN address is not reachable at all --
+    // the app is bound to loopback -- so printing the LAN one there would be
+    // worse than printing nothing.
+    address: config.remote && config.remoteAddress ? config.remoteAddress : lan,
+    remote: Boolean(config.remote),
+    lanAddress: lan,
   };
 }
 
@@ -160,6 +168,45 @@ export function stoppingNeedsAdministrator() {
   return isWindows;
 }
 
+/* -------------------------------------------------------------- the jobs */
+
+/**
+ * The environment the pharmacy's own scripts need.
+ *
+ * Shared by the backup and the daily jobs, because getting the PATH wrong here
+ * is not a missing command -- it is `pg_dump` from somewhere else on the
+ * machine, at a version that does not match the server, producing a dump that
+ * fails at the only moment anybody will ever need it.
+ */
+function jobEnv(paths, config) {
+  return {
+    DATABASE_URL: connectionUrl(config.pgPort, config.dbPassword),
+    // The bundled bin first, then the directory holding the Node that is
+    // running this -- npm lives beside it, and a service has no useful PATH.
+    PATH: pathWith(binDirectory(paths), dirname(process.execPath)),
+  };
+}
+
+/**
+ * The daily three, in the order they have to happen.
+ *
+ * Alerts first, then the backup, then the digest: the digest reports on the
+ * alert list the first job has just reconciled, so running them the other way
+ * round emails yesterday's problems.
+ */
+export const DAILY_JOBS = ["alerts", "backup", "digest"];
+
+/** Runs one of the pharmacy's scripts by name. */
+export async function job(paths, config, name) {
+  // Backup goes through `backup()` rather than being run directly, so the
+  // scheduled run and the button on the panel are one code path -- including
+  // starting the database first if it is somehow down.
+  if (name === "backup") return backup(paths, config);
+
+  const output = await npm(["run", name], { cwd: paths.app, env: jobEnv(paths, config) });
+  return { ok: true, output: output ?? "" };
+}
+
 /* ------------------------------------------------------------------ backup */
 
 /**
@@ -177,14 +224,7 @@ export async function backup(paths, config, { inherit = false } = {}) {
 
   const output = await npm(["run", "backup", "--", "--out", paths.backups], {
     cwd: paths.app,
-    env: {
-      DATABASE_URL: connectionUrl(config.pgPort, config.dbPassword),
-      // The bundled pg_dump, not whatever may be on PATH: a version mismatch
-      // between dump and server is a restore that fails when it is needed.
-      // The bundled bin first, then the directory holding the Node that is
-      // running this -- npm lives beside it, and cron has no useful PATH.
-      PATH: pathWith(binDirectory(paths), dirname(process.execPath)),
-    },
+    env: jobEnv(paths, config),
     inherit,
   });
 
@@ -193,6 +233,22 @@ export async function backup(paths, config, { inherit = false } = {}) {
   // carry off the machine, which is the only kind that counts.
   const file = /Dumping to\s+(.+\.dump)/u.exec(output ?? "")?.[1]?.trim() ?? null;
   return { ok: true, startedDatabase: started, file, output: output ?? "" };
+}
+
+/**
+ * When each daily job last ran, from the state `jobs.mjs` keeps.
+ *
+ * The owner's real question about backups is never "is there a backup feature",
+ * it is "is it actually happening" — and until this, nothing answered that.
+ * A job that failed reports its failure rather than its time: a date shown for
+ * a backup that did not happen is worse than no date at all.
+ */
+export async function jobHistory(paths) {
+  try {
+    return JSON.parse(await readFile(join(paths.root, "jobs.json"), "utf8"));
+  } catch {
+    return {};
+  }
 }
 
 /* -------------------------------------------------------------------- logs */
