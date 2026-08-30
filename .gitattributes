@@ -1,0 +1,13 @@
+# Last match wins in this file, so the general rule goes first and the
+# exceptions after it.
+
+# Read by Node and PostgreSQL, neither of which cares, and a mixed repo does.
+* text=auto eol=lf
+
+# The Windows launcher and its bootstrap must reach the clinic machine with
+# CRLF endings. cmd.exe mis-parses a batch file with bare LF -- labels and
+# `goto` in particular -- and the failure is a script that runs the wrong half
+# of itself rather than one that refuses.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf

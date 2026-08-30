@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { exists, run } from "./lib.mjs";
+import { installWindowsService, removeWindowsService } from "./windows.mjs";
 
 /**
  * Making the pharmacy come back on its own.
@@ -10,16 +11,20 @@ import { exists, run } from "./lib.mjs";
  * till, so the supervisor is registered with whatever the platform uses to
  * start things.
  *
- * Both paths register **for the logged-in user, not the system**, so no
- * administrator password is needed. The trade is real and worth naming: a
- * user-level service starts when that user's session does. On Linux that needs
- * lingering enabled, which the installer turns on if it can and reports if it
- * cannot.
+ * The macOS and Linux paths register **for the logged-in user, not the
+ * system**, so no administrator password is needed. The trade is real and
+ * worth naming: a user-level service starts when that user's session does. On
+ * Linux that needs lingering enabled, which the installer turns on if it can
+ * and reports if it cannot.
+ *
+ * Windows asks for administrator rights once, because the same elevation buys
+ * the firewall rule the till needs -- see windows.mjs. It falls back to a
+ * per-user task if that is declined.
  */
 
 const LABEL = "id.apotek.pharmacy";
 
-export async function installService(paths) {
+export async function installService(paths, appPort) {
   const nodePath = process.execPath;
   // The installer copies itself into the application folder, so the runner
   // lives beside the code it starts rather than at the install root.
@@ -30,6 +35,9 @@ export async function installService(paths) {
   }
   if (process.platform === "linux") {
     return installSystemd(paths, nodePath, runner);
+  }
+  if (process.platform === "win32") {
+    return installWindowsService(paths, nodePath, runner, appPort);
   }
   return {
     installed: false,
@@ -143,6 +151,9 @@ export async function removeService() {
       () => {},
     );
     return true;
+  }
+  if (process.platform === "win32") {
+    return removeWindowsService();
   }
   return false;
 }

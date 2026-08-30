@@ -1,6 +1,6 @@
 import { readFile, readdir, rm } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { exists, has, lanAddress, layout, run, ui } from "./lib.mjs";
+import { exists, has, lanAddress, layout, npm, pathWith, run, ui } from "./lib.mjs";
 import {
   binDirectory,
   connectionUrl,
@@ -40,6 +40,12 @@ const SERVICE = {
   linux: {
     start: ["systemctl", ["--user", "start", "pharmacy.service"]],
     stop: ["systemctl", ["--user", "stop", "pharmacy.service"]],
+  },
+  win32: {
+    // /End stops the whole task tree, which matters: the wrapper the task runs
+    // is a restart loop, so killing only the Node process would start another.
+    start: ["schtasks", ["/Run", "/TN", "PharmacyStockLedger"]],
+    stop: ["schtasks", ["/End", "/TN", "PharmacyStockLedger"]],
   },
 };
 
@@ -108,7 +114,7 @@ const commands = {
       await waitUntilReady(paths, pgPort);
     }
 
-    await run("npm", ["run", "backup", "--", "--out", paths.backups], {
+    await npm(["run", "backup", "--", "--out", paths.backups], {
       cwd: paths.app,
       env: {
         DATABASE_URL: connectionUrl(pgPort, dbPassword),
@@ -116,7 +122,7 @@ const commands = {
         // between dump and server is a restore that fails when it is needed.
         // The bundled bin first, then the directory holding the Node that is
         // running this -- npm lives beside it, and cron has no useful PATH.
-        PATH: `${binDirectory(paths)}:${dirname(process.execPath)}:${process.env.PATH ?? ""}`,
+        PATH: pathWith(binDirectory(paths), dirname(process.execPath)),
       },
       inherit: true,
     });

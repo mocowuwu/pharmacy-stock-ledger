@@ -7,23 +7,48 @@ there is nothing to install by hand.
 ```
 macOS    double-click  install-macos.command
 Linux    sh install-linux.sh
-Windows  not built yet -- see the bottom of this file
+Windows  double-click  install-windows.bat
 ```
 
-It installs into `~/pharmacy`, needs no administrator password, and touches
-nothing outside that folder. Uninstalling is deleting it.
+It installs into `~/pharmacy` and touches nothing outside that folder.
+Uninstalling is deleting it.
+
+On macOS and Linux it needs no administrator password. **Windows is the
+exception, twice.** The PostgreSQL binaries are built with MSVC and import
+`vcruntime140.dll`, which Windows does not ship, so the installer installs the
+Microsoft Visual C++ runtime system-wide before anything else — one prompt. The
+firewall rule and the boot task want administrator rights too — a second prompt.
+The runtime is shared and stays behind after uninstalling; it is Microsoft's,
+versioned by them, and already present on most machines that have run a desktop
+application. Nothing else survives deleting the folder.
 
 The macOS path has been run end to end on a clean directory: PostgreSQL fetched
 and checksum-verified, cluster created, application built, owner account seeded,
 service registered, and a backup taken and restored with the ledger reconciling.
-**The Linux path is written but has not been run**, because this was developed
-on a Mac. Expect to fix something; the installer stops with a sentence rather
-than half-finishing.
+**The Windows path has now been run**, on Windows 11, end to end: runtime
+installed, PostgreSQL fetched and checksum-verified, cluster created,
+application built, owner account seeded, boot task and firewall rule
+registered, and a backup taken and restored with the ledger reconciling. Seven
+bugs were found and fixed doing it; see "Windows" at the end of this file.
+Two things it does not yet prove: that the till reaches it across a real LAN
+(this was a NAT'd VM), and that it survives a reboot. Do both before go-live.
+
+**The Linux path is written but has not been run.** Expect to fix something;
+the installer stops with a sentence rather than half-finishing.
+
+On Windows the installer asks for administrator rights **twice** on a first
+install — once for the Microsoft Visual C++ runtime, once for the firewall rule
+and boot task — and the operator should click Yes to both. An upgrade after the
+machine has rebooted asks a third time, to stop the pharmacy SYSTEM is running. It buys exactly two things: the
+firewall rule that lets the till reach this machine, and the boot task that
+reopens the pharmacy after a power cut. Clicking No still finishes the install
+and prints the two commands to run by hand.
 
 What it prints at the end is the part that matters: the owner's one-time
 password, and the LAN address to open from the till. Write both down.
 
-Afterwards, `~/pharmacy/pharmacy` is the control command:
+Afterwards, `~/pharmacy/pharmacy` is the control command — on Windows,
+`%USERPROFILE%\pharmacy\pharmacy.cmd`, which is double-clickable:
 
 ```bash
 ~/pharmacy/pharmacy status     # is it running, and where to open it
@@ -258,23 +283,94 @@ data, count, parallel run.
 
 ## Windows
 
-Not built yet, deliberately rather than by oversight. The installer's work is
-already cross-platform JavaScript and PostgreSQL 18 publishes a Windows build,
-so what is missing is a service registration, a launcher, and packaging into an
-`.exe` — perhaps a day's work.
+The installer now covers Windows: `install-windows.bat` finds or fetches Node,
+then runs the same `installer/main.mjs` that macOS and Linux run. What is
+Windows-specific lives in `installer/windows.mjs` and `installer/bootstrap.ps1`.
 
-It should be done **on Windows**. An installer that has never been run on the
-system it installs onto is a guess, and the failures are all in the parts a Mac
-cannot exercise: paths with spaces, the service manager, SmartScreen, antivirus
-holding a file open mid-copy. Running Claude Code inside a Windows VM is the
-right way — snapshot, install, roll back, try again on a genuinely clean system.
+**It has now been run on Windows 11**, in a snapshotted VM, and reaches
+"Installed" with the pharmacy serving, the boot task registered as SYSTEM at
+system start-up, and the firewall rule in place. Seven bugs were found doing
+it. Three were Windows-only:
 
-Two things to know before that session:
+- **The Microsoft Visual C++ runtime is not on a clean Windows**, and every
+  PostgreSQL binary here imports `vcruntime140.dll`. `initdb` died with
+  `0xC0000135`, surfaced as the bare number 3221225781. The machine check now
+  installs the runtime first. This is the one thing installed outside the
+  pharmacy folder.
+- **`spawn` cannot run `npm.cmd`.** Since the fix for CVE-2024-27980, `spawn`
+  with `shell: false` refuses a `.cmd` outright with `EINVAL`. npm is now run
+  as a script under the Node already running the installer — no shell, so
+  nothing re-parses a path containing a space.
+- **The Windows checksum file is `certutil` format**, with a header line before
+  the hash. The anchored regex matched nothing, so every Windows install
+  downloaded PostgreSQL unverified and blamed the publisher for it.
 
-- An unsigned installer trips **SmartScreen**. The operator clicks *More info →
-  Run anyway* once. Removing that warning needs a code-signing certificate at a
-  few hundred dollars a year, which is rarely worth it for one clinic.
-- The manual path above works on Windows today. It is longer, not worse.
+Two more were Windows-only but only appear after the machine has rebooted once,
+when the pharmacy belongs to SYSTEM and the operator's installer cannot touch
+it:
 
-In the meantime `install-windows.bat` exists only to say so rather than to fail
-confusingly.
+- **An upgrade could not stop the running pharmacy.** `schtasks /End` and
+  `pg_ctl stop` are both refused, both failures were swallowed, and the install
+  then died on `could not open log file ... Permission denied` — the running
+  server still holding it. It now elevates to stop it, and says why.
+- **`pharmacy status` reported the database down while it was serving.**
+  `pg_ctl status` cannot inspect a SYSTEM-owned process and reports "no server
+  running". Worse, `backup` believed it and would start a second postmaster
+  over a live one. The postmaster's PID file is now consulted, which still
+  distinguishes *our* server from any other.
+
+The remaining two were latent on every platform and Windows merely got there
+first: the database password was written in step 5 but the cluster created in
+step 3, so any failure in between left an install nothing could ever
+authenticate against; and `package-lock.json` was out of sync, making `npm ci`
+impossible on a clean checkout anywhere.
+
+Still unproven: reaching it from a till across a real LAN (the first run was a
+NAT'd VM), and surviving a reboot.
+
+### What it does that the other platforms do not
+
+- **Opens the firewall.** This is the one that wastes an afternoon. The app
+  already listens on every interface, so it works perfectly in a browser on the
+  machine itself and is invisible from the till — Windows Defender Firewall
+  drops the inbound connection with no error anywhere. The till just spins. The
+  installer adds an inbound TCP allow rule for the app port on the private and
+  domain profiles.
+- **Registers a boot task**, `PharmacyStockLedger`, via `schtasks`. It runs at
+  startup as SYSTEM, so the pharmacy comes back after a power cut with nobody
+  in the building. The task runs `pharmacy-service.cmd`, a wrapper that loops —
+  that loop is the `Restart=always` the systemd unit gets for free.
+- **Asks for administrator rights.** Both of the above need it, so they are
+  done together behind a single UAC prompt. Decline it and the install still
+  completes, falling back to a per-user task that starts at *logon* rather than
+  at boot, and printing the two commands to finish by hand.
+
+  A first install prompts once more before that, for the Microsoft Visual C++
+  runtime, and an upgrade on a machine that has rebooted prompts again to stop
+  the pharmacy SYSTEM is running. Both are separate prompts because both are
+  separate elevations; neither can be folded into the one above, which happens
+  at the end.
+
+### Things to check on that first run
+
+- **The network profile must be Private.** The firewall rule covers private and
+  domain, not public. A clinic Wi-Fi first joined as "Public" will still block
+  the till, and nothing in the app can tell.
+- **A path with a space** — `C:\Users\Apotek Sehat\pharmacy` — is the normal
+  case, not the edge case. Every generated script quotes for it; that quoting is
+  the first thing to distrust if something fails to start.
+- **SmartScreen.** An unsigned `.bat` may warn. The operator clicks *More info
+  → Run anyway* once. Removing that needs a code-signing certificate at a few
+  hundred dollars a year, rarely worth it for one clinic.
+- **Antivirus holding a file open** mid-copy, during `npm ci` or the build.
+  This is the classic Windows install failure and it reads as a corrupt file
+  rather than as a lock.
+- **PostgreSQL is x64-only** here, so an ARM Windows machine is refused up
+  front rather than half-installed.
+- **The install directory must be a local disk.** A network folder or a mapped
+  drive is refused: PostgreSQL needs fsync semantics a share does not give, and
+  the boot task runs as SYSTEM, which cannot see a per-user mapped drive at all.
+  Running the installer *from* a share is fine — only the destination matters.
+
+The manual path above also works on Windows, and remains the fallback. It is
+longer, not worse.

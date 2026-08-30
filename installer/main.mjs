@@ -6,8 +6,11 @@ import {
   exists,
   freeSpaceGb,
   has,
+  isWindows,
   lanAddress,
+  launcher,
   layout,
+  npm,
   run,
   targetTriple,
   ui,
@@ -24,6 +27,7 @@ import {
   waitUntilReady,
 } from "./postgres.mjs";
 import { installService } from "./service.mjs";
+import { ensureVisualCppRuntime, stopWindowsService } from "./windows.mjs";
 
 /**
  * The installer.
@@ -60,17 +64,24 @@ function defaultRoot() {
  * half-served application: the service is stopped, then restarted at the end by
  * registering it again.
  */
-async function stopRunningInstance(paths) {
+async function stopRunningInstance(paths, pgPort) {
   if (process.platform === "darwin") {
     await run("launchctl", [
       "bootout",
       `gui/${process.getuid?.() ?? 501}`,
       `${homedir()}/Library/LaunchAgents/id.apotek.pharmacy.plist`,
     ]).catch(() => {});
+    await stopServer(paths).catch(() => {});
   } else if (process.platform === "linux") {
     await run("systemctl", ["--user", "stop", "pharmacy.service"]).catch(() => {});
+    await stopServer(paths).catch(() => {});
+  } else if (isWindows) {
+    // Windows needs its own routine: after the machine has booted once, this
+    // pharmacy belongs to SYSTEM and the operator cannot stop it unaided.
+    // Swallowing that failure here is what produced a "Permission denied" on a
+    // log file three steps later. See stopWindowsService.
+    await stopWindowsService(paths, pgPort);
   }
-  await stopServer(paths).catch(() => {});
   ui.detail("stopped the running pharmacy");
 }
 
@@ -83,7 +94,12 @@ export async function install() {
 
   ui.title("Pharmacy Stock Ledger — install");
   ui.info(`Installing into ${root}`);
-  ui.detail("Nothing outside this folder is modified.");
+  ui.detail(
+    isWindows
+      ? "Nothing outside this folder is modified, except the Microsoft Visual\n" +
+          "   C++ runtime, which PostgreSQL needs and Windows does not ship."
+      : "Nothing outside this folder is modified.",
+  );
 
   /* --------------------------------------------------------- 1. preflight */
 
@@ -125,6 +141,11 @@ export async function install() {
     ui.fail("tar was not found, and it is needed to unpack PostgreSQL.");
   }
 
+  // Before anything is downloaded or created, because the alternative is
+  // finding out at initdb -- six steps in, with a data directory already on
+  // disk and an exit code that names nothing.
+  if (isWindows) await ensureVisualCppRuntime(paths);
+
   if (!(await exists(join(source, "package.json")))) {
     ui.fail(
       `no application found at ${source}.`,
@@ -140,7 +161,7 @@ export async function install() {
     // the pharmacy itself, so stop it rather than refusing to proceed.
     ui.warn("an installation is already here; updating it");
     ui.detail("the database and its records are left exactly as they are");
-    await stopRunningInstance(paths);
+    await stopRunningInstance(paths, pgPort);
   } else {
     // A first install refuses a port somebody else holds, rather than
     // discovering it later as a confusing failure against a foreign database.
@@ -148,13 +169,13 @@ export async function install() {
       ui.fail(
         `something is already listening on 127.0.0.1:${pgPort}.`,
         "That is probably another PostgreSQL. Pick a free port:\n" +
-          `  sh install-macos.command --db-port ${pgPort + 1}`,
+          `  ${launcher()} --db-port ${pgPort + 1}`,
       );
     }
     if (await portInUse(appPort)) {
       ui.fail(
         `something is already listening on port ${appPort}.`,
-        `Pick a different one:\n  sh install-macos.command --port ${appPort + 1}`,
+        `Pick a different one:\n  ${launcher()} --port ${appPort + 1}`,
       );
     }
     ui.ok(`ports ${pgPort} and ${appPort} are free`);
@@ -178,7 +199,40 @@ export async function install() {
     ? JSON.parse(await readFile(paths.config, "utf8"))
     : { dbPassword: randomBytes(24).toString("base64url"), pgPort, appPort };
 
-  await initCluster(paths, config.dbPassword);
+  const created = await initCluster(paths, config.dbPassword);
+
+  // The moment the cluster exists, this password is the only one that will ever
+  // open it -- it is baked into the role initdb created. Persist it here rather
+  // than in step 5, because everything between the two is allowed to fail.
+  //
+  // It used to be written in step 5, and a first install that died anywhere in
+  // between could not be resumed or repaired: `alreadyInstalled` keys off this
+  // file, so the next run generated a fresh password, while initCluster quite
+  // correctly refused to touch the cluster already on disk. Authentication then
+  // failed forever, and the only way out was deleting a data directory -- which
+  // for a real install is the one thing this program must never do.
+  if (created) {
+    await writeFile(paths.config, JSON.stringify(config, null, 2), { mode: 0o600 });
+  } else if (!alreadyInstalled) {
+    // A cluster on disk with no configuration beside it: the state an install
+    // interrupted before the fix above used to leave. The password that opens
+    // this cluster is gone, so nothing here can authenticate, and saying so
+    // plainly beats the "password authentication failed" this became.
+    //
+    // Deliberately not offering to delete it. If that cluster holds a
+    // pharmacy's records, deleting it is unrecoverable, and this program is in
+    // no position to tell the difference.
+    ui.fail(
+      `there is a database at ${paths.data}, but no ${paths.config} to open it with.`,
+      "The password was generated during an install that did not finish, and it\n" +
+        "cannot be recovered.\n\n" +
+        "If this machine has never held real pharmacy records, that database is\n" +
+        "empty and safe to remove -- delete the folder above and run this again.\n\n" +
+        "If it might hold records, do not delete it. Restore from a backup, or\n" +
+        "see DEPLOY.md for opening the cluster by hand.",
+    );
+  }
+
   await startServer(paths, config.pgPort);
   if (!(await waitUntilReady(paths, config.pgPort))) {
     ui.fail(
@@ -196,14 +250,21 @@ export async function install() {
   if (resolve(paths.app) !== source) {
     await cp(source, paths.app, {
       recursive: true,
+      // `.env*.local` is excluded for the same reason as `.data`: it is the
+      // developer's machine, not the pharmacy's. Copying it put a dev
+      // DATABASE_URL -- password and all -- onto the clinic's disk. Step 5
+      // overwrites it seconds later on a good run, which is exactly why this
+      // went unnoticed; on a run that stops in between it stays there, and it
+      // was never ours to copy in the first place.
       filter: (path) =>
-        !/(^|[\\/])(node_modules|\.next|\.git|\.data|backups|downloads)([\\/]|$)/u.test(path),
+        !/(^|[\\/])(node_modules|\.next|\.git|\.data|backups|downloads)([\\/]|$)/u.test(path) &&
+        !/(^|[\\/])\.env(\.[^\\/]*)?\.local$/u.test(path),
     });
     ui.ok("files copied");
   }
 
   ui.info("installing dependencies — this takes a few minutes");
-  await run("npm", ["ci", "--no-audit", "--no-fund"], { cwd: paths.app });
+  await npm(["ci", "--no-audit", "--no-fund"], { cwd: paths.app });
   ui.ok("dependencies installed");
 
   /* ---------------------------------------------------------- 5. config */
@@ -235,24 +296,30 @@ export async function install() {
 
   ui.step("Building");
   ui.info("this is the slow step — a few minutes on a small machine");
-  await run("npm", ["run", "build"], { cwd: paths.app });
+  await npm(["run", "build"], { cwd: paths.app });
   ui.ok("built");
 
   /* ------------------------------------------------------- 7. migrations */
 
   ui.step("Preparing the database");
-  await run("npm", ["run", "db:migrate"], { cwd: paths.app });
+  await npm(["run", "db:migrate"], { cwd: paths.app });
   ui.ok("schema up to date");
 
   /* ----------------------------------------------------- 8. owner account */
 
-  let ownerPassword = null;
-  if (!alreadyInstalled) {
-    ui.step("Creating the owner account");
-    const output = await run("npm", ["run", "db:seed"], { cwd: paths.app });
-    ownerPassword = /Temporary password\s*:\s*(\S+)/u.exec(output)?.[1] ?? null;
-    ui.ok("owner account created");
-  }
+  // Always run, and let the database decide. `db:seed` is idempotent: it leaves
+  // an existing owner alone and prints no password for one it did not create.
+  //
+  // This used to be gated on `alreadyInstalled`, which is a guess about the
+  // database made from a file beside it. The guess broke as soon as the config
+  // began being written early: an install that failed after the cluster existed
+  // then looked like an upgrade on the next run, so seeding was skipped and the
+  // pharmacy came up with no owner and no way to sign in -- reporting success
+  // the whole way.
+  ui.step("Creating the owner account");
+  const seeded = await npm(["run", "db:seed"], { cwd: paths.app });
+  const ownerPassword = /Temporary password\s*:\s*(\S+)/u.exec(seeded)?.[1] ?? null;
+  ui.ok(ownerPassword ? "owner account created" : "owner account already exists");
 
   /* -------------------------------------------------- 9. control command */
 
@@ -260,29 +327,55 @@ export async function install() {
 
   // A tiny wrapper so the owner types `pharmacy status`, not a node invocation
   // with two paths in it. It pins the install root, so it works from anywhere.
-  const controlPath = join(root, "pharmacy");
-  await writeFile(
-    controlPath,
-    [
-      "#!/bin/sh",
-      "# Control the pharmacy. Written by the installer.",
-      `PHARMACY_ROOT=${JSON.stringify(root)} exec ${JSON.stringify(process.execPath)} \\`,
-      `  ${JSON.stringify(join(paths.app, "installer", "control.mjs"))} "$@"`,
-      "",
-    ].join("\n"),
-    { mode: 0o755 },
-  );
+  const controlModule = join(paths.app, "installer", "control.mjs");
+  const controlPath = join(root, isWindows ? "pharmacy.cmd" : "pharmacy");
+
+  if (isWindows) {
+    // `%*` forwards the arguments; `set` rather than an inline assignment,
+    // which cmd does not have. Double-clickable as well as typeable.
+    await writeFile(
+      controlPath,
+      [
+        "@echo off",
+        "REM Control the pharmacy. Written by the installer.",
+        `set "PHARMACY_ROOT=${root}"`,
+        `"${process.execPath}" "${controlModule}" %*`,
+        "",
+      ].join("\r\n"),
+      "utf8",
+    );
+  } else {
+    await writeFile(
+      controlPath,
+      [
+        "#!/bin/sh",
+        "# Control the pharmacy. Written by the installer.",
+        `PHARMACY_ROOT=${JSON.stringify(root)} exec ${JSON.stringify(process.execPath)} \\`,
+        `  ${JSON.stringify(controlModule)} "$@"`,
+        "",
+      ].join("\n"),
+      { mode: 0o755 },
+    );
+  }
   ui.ok(`${controlPath} created`);
 
   /* -------------------------------------------------------- 10. service */
 
   ui.step("Making it start by itself");
-  const service = await installService(paths);
+  const service = await installService(paths, config.appPort);
   if (service.installed) {
-    ui.ok(`${service.kind} service registered — it will start after a power cut`);
+    ui.ok(`${service.kind} registered — it will start after a power cut`);
   } else {
     ui.warn(service.reason);
-    ui.detail(`Start it by hand with: ${join(root, "pharmacy")} start`);
+    ui.detail(`Start it by hand with: ${controlPath} start`);
+  }
+  if (service.firewall) {
+    ui.ok(`the firewall now allows the till to reach port ${config.appPort}`);
+  }
+  if (service.warning) {
+    ui.blank();
+    ui.warn("Not finished:");
+    for (const line of service.warning.split("\n")) ui.info(line);
   }
 
   /* ------------------------------------------------------------- done */
@@ -302,9 +395,9 @@ export async function install() {
   ui.info(`Open this from the till:  ${address}`);
   ui.blank();
   ui.info("Useful afterwards:");
-  ui.detail(`${join(root, "pharmacy")} status     is it running?`);
-  ui.detail(`${join(root, "pharmacy")} backup     take a backup now`);
-  ui.detail(`${join(root, "pharmacy")} logs       what it has been doing`);
+  ui.detail(`${controlPath} status     is it running?`);
+  ui.detail(`${controlPath} backup     take a backup now`);
+  ui.detail(`${controlPath} logs       what it has been doing`);
   ui.blank();
   ui.info("Next: read GO-LIVE.md. Rehearse a restore before real data goes in.");
   ui.blank();

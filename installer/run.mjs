@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
-import { layout } from "./lib.mjs";
+import { layout, pathWith } from "./lib.mjs";
 import { startServer, stopServer, waitUntilReady } from "./postgres.mjs";
 
 /**
@@ -46,14 +46,17 @@ async function main() {
   // already running removes the assumption entirely.
   const next = join(paths.app, "node_modules", "next", "dist", "bin", "next");
 
-  app = spawn(process.execPath, [next, "start", "-p", String(config.appPort)], {
+  // `-H 0.0.0.0` is Next's default, said out loud. This is the pharmacy's whole
+  // reason for existing on the network -- the till is a different machine --
+  // and it must not be a default that a future version is free to change.
+  app = spawn(process.execPath, [next, "start", "-H", "0.0.0.0", "-p", String(config.appPort)], {
     cwd: paths.app,
     env: {
       ...process.env,
       PORT: String(config.appPort),
       NODE_ENV: "production",
       // So anything the app itself shells out to can find node and npm.
-      PATH: `${dirname(process.execPath)}:${process.env.PATH ?? ""}`,
+      PATH: pathWith(dirname(process.execPath)),
     },
     stdio: ["ignore", "inherit", "inherit"],
   });

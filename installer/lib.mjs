@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
-import { access, mkdir, rm, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { createWriteStream } from "node:fs";
 import { networkInterfaces } from "node:os";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { dirname, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 
 /**
  * Shared parts of the installer.
@@ -112,12 +112,17 @@ export function run(command, args, options = {}) {
     );
     child.on("exit", (code) => {
       if (code === 0) return resolve(output);
-      reject(
-        new Error(
-          `${command} ${args.join(" ")} exited with ${code}` +
-            (output ? `\n\n${output.trim().split("\n").slice(-25).join("\n")}` : ""),
-        ),
+      const error = new Error(
+        `${command} ${args.join(" ")} exited with ${code}` +
+          (output ? `\n\n${output.trim().split("\n").slice(-25).join("\n")}` : ""),
       );
+      // The message embeds the command line, so anything matching against it
+      // is also matching the arguments -- which is how a failed initdb came to
+      // be reported as an ICU problem, `--icu-locale` being right there in the
+      // text. Callers that need to know what the program *said* read these.
+      error.output = output;
+      error.exitCode = code;
+      reject(error);
     });
   });
 }
@@ -160,6 +165,106 @@ export function targetTriple() {
     "win32-x64": "x86_64-pc-windows-msvc",
   };
   return triples[key] ?? null;
+}
+
+/** Windows differs in enough small ways that naming it once is worth it. */
+export const isWindows = process.platform === "win32";
+
+/**
+ * npm, run in a way Windows will actually start.
+ *
+ * On Windows npm is `npm.cmd`, a batch file, and `spawn` runs with
+ * `shell: false` -- deliberately, so no argument is ever re-parsed. That
+ * combination has failed two different ways:
+ *
+ *   - Spawning the bare name `npm` fails ENOENT, which reads as "npm is not
+ *     installed" on a machine where npm is plainly installed.
+ *   - Spawning `npm.cmd` fixed that, and now fails EINVAL. Since the fix for
+ *     CVE-2024-27980 (Node 18.20.2 / 20.12.2 and up) `spawn` refuses to
+ *     execute a `.bat` or `.cmd` at all without `shell: true`.
+ *
+ * `shell: true` would clear both and is the wrong trade: it hands the whole
+ * command line back to cmd.exe to re-parse, and the install path is routinely
+ * `C:\Users\Apotek Sehat\pharmacy`. So run npm the way npm.cmd itself does --
+ * as a script, under the Node already running this installer. No shell, no
+ * quoting, no PATH lookup, and the same npm on every platform.
+ */
+function npmCli() {
+  const here = dirname(process.execPath);
+  return [
+    // The Windows zip and the macOS/Linux tarballs put it in different places.
+    join(here, "node_modules", "npm", "bin", "npm-cli.js"),
+    join(here, "..", "lib", "node_modules", "npm", "bin", "npm-cli.js"),
+  ];
+}
+
+let npmScript;
+
+export async function npm(args, options = {}) {
+  if (npmScript === undefined) {
+    npmScript = null;
+    for (const candidate of npmCli()) {
+      if (await exists(candidate)) {
+        npmScript = candidate;
+        break;
+      }
+    }
+  }
+
+  // A Node installed some other way may not have npm beside it. On macOS and
+  // Linux the plain name still works, so fall back rather than refuse.
+  if (!npmScript) {
+    if (isWindows) {
+      throw new Error(
+        `npm was not found next to ${process.execPath}.\n` +
+          "Install Node 22 from https://nodejs.org, which includes npm, and run this again.",
+      );
+    }
+    return run("npm", args, options);
+  }
+
+  return run(process.execPath, [npmScript, ...args], options);
+}
+
+/**
+ * A PATH with our own directories in front, joined the way this platform joins.
+ *
+ * `:` on Windows produces a PATH the shell reads as a drive letter and silently
+ * ignores, so the bundled `pg_dump` is not found and the backup runs against
+ * whatever PostgreSQL happens to be installed -- or none.
+ */
+export function pathWith(...directories) {
+  return [...directories, process.env.PATH ?? ""].filter(Boolean).join(delimiter);
+}
+
+/** The command that starts the installer here, for use in error messages. */
+export function launcher() {
+  if (isWindows) return "install-windows.bat";
+  return process.platform === "darwin" ? "sh install-macos.command" : "sh install-linux.sh";
+}
+
+/**
+ * Moves the contents of a directory up into a destination.
+ *
+ * This was `sh -c "mv src/* dest/"`, which is three assumptions Windows does
+ * not meet: a POSIX shell, an `mv`, and glob expansion. Done in JavaScript it
+ * is the same operation everywhere, and it falls back to copy-then-delete for
+ * the case that actually happens -- a temp directory and an install directory
+ * on different volumes, where rename fails with EXDEV.
+ */
+export async function moveContents(from, into) {
+  await mkdir(into, { recursive: true });
+  for (const entry of await readdir(from)) {
+    const source = join(from, entry);
+    const destination = join(into, entry);
+    try {
+      await rename(source, destination);
+    } catch (error) {
+      if (error.code !== "EXDEV") throw error;
+      await cp(source, destination, { recursive: true });
+      await rm(source, { recursive: true, force: true });
+    }
+  }
 }
 
 /**
@@ -239,7 +344,18 @@ export async function fetchChecksum(url) {
   const response = await fetch(url, { redirect: "follow" });
   if (!response.ok) return null;
   const text = await response.text();
-  const match = /^([0-9a-f]{64})/iu.exec(text.trim());
+  // Not anchored to the start. The Unix assets are `<hash>  <filename>`, but
+  // the Windows ones are generated with `certutil -hashfile`, which writes a
+  // header line first and puts the hash on line two:
+  //
+  //   SHA256 hash of postgresql-...-windows-msvc.tar.gz:
+  //   7da44c2dbcda3b49...
+  //   CertUtil: -hashfile command completed successfully.
+  //
+  // Anchoring found nothing there and returned null, and null is "no published
+  // checksum" -- so every Windows install downloaded PostgreSQL unverified and
+  // said so in a warning that read like the project's fault rather than a bug.
+  const match = /\b([0-9a-f]{64})\b/iu.exec(text);
   return match ? match[1].toLowerCase() : null;
 }
 
