@@ -141,7 +141,7 @@ export async function start(paths, config) {
  */
 export async function stop(paths, config) {
   if (isWindows) {
-    const stopped = await stopWindowsService(paths, config.pgPort);
+    const stopped = await stopWindowsService(paths, config);
     return {
       ok: stopped.ok,
       // The remedy is the useful half -- the two commands to run as an

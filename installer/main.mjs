@@ -70,7 +70,7 @@ function defaultRoot() {
  * half-served application: the service is stopped, then restarted at the end by
  * registering it again.
  */
-async function stopRunningInstance(paths, pgPort) {
+async function stopRunningInstance(paths, ports) {
   if (process.platform === "darwin") {
     await run("launchctl", [
       "bootout",
@@ -91,7 +91,7 @@ async function stopRunningInstance(paths, pgPort) {
     // must not be killed by a declined prompt. For the installer, though, a
     // pharmacy that will not stop is the end of the road: the next step
     // overwrites the files it is running from.
-    const stopped = await stopWindowsService(paths, pgPort);
+    const stopped = await stopWindowsService(paths, ports);
     if (!stopped.ok) ui.fail(stopped.reason, stopped.remedy);
   }
   ui.detail("stopped the running pharmacy");
@@ -192,7 +192,7 @@ export async function install() {
       ui.detail("continuing, but there is no fresh backup of what is about to change");
     }
 
-    await stopRunningInstance(paths, pgPort);
+    await stopRunningInstance(paths, { pgPort, appPort });
   } else {
     // A first install refuses a port somebody else holds, rather than
     // discovering it later as a confusing failure against a foreign database.

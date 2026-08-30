@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { download, run, ui } from "./lib.mjs";
 import { portInUse } from "./postgres.mjs";
@@ -117,6 +117,15 @@ const TASK_NAME = "PharmacyStockLedger";
 export const FIREWALL_RULE = "Pharmacy Stock Ledger";
 
 /**
+ * The file that tells the restart loop a stop was deliberate.
+ *
+ * Its presence means "do not start the pharmacy again"; stopping creates it and
+ * starting removes it. A file rather than a signal because the thing that has
+ * to be told is a batch loop, and that is the only language it reads.
+ */
+const stopFlag = (paths) => join(paths.root, "stopping");
+
+/**
  * The script the scheduled task runs.
  *
  * A wrapper file rather than the command inline, because `schtasks /TR` takes
@@ -131,6 +140,7 @@ export const FIREWALL_RULE = "Pharmacy Stock Ledger";
 async function writeRunner(paths, nodePath, runner) {
   const script = join(paths.root, "pharmacy-service.cmd");
   const log = join(paths.logs, "pharmacy.log");
+  const stopping = stopFlag(paths);
 
   await writeFile(
     script,
@@ -139,7 +149,16 @@ async function writeRunner(paths, nodePath, runner) {
       "REM Written by the installer. Runs the pharmacy and restarts it if it stops.",
       `cd /d "${paths.app}"`,
       ":loop",
+      // The loop has to tell "the app crashed, start it again" from "somebody
+      // asked me to stop", and a dead child process looks identical either way.
+      // `schtasks /End` was trusted to end the whole tree and does not reliably
+      // do so: the supervisor died, this loop restarted it five seconds later,
+      // and the `pg_ctl stop` that came next then shut the database out from
+      // under a pharmacy that was busy starting. The result was an app with no
+      // database, serving 500s. This file is how the loop is told.
+      `if exist "${stopping}" goto done`,
       `"${nodePath}" "${runner}" "${paths.root}" >> "${log}" 2>&1`,
+      `if exist "${stopping}" goto done`,
       `echo %DATE% %TIME%  pharmacy stopped; restarting in 5s >> "${log}"`,
       // `ping`, not `timeout`. A scheduled task runs with no console, and
       // `timeout` refuses to run without one -- "input redirection is not
@@ -148,6 +167,8 @@ async function writeRunner(paths, nodePath, runner) {
       // it, which is worse than being down.
       "ping -n 6 127.0.0.1 > nul",
       "goto loop",
+      ":done",
+      `echo %DATE% %TIME%  pharmacy stopped on request >> "${log}"`,
       "",
     ].join("\r\n"),
     "utf8",
@@ -182,6 +203,12 @@ async function elevate(paths, lines) {
 
 export async function installWindowsService(paths, nodePath, runner, appPort) {
   const script = await writeRunner(paths, nodePath, runner);
+
+  // An install ends by starting the task, and the loop refuses to start while
+  // this file is there. An upgrade stops the pharmacy on its way in, so without
+  // this every upgrade would finish by reporting the pharmacy registered and
+  // running while the loop read the flag and exited.
+  await rm(stopFlag(paths), { force: true }).catch(() => {});
 
   // ONSTART as SYSTEM is the one that matches what this is for: the machine
   // comes back after a power cut with nobody in the building to log in.
@@ -266,7 +293,7 @@ export async function installWindowsService(paths, nodePath, runner, appPort) {
  * every separator eaten. The only character that needs care here is `'`, which
  * is escaped by doubling it.
  */
-function quote(value) {
+function psLiteral(value) {
   return `'${String(value).replaceAll("'", "''")}'`;
 }
 
@@ -282,9 +309,9 @@ export async function installPanelShortcut(paths, target) {
     "foreach ($dir in @([Environment]::GetFolderPath('Desktop'), " +
       "[Environment]::GetFolderPath('StartMenu'))) {",
     `  if (-not $dir) { continue }`,
-    `  $link = $shell.CreateShortcut((Join-Path $dir ${quote(shortcut)}))`,
-    `  $link.TargetPath = ${quote(target)}`,
-    `  $link.WorkingDirectory = ${quote(paths.root)}`,
+    `  $link = $shell.CreateShortcut((Join-Path $dir ${psLiteral(shortcut)}))`,
+    `  $link.TargetPath = ${psLiteral(target)}`,
+    `  $link.WorkingDirectory = ${psLiteral(paths.root)}`,
     "  $link.WindowStyle = 7",
     "  $link.Description = 'Panel kontrol Apotek'",
     "  $link.Save()",
@@ -320,6 +347,10 @@ export async function installPanelShortcut(paths, target) {
  * operator, and that one needs no prompt at all.
  */
 export async function startWindowsService(paths) {
+  // Cleared first, or the loop reads it and exits immediately -- a start that
+  // reports success and leaves the pharmacy down.
+  await rm(stopFlag(paths), { force: true }).catch(() => {});
+
   try {
     await run("schtasks", ["/Run", "/TN", TASK_NAME]);
     return { ok: true };
@@ -360,18 +391,65 @@ export async function startWindowsService(paths) {
  * pharmacy is the operator's own and no prompt is needed -- and only ask for
  * administrator rights if something is still holding the port.
  */
-export async function stopWindowsService(paths, pgPort) {
+export async function stopWindowsService(paths, ports) {
   const pgCtl = join(paths.postgres, "bin", "pg_ctl.exe");
+  const { pgPort, appPort } = typeof ports === "number" ? { pgPort: ports } : ports;
+
+  // Both halves, because either one still up means the stop did not happen.
+  // Only the database was checked before, so an app left holding its port went
+  // unnoticed -- which is exactly the state a half-killed restart loop leaves.
+  const stillUp = async () =>
+    (await portInUse(pgPort)) || (appPort ? await portInUse(appPort) : false);
+
+  // First, and before anything is killed. The loop in pharmacy-service.cmd
+  // reads this to know the stop was asked for; without it, killing the
+  // supervisor just makes the loop start another one five seconds later.
+  await writeFile(stopFlag(paths), `stopping at ${new Date().toISOString()}\n`, "utf8")
+    .catch(() => {});
 
   await run("schtasks", ["/End", "/TN", TASK_NAME]).catch(() => {});
   await run(pgCtl, ["--pgdata", paths.data, "--mode", "fast", "stop"]).catch(() => {});
 
-  if (!(await portInUse(pgPort))) return { ok: true };
+  if (!(await stillUp())) return { ok: true };
 
   ui.detail("the pharmacy is running as SYSTEM; stopping it needs administrator rights");
+
+  // `schtasks /End` ends the task, and on this machine that does not reach the
+  // grandchild: the supervisor dies and the Next server it spawned keeps
+  // running, still holding the app port. A stop that leaves the app up is not a
+  // stop, and the next start then fails on a port it cannot bind.
+  //
+  // So the tree is ended by hand as well, matched on the install root so only
+  // this pharmacy's processes are touched -- never every node.exe on a machine
+  // that may be running other things, including the tools being used to
+  // install it.
+  const killer = join(paths.root, "downloads", "stop-tree.ps1");
+  await mkdir(join(paths.root, "downloads"), { recursive: true });
+  // Matched on the three things that are the pharmacy -- the service loop, the
+  // supervisor, and the Next server it spawns -- and not merely on the install
+  // path. Matching the path alone also matches `pharmacy.cmd`, which is to say
+  // the very command asking for the stop: the first version of this killed its
+  // own caller, freeing the ports and then reporting nothing at all.
+  await writeFile(
+    killer,
+    [
+      "$root = " + psLiteral(paths.root),
+      "$mine = @('pharmacy-service.cmd', 'installer\\run.mjs', 'next\\dist\\bin\\next')",
+      "Get-CimInstance Win32_Process -Filter \"Name='node.exe' OR Name='cmd.exe'\" |",
+      "  Where-Object {",
+      "    $line = $_.CommandLine",
+      "    $line -and $line -like \"*$root*\" -and ($mine | Where-Object { $line -like \"*$_*\" })",
+      "  } |",
+      "  ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }",
+      "",
+    ].join("\r\n"),
+    "utf8",
+  );
+
   try {
     await elevate(paths, [
       `schtasks /End /TN "${TASK_NAME}"`,
+      `powershell -NoProfile -ExecutionPolicy Bypass -File "${killer}"`,
       `"${pgCtl}" --pgdata "${paths.data}" --mode fast stop`,
       "exit /b 0",
     ]);
@@ -379,9 +457,11 @@ export async function stopWindowsService(paths, pgPort) {
     ui.warn("could not stop the running pharmacy");
   }
 
-  // Stopping is asynchronous enough that the port outlives the command.
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    if (!(await portInUse(pgPort))) return { ok: true };
+  // Stopping is asynchronous enough that the ports outlive the command, and the
+  // restart loop needs a moment to notice the flag and give up. Long enough to
+  // cover the loop's own five-second pause.
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    if (!(await stillUp())) return { ok: true };
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
