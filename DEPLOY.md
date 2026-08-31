@@ -111,7 +111,9 @@ server means a closed counter on the morning the connection fails.
 - **A fixed address on the clinic network**, so the till machine can always find
   it. Either a static IP or a DHCP reservation on the router.
 - **Somewhere for backups that is not that machine.** An external drive is
-  enough to start.
+  enough to start, or set `BACKUP_RCLONE_REMOTE` to push each dump to Google
+  Drive (or OneDrive, S3, ...) automatically -- see "Backing up to Google
+  Drive" in README.md.
 
 ---
 
