@@ -71,6 +71,9 @@ const T = {
     "tailscale-serve-failed":
       "Tailscale tidak dapat menyajikan apotek. Periksa Tailscale di komputer " +
       "ini, lalu coba lagi.",
+    "tailscale-serve-timeout":
+      "Tailscale tidak merespons. Buka aplikasi Tailscale, pastikan sudah " +
+      "masuk dan berjalan, lalu coba lagi.",
   },
   remoteNoHttps:
     "Sertifikat HTTPS belum diaktifkan untuk jaringan Tailscale Anda, jadi " +

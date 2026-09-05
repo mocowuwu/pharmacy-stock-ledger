@@ -65,7 +65,7 @@ export async function tailscaleState() {
 
   let status;
   try {
-    status = JSON.parse(await run(binary, ["status", "--json"]));
+    status = JSON.parse(await run(binary, ["status", "--json"], { timeoutMs: 10_000 }));
   } catch {
     return { state: "missing", binary };
   }
@@ -122,8 +122,23 @@ export async function enableRemote(paths, config) {
   let https = true;
 
   try {
-    await run(tailscale.binary, ["serve", "--bg", "--https=443", target]);
+    await run(tailscale.binary, ["serve", "--bg", "--https=443", target], {
+      timeoutMs: 20_000,
+    });
   } catch (error) {
+    // A stuck `serve` is not a certificate refusal -- it is the backend never
+    // answering (a UAC-adjacent prompt with no console to show it on, or
+    // tailscaled not warmed up), and it is not the HTTPS fallback below.
+    // Report it as its own thing, because "try again" is the only remedy that
+    // fits and it fits every one of those causes.
+    if (error.timedOut) {
+      return {
+        ok: false,
+        code: "tailscale-serve-timeout",
+        reason: "Tailscale did not respond to the `serve` command in time.",
+        remedy: "Open the Tailscale app, confirm it is signed in and running, and try again.",
+      };
+    }
     // HTTPS certificates are a per-tailnet switch in the admin console, off by
     // default on some plans. Without it `serve --https` cannot get a
     // certificate and fails. That is not fatal: the tailnet is WireGuard
@@ -169,7 +184,9 @@ export async function enableRemote(paths, config) {
 export async function disableRemote(paths, config) {
   const tailscale = await tailscaleState();
   if (tailscale.state === "running") {
-    await run(tailscale.binary, ["serve", "--https=443", "off"]).catch(() => {});
+    await run(tailscale.binary, ["serve", "--https=443", "off"], { timeoutMs: 10_000 }).catch(
+      () => {},
+    );
   }
 
   const updated = { ...config, remote: false, bind: "0.0.0.0" };

@@ -107,10 +107,31 @@ export function run(command, args, options = {}) {
       child.stderr?.on("data", (d) => (output += d));
     }
 
-    child.on("error", (error) =>
-      reject(new Error(`could not run ${command}: ${error.message}`)),
-    );
+    // A child that never exits -- waiting on an interactive prompt with no
+    // console to show it on, or a backend that never answers -- would
+    // otherwise hang this promise, and every caller that awaits it, forever.
+    // Only opt-in callers pay for the timer.
+    let timedOut = false;
+    const timer = options.timeoutMs
+      ? setTimeout(() => {
+          timedOut = true;
+          child.kill();
+        }, options.timeoutMs)
+      : null;
+
+    child.on("error", (error) => {
+      if (timer) clearTimeout(timer);
+      reject(new Error(`could not run ${command}: ${error.message}`));
+    });
     child.on("exit", (code) => {
+      if (timer) clearTimeout(timer);
+      if (timedOut) {
+        const error = new Error(
+          `${command} ${args.join(" ")} did not finish within ${options.timeoutMs}ms`,
+        );
+        error.timedOut = true;
+        return reject(error);
+      }
       if (code === 0) return resolve(output);
       const error = new Error(
         `${command} ${args.join(" ")} exited with ${code}` +
