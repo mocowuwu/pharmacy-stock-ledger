@@ -95,10 +95,19 @@ New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 #
 # Windows 11 on ARM does emulate x64, and the whole stack was in fact first
 # proven that way; but emulated is not what a pharmacy should be running on
-# unknowingly, and nobody has tested it under load. Refuse, and say what it is.
+# unknowingly, and nobody has tested it under load. Refuse by default, and say
+# what it is -- but let someone who has made that call anyway say so
+# explicitly, rather than editing this file to remove the guard.
 if ($env:PROCESSOR_ARCHITECTURE -notin @("AMD64", "x86")) {
-    Die ("unsupported processor: $env:PROCESSOR_ARCHITECTURE. This needs a 64-bit Intel or`n" +
-         "AMD machine -- the PostgreSQL build the pharmacy uses is published for those only.")
+    if ($env:PHARMACY_ALLOW_ARM_EMULATION -ne "1") {
+        Die ("unsupported processor: $env:PROCESSOR_ARCHITECTURE. This needs a 64-bit Intel or`n" +
+             "AMD machine -- the PostgreSQL build the pharmacy uses is published for those only.`n`n" +
+             "Windows on ARM can run the x64 build under emulation, but nobody has tested this`n" +
+             "under real load and it is not what a live pharmacy till should run unknowingly.`n" +
+             "To proceed anyway, set PHARMACY_ALLOW_ARM_EMULATION=1 and run this again.")
+    }
+    Say "Running on $env:PROCESSOR_ARCHITECTURE under x64 emulation -- PHARMACY_ALLOW_ARM_EMULATION=1 was set."
+    Say "This is unproven under real load. Treat it as a trial, not a go-live machine."
 }
 
 $NodeBin = Find-Node
