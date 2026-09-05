@@ -1,8 +1,8 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
-import { resolve } from "node:path";
-import { exists, layout, run, ui } from "./lib.mjs";
+import { join, resolve } from "node:path";
+import { exists, isWindows, layout, run, ui } from "./lib.mjs";
 import * as operations from "./operations.mjs";
 import * as remote from "./remote.mjs";
 
@@ -87,6 +87,16 @@ const T = {
   backup: "Cadangkan sekarang",
   adminWarning: "Windows akan meminta izin. Klik Ya.",
   working: "Sedang berjalan…",
+  updateTitle: "Pembaruan",
+  checkUpdate: "Periksa pembaruan",
+  updateNow: "Pasang pembaruan",
+  updateHint:
+    "Mengunduh versi terbaru dan memasangnya. Basis data dicadangkan lebih " +
+    "dulu, dan apotek berhenti sebentar selama proses berlangsung.",
+  upToDate: "Sudah versi terbaru",
+  updateAvailable: "Versi baru tersedia:",
+  updateInstalled: "Terpasang:",
+  updateDone: "Pembaruan selesai. Versi sekarang:",
   folders: "Lokasi berkas",
   foldersHint:
     "Rekaman apotek disimpan di folder basis data. Cadangan yang belum disalin " +
@@ -109,6 +119,15 @@ const T = {
   closeHint:
     "Menutup halaman ini tidak menghentikan apotek. Apotek berjalan sendiri, " +
     "termasuk setelah komputer menyala kembali.",
+  shutdownTitle: "Matikan total",
+  shutdownBody:
+    "Ini menghentikan seluruh apotek, mematikan aktifnya secara otomatis, " +
+    "dan menonaktifkan halaman panel ini juga -- semuanya, bukan sebagian. " +
+    "Rekaman dan cadangan yang sudah ada tetap aman dan tidak terhapus.",
+  shutdownHow: "Untuk melakukannya, buka terminal di komputer ini dan jalankan:",
+  shutdownUndo:
+    "Tidak ada tombol untuk menyalakannya kembali dari sini -- itu sengaja. " +
+    "Satu-satunya cara adalah menjalankan pemasang (installer) lagi.",
 };
 
 /* ----------------------------------------------------------------- security */
@@ -147,7 +166,7 @@ const escape = (value) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character],
   );
 
-function page(folders, needsAdministrator) {
+function page(folders, needsAdministrator, controlPath) {
   const folderRows = folders
     .map(
       (folder) => `
@@ -293,6 +312,16 @@ function page(folders, needsAdministrator) {
   </section>
 
   <section>
+    <h2>${T.updateTitle}</h2>
+    <div class="actions">
+      <button data-action="check-update">${T.checkUpdate}</button>
+      <button data-action="update" id="update-now" hidden>${T.updateNow}</button>
+    </div>
+    <p class="hint" id="update-status">—</p>
+    <p class="hint">${T.updateHint}</p>
+  </section>
+
+  <section>
     <h2>${T.folders}</h2>
     <table>${folderRows}</table>
     <p class="hint">${T.foldersHint}</p>
@@ -301,6 +330,14 @@ function page(folders, needsAdministrator) {
   <section>
     <h2>${T.logs}</h2>
     <pre id="logs">—</pre>
+  </section>
+
+  <section>
+    <h2>${T.shutdownTitle}</h2>
+    <p>${T.shutdownBody}</p>
+    <p class="hint">${T.shutdownHow}</p>
+    <pre>${escape(controlPath)} disable</pre>
+    <p class="hint">${T.shutdownUndo}</p>
   </section>
 
   <footer>${T.closeHint}</footer>
@@ -403,6 +440,16 @@ function page(folders, needsAdministrator) {
         if (result.ok === false) {
           say(T.remoteErrors[result.code] || T.failed + " " + (result.reason || ""), false);
         }
+        else if (button.dataset.action === "check-update") {
+          $("update-now").hidden = !result.updateAvailable;
+          $("update-status").textContent = result.updateAvailable
+            ? T.updateAvailable + " " + result.current + " → " + result.latest
+            : T.upToDate + " (" + result.current + ")";
+        }
+        else if (button.dataset.action === "update") {
+          $("update-now").hidden = true;
+          $("update-status").textContent = T.updateDone + " " + result.version;
+        }
         else if (result.message) say(T.remoteNoHttps, true);
         else if (result.address) say(result.address, true);
         else if (result.file) say(T.backupDone + " " + result.file, true);
@@ -450,6 +497,79 @@ function page(folders, needsAdministrator) {
 </html>`;
 }
 
+/* ---------------------------------------------------------- disabled page */
+
+/**
+ * What the panel shows instead of itself once `pharmacy disable` has run.
+ *
+ * "Every part of the server" includes this page -- a control panel that still
+ * has a working stop/start/backup on it is not disabled, it is a pharmacy one
+ * click away from being un-disabled by the same person the disable was for.
+ * So there is no status, no buttons, nothing that calls into `operations.mjs`
+ * at all: just the one sentence that says why, and the one sentence that says
+ * how to undo it.
+ */
+function disabledPage() {
+  return `<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apotek — Dinonaktifkan</title>
+<style>
+  :root { --bg:#f6f5fa; --ink:#17141f; --muted:#5c5670; --sidebar:#221c33; --sidebar-ink:#edeaf6; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f0d16; --ink:#edeaf6; --muted:#9c95b3; --sidebar:#191527; }
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  header { background:var(--sidebar); color:var(--sidebar-ink); padding:18px 28px; font-size:17px; font-weight:600; }
+  main { max-width:560px; margin:60px auto; padding:0 20px; }
+  p.muted { color:var(--muted); }
+  code { font-family:ui-monospace,"Cascadia Mono",Consolas,monospace; }
+</style>
+</head>
+<body>
+<header>Panel Kontrol Apotek</header>
+<main>
+  <h1>Apotek dinonaktifkan</h1>
+  <p>Seluruh apotek dihentikan, tidak akan menyala sendiri lagi, dan panel
+  kontrol ini pun tidak melakukan apa pun selain menampilkan pesan ini.</p>
+  <p>Rekaman apotek dan cadangan yang sudah ada tetap aman -- tidak ada yang
+  dihapus.</p>
+  <p class="muted">Untuk mengaktifkannya kembali, jalankan pemasang (installer)
+  di komputer ini lagi.</p>
+</main>
+</body>
+</html>`;
+}
+
+/** A minimal server: one static page, nothing that can be driven remotely. */
+async function serveDisabled() {
+  const html = disabledPage();
+  const server = createServer((request, response) => {
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+    response.end(html);
+  });
+  await new Promise((ready) => server.listen(0, "127.0.0.1", ready));
+  const { port } = server.address();
+  const address = `http://127.0.0.1:${port}/`;
+
+  ui.warn("Apotek dinonaktifkan.");
+  ui.detail("Jalankan pemasang lagi untuk mengaktifkannya kembali.");
+  await openBrowser(address).catch(() => {
+    ui.warn("could not open a browser; open the address above yourself");
+  });
+
+  // No live state to poll and nothing to press, so the page does not need the
+  // server once it has loaded -- unlike the real panel, which keeps it open
+  // for as long as somebody is looking.
+  setTimeout(() => process.exit(0), 5_000);
+}
+
 /* ------------------------------------------------------------------ server */
 
 async function openBrowser(url) {
@@ -470,8 +590,11 @@ async function main() {
   }
   const config = JSON.parse(await readFile(paths.config, "utf8"));
 
+  if (config.disabled) return serveDisabled();
+
   let lastSeen = Date.now();
-  const html = page(operations.folders(paths), operations.stoppingNeedsAdministrator());
+  const controlPath = join(root, isWindows ? "pharmacy.cmd" : "pharmacy");
+  const html = page(operations.folders(paths), operations.stoppingNeedsAdministrator(), controlPath);
 
   const server = createServer(async (request, response) => {
     const send = (code, body, type = "application/json") => {
@@ -515,6 +638,20 @@ async function main() {
       if (url.pathname === "/api/stop") return send(200, await operations.stop(paths, config));
       if (url.pathname === "/api/restart") return send(200, await operations.restart(paths, config));
       if (url.pathname === "/api/backup") return send(200, await operations.backup(paths, config));
+      if (url.pathname === "/api/check-update") return send(200, await operations.checkUpdate(paths));
+      if (url.pathname === "/api/update") {
+        // The install this runs can take several minutes -- longer than the
+        // idle timeout below would otherwise allow while nobody else is
+        // making a request. Kept alive here rather than raising IDLE_MS
+        // itself, which would let a genuinely abandoned tab linger just as
+        // long.
+        const keepAlive = setInterval(() => (lastSeen = Date.now()), 30_000);
+        try {
+          return send(200, await operations.update(paths, config));
+        } finally {
+          clearInterval(keepAlive);
+        }
+      }
 
       const folder = url.pathname.match(/^\/api\/reveal\/([a-z]+)$/u)?.[1];
       if (folder) return send(200, await operations.reveal(paths, folder));

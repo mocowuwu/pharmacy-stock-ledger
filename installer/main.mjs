@@ -28,10 +28,11 @@ import {
   waitUntilReady,
 } from "./postgres.mjs";
 import { backup } from "./operations.mjs";
+import { installPanelShortcut as installMacPanelShortcut } from "./macos.mjs";
 import { installService } from "./service.mjs";
 import {
   ensureVisualCppRuntime,
-  installPanelShortcut,
+  installPanelShortcut as installWindowsPanelShortcut,
   stopWindowsService,
 } from "./windows.mjs";
 
@@ -339,6 +340,11 @@ export async function install() {
     ui.detail("timezone is Asia/Jakarta; change it in Settings once you sign in");
   }
 
+  // Running the installer is the one thing that turns `pharmacy disable` back
+  // off. `installService` a few steps down re-registers the boot service
+  // regardless of whether it was ever removed; clearing the flag here is what
+  // lets the control panel and `pharmacy start` work again once it has.
+  delete config.disabled;
   await writeFile(paths.config, JSON.stringify(config, null, 2), { mode: 0o600 });
 
   /* ----------------------------------------------------------- 6. build */
@@ -425,7 +431,7 @@ export async function install() {
       ].join("\r\n"),
       "utf8",
     );
-    await installPanelShortcut(paths, panelPath);
+    await installWindowsPanelShortcut(paths, panelPath);
   } else {
     await writeFile(
       panelPath,
@@ -438,6 +444,9 @@ export async function install() {
       ].join("\n"),
       { mode: 0o755 },
     );
+    if (process.platform === "darwin") {
+      await installMacPanelShortcut(paths, panelPath);
+    }
   }
   ui.ok(`${panelPath} created`);
 
@@ -483,6 +492,8 @@ export async function install() {
   ui.info("On this machine, to check on it:");
   if (isWindows) {
     ui.detail("Panel Kontrol Apotek, on the Desktop and in the Start Menu");
+  } else if (process.platform === "darwin") {
+    ui.detail("Panel Kontrol Apotek, on the Desktop and in ~/Applications");
   } else {
     ui.detail(`${panelPath}`);
   }

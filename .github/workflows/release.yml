@@ -1,0 +1,33 @@
+name: Release
+
+# Publishing a release is what makes `pharmacy update` (and the control
+# panel's "Pasang pembaruan" button) able to find this version at all --
+# installer/update.mjs reads GitHub's own `tarball_url` for the latest
+# release, which only exists once a release does.
+#
+# Nothing here builds anything. The tag's source is exactly what the
+# installer already knows how to install: `npm ci` and `npm run build` happen
+# on the pharmacy's own machine, against its own PostgreSQL, the same as a
+# first install. This workflow's only job is turning a pushed tag into a
+# release GitHub will hand out a source archive for.
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --generate-notes

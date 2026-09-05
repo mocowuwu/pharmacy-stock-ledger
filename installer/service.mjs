@@ -1,6 +1,6 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { exists, run } from "./lib.mjs";
 import { installWindowsService, removeWindowsService } from "./windows.mjs";
 
@@ -23,6 +23,18 @@ import { installWindowsService, removeWindowsService } from "./windows.mjs";
  */
 
 const LABEL = "id.apotek.pharmacy";
+
+/** Where the launch agent lives, and the `gui/<uid>` domain it runs in. */
+export function launchdPlist() {
+  return join(homedir(), "Library", "LaunchAgents", `${LABEL}.plist`);
+}
+export function launchdTarget() {
+  return `gui/${process.getuid?.() ?? 501}`;
+}
+/** The full `<domain>/<label>` identifier `kickstart` and `bootout` take. */
+export function launchdService() {
+  return `${launchdTarget()}/${LABEL}`;
+}
 
 export async function installService(paths, appPort) {
   const nodePath = process.execPath;
@@ -48,10 +60,9 @@ export async function installService(paths, appPort) {
 /* ------------------------------------------------------------------ macOS */
 
 async function installLaunchd(paths, nodePath, runner) {
-  const directory = join(homedir(), "Library", "LaunchAgents");
-  const plist = join(directory, `${LABEL}.plist`);
+  const plist = launchdPlist();
 
-  await mkdir(directory, { recursive: true });
+  await mkdir(dirname(plist), { recursive: true });
   await writeFile(
     plist,
     `<?xml version="1.0" encoding="UTF-8"?>
@@ -77,7 +88,7 @@ async function installLaunchd(paths, nodePath, runner) {
   );
 
   // bootout first so a reinstall replaces rather than stacks.
-  const target = `gui/${process.getuid?.() ?? 501}`;
+  const target = launchdTarget();
   await run("launchctl", ["bootout", target, plist]).catch(() => {});
   await run("launchctl", ["bootstrap", target, plist]);
 
@@ -139,20 +150,39 @@ WantedBy=default.target
 
 /* --------------------------------------------------------------- removal */
 
+/**
+ * Unregisters the boot service -- for good, not just for this session.
+ *
+ * `launchctl bootout` and `systemctl disable` both stop the *running*
+ * registration, but neither one is what decides whether the pharmacy comes
+ * back after the next reboot: launchd reloads every plist it finds in
+ * `~/Library/LaunchAgents` at each login, and a `.service` file left in
+ * `~/.config/systemd/user` is exactly what `--now` would otherwise be
+ * re-enabling by hand. Booting out without deleting the file is not a
+ * disable, it is a stop that undoes itself at the next login.
+ *
+ * So both the running registration and the file describing it are removed
+ * here. `installService` above is what writes the file back -- which is the
+ * whole mechanism behind "run the installer again to turn it back on".
+ */
 export async function removeService() {
   if (process.platform === "darwin") {
-    const plist = join(homedir(), "Library", "LaunchAgents", `${LABEL}.plist`);
-    const target = `gui/${process.getuid?.() ?? 501}`;
-    await run("launchctl", ["bootout", target, plist]).catch(() => {});
+    await run("launchctl", ["bootout", launchdTarget(), launchdPlist()]).catch(() => {});
+    await rm(launchdPlist(), { force: true }).catch(() => {});
     return true;
   }
   if (process.platform === "linux") {
     await run("systemctl", ["--user", "disable", "--now", "pharmacy.service"]).catch(
       () => {},
     );
+    const unit = join(homedir(), ".config", "systemd", "user", "pharmacy.service");
+    await rm(unit, { force: true }).catch(() => {});
+    await run("systemctl", ["--user", "daemon-reload"]).catch(() => {});
     return true;
   }
   if (process.platform === "win32") {
+    // schtasks /Delete already removes the task itself, not merely a running
+    // registration of it -- see removeWindowsService.
     return removeWindowsService();
   }
   return false;

@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { exists, isWindows, lanAddress, npm, pathWith, run } from "./lib.mjs";
 import {
@@ -9,7 +9,9 @@ import {
   stopServer,
   waitUntilReady,
 } from "./postgres.mjs";
+import { launchdPlist, launchdService, launchdTarget, removeService } from "./service.mjs";
 import { startWindowsService, stopWindowsService } from "./windows.mjs";
+import { applyUpdate, checkForUpdate } from "./update.mjs";
 
 /**
  * What the owner can do to a running pharmacy, as data rather than as printing.
@@ -25,15 +27,45 @@ import { startWindowsService, stopWindowsService } from "./windows.mjs";
  * it is the normal thing the owner opened this to find out.
  */
 
-/** How the platform is asked to start and stop the supervisor. */
+/**
+ * How the platform is asked to start and stop the supervisor.
+ *
+ * Each entry is a function, not the `[command, args]` tuple this used to be,
+ * because macOS cannot be driven that uniformly: the launch agent is
+ * registered with `KeepAlive: true`, which restarts the supervisor the
+ * instant it exits -- on any exit, including the clean one `pharmacy stop`
+ * itself asks for by sending SIGTERM. `launchctl kill` alone made `stop`
+ * look like it had worked for a couple of seconds, and then the pharmacy came
+ * back. There is no per-signal exception to KeepAlive; the only way to
+ * actually stop a job registered that way is to unload its registration
+ * entirely (`bootout`), and the only way to start it again afterwards is to
+ * reload it (`bootstrap`) -- `kickstart` alone cannot, because there is
+ * nothing left registered to kick.
+ */
 const SERVICE = {
   darwin: {
-    start: ["launchctl", ["kickstart", `gui/${process.getuid?.() ?? 501}/id.apotek.pharmacy`]],
-    stop: ["launchctl", ["kill", "SIGTERM", `gui/${process.getuid?.() ?? 501}/id.apotek.pharmacy`]],
+    async start() {
+      // `RunAtLoad: true` in the plist means a successful bootstrap starts
+      // the job by itself. Bootstrap fails if it is already loaded -- most
+      // likely because it was never stopped -- and in that case `kickstart`
+      // (without `-k`) starts it only if it is not already running, so a
+      // `start` on an already-running pharmacy does not restart it.
+      const loaded = await run("launchctl", ["bootstrap", launchdTarget(), launchdPlist()])
+        .then(() => true)
+        .catch(() => false);
+      if (!loaded) await run("launchctl", ["kickstart", launchdService()]);
+    },
+    async stop() {
+      await run("launchctl", ["bootout", launchdService()]);
+    },
   },
   linux: {
-    start: ["systemctl", ["--user", "start", "pharmacy.service"]],
-    stop: ["systemctl", ["--user", "stop", "pharmacy.service"]],
+    async start() {
+      await run("systemctl", ["--user", "start", "pharmacy.service"]);
+    },
+    async stop() {
+      await run("systemctl", ["--user", "stop", "pharmacy.service"]);
+    },
   },
   // Windows is deliberately absent. Both halves of it need to elevate -- the
   // task runs as SYSTEM, so `schtasks /Run` and `/End` are alike refused for
@@ -122,7 +154,7 @@ export async function start(paths, config) {
     return { ok: false, reason: `no service integration for ${process.platform}` };
   }
 
-  await run(...service.start);
+  await service.start();
   // Asking the service to run is not the same as the pharmacy being up; the
   // supervisor still has to bring PostgreSQL round. Report what is true when
   // the waiting is over, not what was true a millisecond after asking.
@@ -153,7 +185,7 @@ export async function stop(paths, config) {
   }
 
   const service = SERVICE[process.platform];
-  if (service) await run(...service.stop).catch(() => {});
+  if (service) await service.stop().catch(() => {});
   await stopServer(paths).catch(() => {});
   return { ok: true, status: await status(paths, config) };
 }
@@ -166,6 +198,37 @@ export async function restart(paths, config) {
 /** Whether stopping will raise a UAC prompt, so the page can say so first. */
 export function stoppingNeedsAdministrator() {
   return isWindows;
+}
+
+/**
+ * The hard off switch: stops both halves, unregisters the boot service, and
+ * marks the install so nothing here starts again on its own.
+ *
+ * `stop` alone is not enough -- the boot task or launch agent would bring the
+ * pharmacy straight back at the next reboot or login. `removeService` is what
+ * actually prevents that; see the comment on it in service.mjs for why that
+ * needs deleting a file, not just stopping a running registration.
+ *
+ * The `disabled` flag on the config is what the control panel and `pharmacy
+ * start`/`restart` refuse against -- so the same button that stopped the
+ * pharmacy also closes the two doors that would otherwise still open it.
+ * Nothing here can turn it back on: that is deliberate. The only way out is
+ * running the installer again, which rewrites the config without the flag and
+ * re-registers the service in the same step -- see `install()` in main.mjs.
+ */
+export async function disable(paths, config) {
+  const stopped = await stop(paths, config);
+  await removeService().catch(() => {});
+
+  const updated = { ...config, disabled: true };
+  await writeFile(paths.config, JSON.stringify(updated, null, 2), { mode: 0o600 });
+
+  return {
+    ok: stopped.ok,
+    reason: stopped.reason,
+    config: updated,
+    status: stopped.status,
+  };
 }
 
 /* -------------------------------------------------------------- the jobs */
@@ -248,6 +311,35 @@ export async function jobHistory(paths) {
     return JSON.parse(await readFile(join(paths.root, "jobs.json"), "utf8"));
   } catch {
     return {};
+  }
+}
+
+/* ----------------------------------------------------------------- update */
+
+/**
+ * Is there a newer version published, without downloading or changing
+ * anything. What the panel calls before showing the update button as usable.
+ */
+export async function checkUpdate(paths) {
+  try {
+    return await checkForUpdate(paths);
+  } catch (error) {
+    return { ok: false, reason: error.message ?? String(error) };
+  }
+}
+
+/**
+ * Downloads the latest release and runs the installer's own upgrade path
+ * against it -- the same thing running the installer script again by hand
+ * does, including the pre-upgrade backup and the restart at the end. See
+ * `update.mjs` for why it is *that* file's job and not this one's.
+ */
+export async function update(paths, config) {
+  try {
+    const result = await applyUpdate(paths, config);
+    return { ...result, status: await status(paths, config) };
+  } catch (error) {
+    return { ok: false, reason: error.message ?? String(error), status: await status(paths, config) };
   }
 }
 

@@ -1,6 +1,6 @@
 import { readFile, readdir, rm } from "node:fs/promises";
 import { resolve } from "node:path";
-import { exists, layout, ui } from "./lib.mjs";
+import { exists, launcher, layout, ui } from "./lib.mjs";
 import * as operations from "./operations.mjs";
 import * as remote from "./remote.mjs";
 import { removeService } from "./service.mjs";
@@ -39,9 +39,23 @@ function report(state) {
   else ui.info("Not answering. Look at the log:  pharmacy logs");
 }
 
+/**
+ * Refuses the commands that would bring a disabled pharmacy back, with the
+ * one sentence that matters: what actually undoes it.
+ */
+function refuseIfDisabled(current) {
+  if (!current.disabled) return;
+  ui.fail(
+    "the pharmacy is disabled.",
+    `Run the installer again to turn it back on:  ${launcher()}`,
+  );
+}
+
 const commands = {
   async start() {
-    const result = await operations.start(paths, await config());
+    const current = await config();
+    refuseIfDisabled(current);
+    const result = await operations.start(paths, current);
     if (!result.ok) {
       ui.fail(`${result.reason}; run installer/run.mjs yourself`);
     }
@@ -59,13 +73,44 @@ const commands = {
   },
 
   async restart() {
-    const result = await operations.restart(paths, await config());
+    const current = await config();
+    refuseIfDisabled(current);
+    const result = await operations.restart(paths, current);
     ui.ok("restarted");
     report(result.status);
   },
 
   async status() {
-    report(await operations.status(paths, await config()));
+    const current = await config();
+    report(await operations.status(paths, current));
+    if (current.disabled) {
+      ui.blank();
+      ui.warn("disabled -- it will not start on its own, and the control panel will not open");
+      ui.info(`To turn it back on:  ${launcher()}`);
+    }
+  },
+
+  /**
+   * The hard off switch: stops the pharmacy, unregisters it from starting on
+   * its own, and shuts the control panel's own door on the way out too --
+   * see disable() in operations.mjs for why that is one operation and not
+   * three.
+   *
+   * There is deliberately no `pharmacy enable`. The only way back is running
+   * the installer again, which is also what a machine that has actually
+   * changed -- a new disk, a moved install -- needs anyway, and it re-checks
+   * everything a silent flag flip would not.
+   */
+  async disable() {
+    if (operations.stoppingNeedsAdministrator()) {
+      ui.detail("this may ask for administrator rights");
+    }
+    const result = await operations.disable(paths, await config());
+    if (!result.ok) ui.fail(result.reason);
+    ui.ok("disabled");
+    ui.blank();
+    ui.info("It will not start on its own, and the control panel will not open.");
+    ui.info(`To turn it back on:  ${launcher()}`);
   },
 
   /**
@@ -122,6 +167,37 @@ const commands = {
     // machine, rehearse the restore -- reach the operator unchanged.
     const result = await operations.backup(paths, await config(), { inherit: true });
     if (result.startedDatabase) ui.detail("the database was not running; it was started for this");
+  },
+
+  /** Checks GitHub Releases for a newer version, without installing it. */
+  async "check-update"() {
+    const result = await operations.checkUpdate(paths);
+    if (!result.ok) ui.fail(result.reason);
+    if (!result.updateAvailable) {
+      ui.ok(`up to date (${result.current})`);
+      return;
+    }
+    ui.info(`update available: ${result.current} → ${result.latest}`);
+    if (result.notes) {
+      ui.blank();
+      ui.info(result.notes);
+    }
+    ui.blank();
+    ui.info("To install it:  pharmacy update");
+  },
+
+  /**
+   * Downloads the latest release and installs it in place, the same way
+   * running the installer again by hand would -- see update.mjs.
+   */
+  async update() {
+    const current = await config();
+    refuseIfDisabled(current);
+    ui.info("this backs up the database first, then stops the pharmacy while it upgrades");
+    const result = await operations.update(paths, current);
+    if (!result.ok) ui.fail(result.reason);
+    ui.ok(`updated to ${result.version}`);
+    report(result.status);
   },
 
   async logs() {
@@ -185,8 +261,11 @@ async function main() {
     ui.info("restart    stop then start");
     ui.info("status     is it running, and where to open it");
     ui.info("backup     take a backup now");
+    ui.info("check-update   is a newer version published?");
+    ui.info("update     download and install the latest version");
     ui.info("logs       the last 60 lines");
     ui.info("remote     on | off -- reach it from another building, via Tailscale");
+    ui.info("disable    stop it and turn off autostart and the control panel");
     ui.info("uninstall  remove the software, keeping the records");
     ui.blank();
     process.exit(command === "help" || command === "--help" ? 0 : 1);

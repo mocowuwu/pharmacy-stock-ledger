@@ -51,12 +51,22 @@ Afterwards, `~/pharmacy/pharmacy` is the control command — on Windows,
 `%USERPROFILE%\pharmacy\pharmacy.cmd`, which is double-clickable:
 
 ```bash
-~/pharmacy/pharmacy status     # is it running, and where to open it
-~/pharmacy/pharmacy backup     # take a backup now
-~/pharmacy/pharmacy logs       # the last 60 lines
-~/pharmacy/pharmacy restart    # after editing .env.local
-~/pharmacy/pharmacy uninstall  # removes the software, keeps the records
+~/pharmacy/pharmacy status         # is it running, and where to open it
+~/pharmacy/pharmacy backup         # take a backup now
+~/pharmacy/pharmacy check-update   # is a newer version published?
+~/pharmacy/pharmacy update         # download and install the latest version
+~/pharmacy/pharmacy logs           # the last 60 lines
+~/pharmacy/pharmacy restart        # after editing .env.local
+~/pharmacy/pharmacy disable        # stop it, and stop it starting on its own
+~/pharmacy/pharmacy uninstall      # removes the software, keeps the records
 ```
+
+`disable` is the hard off switch, not `stop`. `stop` comes back at the next
+reboot or login -- that is what the boot task and the launch agent are for.
+`disable` also removes that registration and shuts off the control panel
+itself, so nothing on the machine can quietly turn the pharmacy back on. There
+is no `enable`: the only way back is running the installer again, on this same
+machine -- see "The control panel" below.
 
 ## The control panel
 
@@ -82,11 +92,40 @@ belt-and-braces: it is a page with a "stop the pharmacy" button on a machine
 that also runs a browser. Nothing about it is reachable from the network, and it
 needs no firewall rule.
 
+After `pharmacy disable`, opening the panel shows one sentence saying so and
+nothing else -- no status, no buttons, nothing that could turn the pharmacy back
+on from here. That is deliberate: a disabled pharmacy with a working panel
+beside it is not disabled, it is a pharmacy one click from being re-enabled by
+the same person the disable was for. Re-run the installer to get the panel
+back.
+
 Adding nothing to `package.json` was a constraint, not a coincidence — it is
 served by the Node the installer already brings.
 
 Running the installer again over an existing install upgrades it: the database,
 its records and the owner account are left exactly as they are.
+
+### Updating
+
+The panel's "Pembaruan" section, and `pharmacy check-update` / `pharmacy
+update` from a terminal, are that same upgrade, automated: they download the
+latest [GitHub release](https://github.com/mocowuwu/pharmacy-stock-ledger/releases)'s
+source and run the installer against it, exactly as if you had copied a new
+`pharmacy-stock-ledger` folder onto the machine and run the installer script
+by hand. The database is backed up first, and the pharmacy is stopped for the
+few minutes the install takes, then comes back up on its own.
+
+`pharmacy check-update` only asks whether a newer version exists — it changes
+nothing on the machine. It compares the installed app's `package.json`
+version against the newest published release tag, so a release only shows up
+as an update once its tag matches the version being released.
+
+Publishing a release is a maintainer action, not something the installed
+pharmacy does: push a tag like `v0.2.0` (matching the version bumped in
+`package.json`) and `.github/workflows/release.yml` turns it into a GitHub
+release. Nothing is built in that workflow — the installed pharmacies build
+themselves, the same way a first install does — so the release just has to
+exist, tagged, for GitHub to hand out a source archive.
 
 ---
 
