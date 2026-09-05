@@ -115,9 +115,15 @@
  * and the shadow only deepens the separation.
  */
 :root {
-  --shadow-card: 0 1px 2px rgba(23, 20, 31, 0.04), 0 1px 3px rgba(23, 20, 31, 0.03);
-  --shadow-raised: 0 1px 2px rgba(23, 20, 31, 0.04), 0 6px 16px -4px rgba(23, 20, 31, 0.08);
-  --shadow-pop: 0 2px 4px rgba(23, 20, 31, 0.05), 0 12px 28px -8px rgba(23, 20, 31, 0.14);
+  /* Tinted with the accent rather than pure ink, per the reference's
+     rgba(109, 40, 217, 0.05) card shadow -- a lifted surface reads as part of
+     this palette rather than a generic grey drop shadow. */
+  --shadow-card: 0 1px 2px color-mix(in oklab, var(--accent) 8%, rgba(23, 20, 31, 0.04)),
+    0 1px 3px color-mix(in oklab, var(--accent) 8%, rgba(23, 20, 31, 0.03));
+  --shadow-raised: 0 1px 2px color-mix(in oklab, var(--accent) 8%, rgba(23, 20, 31, 0.04)),
+    0 6px 16px -4px color-mix(in oklab, var(--accent) 8%, rgba(23, 20, 31, 0.08));
+  --shadow-pop: 0 2px 4px color-mix(in oklab, var(--accent) 8%, rgba(23, 20, 31, 0.05)),
+    0 12px 28px -8px color-mix(in oklab, var(--accent) 8%, rgba(23, 20, 31, 0.14));
   --edge: inset 0 1px 0 rgba(255, 255, 255, 0);
   --ring: color-mix(in oklab, var(--accent) 22%, transparent);
 }
@@ -163,7 +169,7 @@
   --color-sidebar-muted: var(--sidebar-muted);
   --color-sidebar-hover: var(--sidebar-hover);
   --color-sidebar-rule: var(--sidebar-rule);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-jakarta-sans);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -181,6 +187,18 @@ body {
 /* Quantities, prices and dates line up in columns throughout the app. */
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Surface 2 -- glass. Reserved for genuinely floating surfaces (a sticky
+ * summary panel, a header bar content scrolls under), never regular cards:
+ * a table or a dashboard tile is Surface 1 and stays opaque, per the
+ * reference's own split.
+ */
+.glass {
+  background: color-mix(in oklab, var(--surface) 80%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 /* Visible keyboard focus everywhere: the till is operated without a mouse.

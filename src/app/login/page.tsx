@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { publicBranding } from "@/lib/dal/settings";
+import { Card } from "@/components/ui";
 import { LoginForm } from "./LoginForm";
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
@@ -12,8 +13,19 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const next = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "";
 
   return (
-    <main className="flex flex-1 items-center justify-center px-4 py-12">
-      <div className="w-full max-w-sm">
+    <main className="relative flex flex-1 items-center justify-center overflow-hidden px-4 py-12">
+      {/* A soft accent-tinted glow behind the card -- the sign-in screen has
+          nothing else on it, so this is where the reference's depth shows up
+          without inventing imagery. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute top-1/2 left-1/2 h-[36rem] w-[36rem] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-60"
+        style={{
+          background:
+            "radial-gradient(circle, color-mix(in oklab, var(--accent) 16%, transparent) 0%, transparent 70%)",
+        }}
+      />
+      <div className="relative w-full max-w-sm">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold tracking-tight">
             {branding.businessName ?? t("app.name")}
@@ -22,9 +34,9 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             {branding.businessTagline ?? t("auth.signInTitle")}
           </p>
         </div>
-        <div className="rounded-xl border border-rule bg-surface p-6 shadow-[0_1px_2px_rgba(23,20,31,0.04)]">
+        <Card className="p-6">
           <LoginForm next={next} />
-        </div>
+        </Card>
       </div>
     </main>
   );

@@ -5,7 +5,7 @@ import { can } from "@/lib/auth/permissions";
 import { listCategories, listItems, listSuppliers } from "@/lib/dal/catalogue";
 import { alertCounts } from "@/lib/dal/alerts";
 import { dailyTakings, todaysTakings } from "@/lib/dal/sales";
-import { Card, PageHeader, SectionHeading, Stat } from "@/components/ui";
+import { Card, Chip, PageHeader, SectionHeading, Stat } from "@/components/ui";
 import { SalesChart } from "@/components/SalesChart";
 import { formatMoney } from "@/lib/format/money";
 
@@ -71,16 +71,14 @@ export default async function DashboardPage() {
             <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
               <div>
                 <div className="text-sm text-muted">{t("dashboard.takingsToday")}</div>
-                <div className="tabular mt-1 text-3xl font-semibold">
+                <div className="tabular mt-1 text-3xl font-semibold text-accent">
                   {formatMoney(takings?.total ?? 0)}
                 </div>
                 <div className="mt-0.5 text-xs text-faint">
                   {t("dashboard.transactionsToday", { count: takings?.count ?? 0 })}
                 </div>
               </div>
-              <span className="rounded-full border border-rule px-3 py-1 text-xs text-muted">
-                {t("dashboard.last30Days")}
-              </span>
+              <Chip tone="accent">{t("dashboard.last30Days")}</Chip>
             </div>
 
             <SalesChart

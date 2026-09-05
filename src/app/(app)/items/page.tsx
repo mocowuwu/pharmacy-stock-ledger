@@ -4,14 +4,18 @@ import { requirePermission } from "@/lib/dal/session";
 import { can } from "@/lib/auth/permissions";
 import { listCategories, listItems, type DrugClass } from "@/lib/dal/catalogue";
 import { onHandByItem } from "@/lib/dal/stock";
+import { getSettings } from "@/lib/dal/settings";
+import { moduleFlags } from "@/lib/catalogue/modules";
 import { DRUG_CLASSES } from "@/lib/catalogue/enums";
 import { formatMoney } from "@/lib/format/money";
-import { Card, Chip, DrugClassMark, EmptyState, PageHeader, buttonPrimary, buttonSecondary, inputClass } from "@/components/ui";
+import { Card, Chip, DrugClassMark, EmptyState, PageHeader, Th, buttonPrimary, buttonSecondary, inputClass } from "@/components/ui";
 
 export default async function ItemsPage({ searchParams }: PageProps<"/items">) {
   const session = await requirePermission("items.view");
   const t = await getTranslations();
   const params = await searchParams;
+  const settings = await getSettings();
+  const canImport = moduleFlags(settings).import && can(session.grant, "items.import");
 
   const str = (key: string) =>
     typeof params[key] === "string" ? (params[key] as string) : "";
@@ -43,14 +47,21 @@ export default async function ItemsPage({ searchParams }: PageProps<"/items">) {
         title={t("items.title")}
         subtitle={t("items.subtitle")}
         actions={
-          can(session.grant, "items.create") && (
-            <Link
-              href="/items/new"
-              className={buttonPrimary}
-            >
-              {t("items.new")}
-            </Link>
-          )
+          <>
+            {canImport && (
+              <Link href="/items/import" className={buttonSecondary}>
+                {t("items.import")}
+              </Link>
+            )}
+            {can(session.grant, "items.create") && (
+              <Link
+                href="/items/new"
+                className={buttonPrimary}
+              >
+                {t("items.new")}
+              </Link>
+            )}
+          </>
         }
       />
 
@@ -99,14 +110,14 @@ export default async function ItemsPage({ searchParams }: PageProps<"/items">) {
           <Card className="overflow-x-auto">
             <table className="w-full min-w-[860px] text-sm">
               <thead>
-                <tr className="border-b border-rule bg-surface-2 text-left text-xs uppercase tracking-wide text-faint">
-                  <th className="whitespace-nowrap px-3 py-2 font-medium">{t("items.code")}</th>
-                  <th className="whitespace-nowrap px-3 py-2 font-medium">{t("items.genericName")}</th>
-                  <th className="whitespace-nowrap px-3 py-2 font-medium">{t("items.drugClass")}</th>
-                  <th className="whitespace-nowrap px-3 py-2 font-medium">{t("items.category")}</th>
-                  <th className="whitespace-nowrap px-3 py-2 text-right font-medium">{t("stock.onHand")}</th>
-                  <th className="whitespace-nowrap px-3 py-2 text-right font-medium">{t("items.defaultPrice")}</th>
-                  <th className="whitespace-nowrap px-3 py-2 text-right font-medium">{t("items.reorderPoint")}</th>
+                <tr>
+                  <Th>{t("items.code")}</Th>
+                  <Th>{t("items.genericName")}</Th>
+                  <Th>{t("items.drugClass")}</Th>
+                  <Th>{t("items.category")}</Th>
+                  <Th className="text-right">{t("stock.onHand")}</Th>
+                  <Th className="text-right">{t("items.defaultPrice")}</Th>
+                  <Th className="text-right">{t("items.reorderPoint")}</Th>
                 </tr>
               </thead>
               <tbody>

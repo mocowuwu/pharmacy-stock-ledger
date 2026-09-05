@@ -1,11 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import "./globals.css";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+// Plus Jakarta Sans: the design reference's body face. Legible at small sizes,
+// which matters here for dosage instructions and inventory codes.
+const sans = Plus_Jakarta_Sans({ variable: "--font-jakarta-sans", subsets: ["latin"] });
+// Geist Mono stays for batch numbers and document IDs -- it disambiguates
+// 0/O and 1/l, which matters more for ledger legibility than matching the
+// reference's Courier Prime.
+const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 /**
  * Stated rather than left to the framework's default, because the till is run
@@ -36,7 +41,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang={locale}
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${sans.variable} ${mono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
         <NextIntlClientProvider locale={locale} messages={messages}>

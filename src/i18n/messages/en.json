@@ -140,6 +140,7 @@
     "title": "Items",
     "subtitle": "Medicines, devices and consumables",
     "new": "Add item",
+    "import": "Import",
     "edit": "Edit item",
     "searchPlaceholder": "Search name, code or NIE",
     "allCategories": "All categories",
@@ -278,7 +279,41 @@
     "invalid_port": "Enter a port between 1 and 65535.",
     "invalid_timezone": "That timezone is not one this system knows.",
     "owner_only": "Only the owner can do that.",
-    "confirmation_mismatch": "The confirmation phrase did not match, so nothing was changed."
+    "confirmation_mismatch": "The confirmation phrase did not match, so nothing was changed.",
+    "no_file": "Choose a CSV file first.",
+    "unreadable_file": "That file could not be read as CSV.",
+    "too_many_rows": "That file has more than 2,000 rows. Split it into smaller files.",
+    "empty_file": "That file has no data rows."
+  },
+  "itemsImport": {
+    "title": "Import Catalogue",
+    "subtitle": "Add many items and their opening stock at once from a CSV file",
+    "templateTitle": "CSV template",
+    "templateHint": "Download the template, fill in one row per item, and upload it back. The opening-stock columns (lot, expiry, quantity, cost, supplier) can stay blank to add catalogue only.",
+    "downloadTemplate": "Download template",
+    "upload": "Check file",
+    "checking": "Checking...",
+    "previewSummary": "{valid} of {total} rows are ready to import. {errors} rows have a problem and will be skipped.",
+    "row": "Row",
+    "field": "Column",
+    "problem": "Problem",
+    "confirm": "Import {count} rows",
+    "importing": "Importing...",
+    "startOver": "Upload a different file",
+    "done": "{items} items added, with {batches} opening-stock batches.",
+    "error": {
+      "required": "Required.",
+      "invalid_form": "That dosage form is not recognized.",
+      "invalid_drug_class": "That drug class is not recognized.",
+      "duplicate_code": "That code is already used by another item, or appears more than once in this file.",
+      "unknown_category": "No category has this name. Create it first, or leave this column blank.",
+      "unknown_supplier": "No supplier has this name. Create it first.",
+      "invalid_number": "Enter a whole number.",
+      "invalid_money": "That amount could not be read. Example: 15000",
+      "duplicate_barcode": "That barcode is already used by another item, or appears more than once in this file.",
+      "invalid_date": "The expiry date must be in YYYY-MM-DD format.",
+      "already_expired": "That date has already passed. Expired stock cannot be received."
+    }
   },
   "receive": {
     "title": "Receive stock",
@@ -772,7 +807,9 @@
       "counts": "Stock counts",
       "countsHint": "Physical counts and posting the difference found. Off hides the Counts screen from the menu.",
       "dispose": "Disposal",
-      "disposeHint": "Recording expired or damaged stock as a loss. Off hides the Dispose screen from the menu."
+      "disposeHint": "Recording expired or damaged stock as a loss. Off hides the Dispose screen from the menu.",
+      "import": "Spreadsheet import",
+      "importHint": "The Import button on the Catalogue screen. Who may actually use it is still controlled by the \"Import catalogue\" permission per account."
     },
     "tax": "PPN",
     "taxEnabled": "Charge PPN",
@@ -843,7 +880,8 @@
       "create": "Add items",
       "edit": "Edit items",
       "set_price": "Set selling prices",
-      "archive": "Archive items"
+      "archive": "Archive items",
+      "import": "Import the catalogue from a spreadsheet"
     },
     "batches": {
       "receive": "Receive deliveries",

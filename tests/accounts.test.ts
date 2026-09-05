@@ -154,6 +154,7 @@ describe("module switches", () => {
       categoriesEnabled: false,
       countsEnabled: true,
       disposeEnabled: false,
+      importEnabled: true,
     });
     expect(flags).toEqual({
       returns: true,
@@ -164,6 +165,7 @@ describe("module switches", () => {
       categories: false,
       counts: true,
       dispose: false,
+      import: true,
     });
   });
 

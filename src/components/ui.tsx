@@ -18,6 +18,9 @@ export const inputBase =
 
 export const inputClass = `w-full ${inputBase}`;
 
+/** A compact field for inline table/row editing, where the full input padding overruns the row. */
+export const inputSmall = `${inputBase} py-1 text-xs`;
+
 /**
  * Buttons.
  *
@@ -29,31 +32,49 @@ export const inputClass = `w-full ${inputBase}`;
  * the hardest thing on the screen to read. `--accent-contrast` flips to near
  * black there, which is the whole reason the token exists.
  */
+// Radius is left out of buttonBase and set per-variant instead: Tailwind
+// gives same-property utilities equal specificity, so stacking `rounded-lg`
+// from a base class against a `rounded-full` override is a coin flip on
+// stylesheet order, the same trap the width comment above describes.
 const buttonBase =
-  "inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium " +
+  "inline-flex items-center justify-center gap-2 text-sm font-medium " +
   "transition-[filter,background-color,border-color,color] duration-150 " +
   "disabled:pointer-events-none disabled:opacity-60";
 
+// Pill-shaped, per the reference's own rule: pills are for status chips and
+// primary Till buttons only, not every button -- secondary/ghost buttons
+// below stay rounded-lg.
 export const buttonPrimary =
-  `${buttonBase} bg-accent px-4 py-2.5 text-accent-contrast ` +
+  `${buttonBase} rounded-full bg-accent px-4 py-2.5 text-accent-contrast ` +
   "shadow-[var(--shadow-card)] hover:brightness-110 active:brightness-95";
 
 /** The till's commit button, and anything else that is the only thing to press. */
 export const buttonPrimaryLarge =
-  `${buttonBase} w-full bg-accent px-5 py-3.5 text-base text-accent-contrast ` +
+  `${buttonBase} w-full rounded-full bg-accent px-5 py-3.5 text-base text-accent-contrast ` +
   "shadow-[var(--shadow-raised)] hover:brightness-110 active:brightness-95";
 
 export const buttonSecondary =
-  `${buttonBase} border border-rule bg-surface px-4 py-2.5 text-foreground ` +
+  `${buttonBase} rounded-lg border border-rule bg-surface px-4 py-2.5 text-foreground ` +
   "shadow-[var(--shadow-card)] hover:border-accent/50 hover:text-accent";
+
+/**
+ * The reference's other secondary style -- light purple tint, pill-shaped --
+ * for an action that should read as more than a neutral secondary but isn't
+ * the one thing on the screen to press (a segmented toggle's selected state,
+ * a quick-select preset). `buttonSecondary` stays neutral for routine row
+ * actions; this is for the times color is doing real communicative work.
+ */
+export const buttonAccentSoft =
+  `${buttonBase} rounded-full bg-accent-soft px-4 py-2.5 text-accent ` +
+  "hover:brightness-95 active:brightness-90";
 
 /** Row-level actions inside a table, where a full-size button would set the row height. */
 export const buttonSecondarySmall =
-  `${buttonBase} border border-rule bg-surface px-3 py-1.5 text-xs text-muted ` +
+  `${buttonBase} rounded-lg border border-rule bg-surface px-3 py-1.5 text-xs text-muted ` +
   "hover:border-accent/50 hover:text-accent";
 
 /** No border and no fill, for the third action in a row that already has two. */
-export const buttonGhost = `${buttonBase} px-3 py-2 text-muted hover:text-accent`;
+export const buttonGhost = `${buttonBase} rounded-lg px-3 py-2 text-muted hover:text-accent`;
 
 export function Field({
   label,
@@ -84,13 +105,20 @@ export function Field({
 export function Card({
   children,
   className = "",
+  glass = false,
 }: {
   children: ReactNode;
   className?: string;
+  // Surface 2 per the reference: a genuinely floating card (a sticky summary
+  // panel) rather than the normal opaque Surface 1. Kept as a prop rather
+  // than letting a caller stack `.glass` onto this component's own className
+  // -- .glass and `bg-surface` both set `background`, and which one wins
+  // would depend on Tailwind's generated stylesheet order, not source order.
+  glass?: boolean;
 }) {
   return (
     <div
-      className={`rounded-2xl border border-rule bg-surface shadow-[var(--shadow-card),var(--edge)] ${className}`}
+      className={`rounded-2xl border border-rule shadow-[var(--shadow-card),var(--edge)] ${glass ? "glass" : "bg-surface"} ${className}`}
     >
       {children}
     </div>
@@ -234,7 +262,7 @@ export function Stat({
 }: {
   value: ReactNode;
   label: string;
-  tone?: "default" | "critical" | "warning" | "quiet";
+  tone?: "default" | "accent" | "critical" | "warning" | "quiet";
   hint?: string;
 }) {
   // Not built on Card: a tinted tile has to override Card's own background and
@@ -243,6 +271,10 @@ export function Stat({
   // trap as the input widths above.
   const tones = {
     default: { figure: "text-foreground", shell: "border-rule bg-surface" },
+    // For a headline figure that is good news rather than a status -- today's
+    // takings, not a count of what's wrong -- so it reads as the brand's own
+    // colour rather than the critical/warning severity scale.
+    accent: { figure: "text-accent", shell: "border-accent/20 bg-accent-soft" },
     critical: { figure: "text-critical", shell: "border-critical/25 bg-critical-soft" },
     warning: { figure: "text-warning-ink", shell: "border-warning/25 bg-warning-soft" },
     // A zero should not shout: nothing is wrong, so nothing draws the eye.
@@ -281,5 +313,57 @@ export function SectionHeading({ children }: { children: ReactNode }) {
     <h2 className="mb-3.5 text-xs font-semibold tracking-[0.08em] text-accent uppercase">
       {children}
     </h2>
+  );
+}
+
+/**
+ * A data-table header row. Pulled out because the same string was hand-typed
+ * verbatim in more than one screen -- every table header in the app should
+ * look and behave identically, and a copy that drifts is how they stop.
+ */
+export function Th({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <th
+      className={`border-b border-rule bg-surface-2 px-3 py-2 text-left text-xs font-medium tracking-wide whitespace-nowrap text-faint uppercase ${className}`}
+    >
+      {children}
+    </th>
+  );
+}
+
+/**
+ * A label/value row for totals and payment breakdowns. `strong` marks the
+ * line that carries the actual total, which is heavier and sits apart from
+ * the lines above it rather than just being another row.
+ */
+export function SummaryRow({
+  label,
+  value,
+  strong = false,
+}: {
+  label: ReactNode;
+  value: ReactNode;
+  strong?: boolean;
+}) {
+  return (
+    <div
+      className={`flex items-center justify-between gap-4 ${
+        strong ? "text-base font-semibold" : "text-sm text-muted"
+      }`}
+    >
+      {/* The total is the one figure on this row group that isn't merely
+          informational -- it's what the cashier is about to collect, so it
+          carries the brand's own colour rather than reading as plain text. */}
+      <span className={strong ? "text-foreground" : ""}>{label}</span>
+      <span className={`tabular ${strong ? "text-lg text-accent" : "text-foreground"}`}>
+        {value}
+      </span>
+    </div>
   );
 }

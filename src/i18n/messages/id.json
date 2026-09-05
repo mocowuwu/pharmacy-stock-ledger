@@ -140,6 +140,7 @@
     "title": "Barang",
     "subtitle": "Daftar obat, alat kesehatan, dan bahan habis pakai",
     "new": "Tambah Barang",
+    "import": "Impor",
     "edit": "Ubah Barang",
     "searchPlaceholder": "Cari nama, kode, atau NIE",
     "allCategories": "Semua kategori",
@@ -278,7 +279,41 @@
     "invalid_port": "Masukkan port antara 1 dan 65535.",
     "invalid_timezone": "Zona waktu itu tidak dikenali sistem.",
     "owner_only": "Hanya pemilik yang bisa melakukannya.",
-    "confirmation_mismatch": "Frasa konfirmasi tidak cocok, jadi tidak ada yang diubah."
+    "confirmation_mismatch": "Frasa konfirmasi tidak cocok, jadi tidak ada yang diubah.",
+    "no_file": "Pilih berkas CSV terlebih dahulu.",
+    "unreadable_file": "Berkas ini tidak terbaca sebagai CSV.",
+    "too_many_rows": "Berkas ini lebih dari 2.000 baris. Bagi menjadi beberapa berkas.",
+    "empty_file": "Berkas ini tidak berisi baris data."
+  },
+  "itemsImport": {
+    "title": "Impor Katalog",
+    "subtitle": "Tambah banyak barang dan stok awal sekaligus dari berkas CSV",
+    "templateTitle": "Templat CSV",
+    "templateHint": "Unduh templat, isi satu baris per barang, lalu unggah kembali. Kolom stok awal (bets, kedaluwarsa, jumlah, harga modal, pemasok) boleh dikosongkan jika hanya ingin menambah katalog.",
+    "downloadTemplate": "Unduh templat",
+    "upload": "Periksa berkas",
+    "checking": "Memeriksa...",
+    "previewSummary": "{valid} dari {total} baris siap diimpor. {errors} baris bermasalah dan akan dilewati.",
+    "row": "Baris",
+    "field": "Kolom",
+    "problem": "Masalah",
+    "confirm": "Impor {count} baris",
+    "importing": "Mengimpor...",
+    "startOver": "Unggah berkas lain",
+    "done": "{items} barang ditambahkan, dengan {batches} bets stok awal.",
+    "error": {
+      "required": "Wajib diisi.",
+      "invalid_form": "Bentuk sediaan tidak dikenali.",
+      "invalid_drug_class": "Golongan obat tidak dikenali.",
+      "duplicate_code": "Kode ini sudah dipakai barang lain, atau muncul lebih dari sekali di berkas ini.",
+      "unknown_category": "Tidak ada kategori dengan nama ini. Buat dulu kategorinya, atau kosongkan kolom ini.",
+      "unknown_supplier": "Tidak ada pemasok dengan nama ini. Buat dulu pemasoknya.",
+      "invalid_number": "Isi angka bulat.",
+      "invalid_money": "Jumlah uang tidak terbaca. Contoh: 15000",
+      "duplicate_barcode": "Barcode ini sudah dipakai barang lain, atau muncul lebih dari sekali di berkas ini.",
+      "invalid_date": "Tanggal kedaluwarsa harus berformat YYYY-MM-DD.",
+      "already_expired": "Tanggal ini sudah lewat. Stok kedaluwarsa tidak dapat diterima."
+    }
   },
   "receive": {
     "title": "Terima Barang",
@@ -772,7 +807,9 @@
       "counts": "Stok opname",
       "countsHint": "Penghitungan fisik dan pencatatan selisihnya. Jika mati, layar Opname disembunyikan dari menu.",
       "dispose": "Pemusnahan",
-      "disposeHint": "Mencatat barang kedaluwarsa atau rusak sebagai kerugian. Jika mati, layar Pemusnahan disembunyikan dari menu."
+      "disposeHint": "Mencatat barang kedaluwarsa atau rusak sebagai kerugian. Jika mati, layar Pemusnahan disembunyikan dari menu.",
+      "import": "Impor dari spreadsheet",
+      "importHint": "Tombol Impor di layar Katalog. Siapa yang boleh memakainya tetap diatur lewat izin \"Mengimpor katalog\" per akun."
     },
     "tax": "PPN",
     "taxEnabled": "Pungut PPN",
@@ -843,7 +880,8 @@
       "create": "Menambah barang",
       "edit": "Mengubah barang",
       "set_price": "Menetapkan harga jual",
-      "archive": "Mengarsipkan barang"
+      "archive": "Mengarsipkan barang",
+      "import": "Mengimpor katalog dari spreadsheet"
     },
     "batches": {
       "receive": "Menerima kiriman",

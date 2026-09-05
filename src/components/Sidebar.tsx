@@ -156,11 +156,13 @@ export function SidebarNav({ entries }: { entries: NavEntry[] }) {
             // it darkens to #6d3beb in light mode -- so a translucent accent on
             // this background would be legible in one theme and mud in the
             // other. A solid fill with `--accent-contrast` is the only
-            // treatment that holds up in both.
-            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors duration-150 ${
+            // treatment that holds up in both. The left-edge bar is layered on
+            // top as a nod to the reference's purple border glow, not a
+            // replacement for the fill.
+            className={`flex items-center gap-3 rounded-xl border-l-2 px-3 py-2.5 text-sm transition-colors duration-150 ${
               active
-                ? "bg-accent text-accent-contrast font-medium shadow-[0_2px_10px_-2px_var(--accent)]"
-                : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-ink"
+                ? "border-accent-contrast/40 bg-accent text-accent-contrast font-medium shadow-[0_2px_10px_-2px_var(--accent)]"
+                : "border-transparent text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-ink"
             }`}
           >
             <Icon name={entry.key} />

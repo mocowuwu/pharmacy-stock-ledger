@@ -26,6 +26,7 @@ export const MODULES = [
   "categories",
   "counts",
   "dispose",
+  "import",
 ] as const;
 
 export type ModuleKey = (typeof MODULES)[number];
@@ -40,6 +41,7 @@ export const MODULE_SETTING = {
   categories: "categoriesEnabled",
   counts: "countsEnabled",
   dispose: "disposeEnabled",
+  import: "importEnabled",
 } as const satisfies Record<ModuleKey, string>;
 
 export type ModuleFlags = Record<ModuleKey, boolean>;
@@ -54,6 +56,7 @@ export function moduleFlags(settings: {
   categoriesEnabled: boolean;
   countsEnabled: boolean;
   disposeEnabled: boolean;
+  importEnabled: boolean;
 }): ModuleFlags {
   return {
     returns: settings.returnsEnabled,
@@ -64,6 +67,7 @@ export function moduleFlags(settings: {
     categories: settings.categoriesEnabled,
     counts: settings.countsEnabled,
     dispose: settings.disposeEnabled,
+    import: settings.importEnabled,
   };
 }
 

@@ -124,7 +124,10 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           {/* Sticky on a phone: the section links are how you move around when
               there is no sidebar, and hunting for them means scrolling a long
               table back to the top. */}
-          <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-sidebar-rule bg-sidebar px-4 py-3 md:hidden">
+          {/* backdrop-blur-md (not the shared .glass class) so the sidebar tint
+              on bg-sidebar/85 isn't fought over by two background-setting
+              rules -- .glass hardcodes its own surface-tinted background. */}
+          <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-sidebar-rule bg-sidebar/85 px-4 py-3 backdrop-blur-md md:hidden">
             <span className="font-semibold text-sidebar-ink">
               {settings.businessName || t("app.name")}
             </span>

@@ -43,6 +43,10 @@ next-env.d.ts
 # Local PGlite development database
 .data/
 
+# Fake "install" directory the real control panel (installer/panel.mjs) runs
+# against in dev -- see `npm run panel`.
+.dev-panel/
+
 # Editor swap files
 *.swp
 *.swo

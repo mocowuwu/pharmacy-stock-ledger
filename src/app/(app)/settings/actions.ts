@@ -47,6 +47,7 @@ export async function saveSettings(formData: FormData) {
       categoriesEnabled: formData.get("categoriesEnabled") === "on",
       countsEnabled: formData.get("countsEnabled") === "on",
       disposeEnabled: formData.get("disposeEnabled") === "on",
+      importEnabled: formData.get("importEnabled") === "on",
       digestEnabled: formData.get("digestEnabled") === "on",
       digestEmail: String(formData.get("digestEmail") ?? "") || null,
       digestHour: number(formData, "digestHour"),

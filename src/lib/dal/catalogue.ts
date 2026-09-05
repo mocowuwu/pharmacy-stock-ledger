@@ -285,7 +285,7 @@ export async function listCategories() {
     })
     .from(categories)
     .leftJoin(items, and(eq(items.categoryId, categories.id), eq(items.status, "active")))
-    .groupBy(categories.id)
+    .groupBy(categories.id, categories.name, categories.sortOrder)
     .orderBy(asc(categories.sortOrder), asc(categories.name));
 }
 

@@ -1,0 +1,1 @@
+ALTER TABLE "settings" ADD COLUMN "import_enabled" boolean DEFAULT false NOT NULL;

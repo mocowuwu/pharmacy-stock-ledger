@@ -109,6 +109,13 @@ export const settings = pgTable(
     /** Disposing expired or damaged stock as a loss. */
     disposeEnabled: boolean("dispose_enabled").notNull().default(true),
 
+    /**
+     * The spreadsheet-import entry point on the katalog screen. Off by default:
+     * a bulk loader is worth surfacing only once someone is about to use it, and
+     * `items.import` is the actual control regardless of this switch.
+     */
+    importEnabled: boolean("import_enabled").notNull().default(false),
+
     digestEnabled: boolean("digest_enabled").notNull().default(false),
     digestEmail: text("digest_email"),
     /** Local hour the digest is sent, 0-23. The job decides; nothing polls. */

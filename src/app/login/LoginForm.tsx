@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { useTranslations } from "next-intl";
 import { signIn, type SignInState } from "./actions";
-import { buttonPrimaryLarge } from "@/components/ui";
+import { Alert, buttonPrimaryLarge, inputClass } from "@/components/ui";
 
 export function LoginForm({ next }: { next: string }) {
   const t = useTranslations("auth");
@@ -25,14 +25,7 @@ export function LoginForm({ next }: { next: string }) {
     <form action={formAction} className="flex flex-col gap-5">
       <input type="hidden" name="next" value={next} />
 
-      {message && (
-        <p
-          role="alert"
-          className="rounded-lg border border-critical/30 bg-critical-soft px-3 py-2 text-sm text-critical"
-        >
-          {message}
-        </p>
-      )}
+      {message && <Alert tone="critical">{message}</Alert>}
 
       <label className="flex flex-col gap-1.5">
         <span className="text-sm font-medium text-muted">{t("username")}</span>
@@ -44,7 +37,7 @@ export function LoginForm({ next }: { next: string }) {
           autoCorrect="off"
           required
           autoFocus
-          className="w-full rounded-lg border border-rule bg-surface px-3 py-2 text-base outline-none focus:border-accent"
+          className={inputClass}
         />
       </label>
 
@@ -55,7 +48,7 @@ export function LoginForm({ next }: { next: string }) {
           type="password"
           autoComplete="current-password"
           required
-          className="w-full rounded-lg border border-rule bg-surface px-3 py-2 text-base outline-none focus:border-accent"
+          className={inputClass}
         />
       </label>
 

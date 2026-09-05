@@ -14,6 +14,7 @@ export const PERMISSION_GROUPS = {
     "items.edit",
     "items.set_price",
     "items.archive",
+    "items.import",
   ],
   stock: [
     "batches.receive",
@@ -73,6 +74,7 @@ export const SENSITIVE_PERMISSIONS: readonly Permission[] = [
   "users.manage",
   "settings.manage",
   "audit.view",
+  "items.import",
 ];
 
 /**

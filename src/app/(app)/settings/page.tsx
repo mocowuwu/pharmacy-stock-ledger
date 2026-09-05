@@ -71,6 +71,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
     categories: "categoriesEnabled",
     counts: "countsEnabled",
     dispose: "disposeEnabled",
+    import: "importEnabled",
   };
 
   return (

@@ -198,6 +198,6 @@ export async function countableCategories() {
       batches,
       and(eq(batches.itemId, items.id), sql`${batches.status} in ('active','quarantined','expired')`),
     )
-    .groupBy(categories.id)
+    .groupBy(categories.id, categories.name)
     .orderBy(asc(categories.name));
 }

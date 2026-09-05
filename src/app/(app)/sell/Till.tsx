@@ -4,7 +4,18 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { checkout, findForSale, type Candidate, type CheckoutState } from "./actions";
-import { Alert, Card, Chip, buttonPrimary, buttonPrimaryLarge, buttonSecondary, inputBase, inputClass } from "@/components/ui";
+import {
+  Alert,
+  Card,
+  Chip,
+  SummaryRow,
+  buttonPrimary,
+  buttonPrimaryLarge,
+  buttonSecondary,
+  inputBase,
+  inputClass,
+  inputSmall,
+} from "@/components/ui";
 import { ScanButton } from "@/components/BarcodeScanner";
 import { formatMoney, parseMoney, applyRateBps, splitInclusiveTax } from "@/lib/format/money";
 import { formatExpiry } from "@/lib/format/date";
@@ -420,7 +431,7 @@ export function Till({
                         onChange={(e) =>
                           update(line.key, { preferBatchId: e.target.value || null })
                         }
-                        className={`${inputBase} w-auto py-1 text-xs`}
+                        className={`${inputSmall} w-auto`}
                       >
                         <option value="">{t("sell.fefoDefault")}</option>
                         {line.batches.map((b) => (
@@ -446,7 +457,7 @@ export function Till({
                             update(line.key, { overrideReason: e.target.value })
                           }
                           placeholder={t("sell.overrideReason")}
-                          className={`${inputBase} flex-1 py-1 text-xs`}
+                          className={`${inputSmall} flex-1`}
                         />
                       )}
                   </div>
@@ -457,12 +468,14 @@ export function Till({
         </Card>
       </div>
 
+      {/* Genuinely floating -- it sits sticky over the basket while scrolling
+          -- so it's the one panel that gets the glass (Surface 2) treatment
+          instead of the app's usual opaque cards. */}
       <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
-        <Card className="p-4">
+        <Card glass className="p-4">
           <dl className="flex flex-col gap-2 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-muted">{t("sell.subtotal")}</dt>
-              <dd className="tabular">{formatMoney(subtotal)}</dd>
+            <div>
+              <SummaryRow label={t("sell.subtotal")} value={formatMoney(subtotal)} />
             </div>
 
             {canDiscount && (
@@ -480,36 +493,53 @@ export function Till({
             )}
 
             {tax?.enabled && (
-              <div className="flex justify-between">
-                <dt className="text-muted">
-                  {t("sell.tax")} {(tax.rateBps / 100).toFixed(0)}%
-                </dt>
-                <dd className="tabular">{formatMoney(taxAmount)}</dd>
+              <div>
+                <SummaryRow
+                  label={`${t("sell.tax")} ${(tax.rateBps / 100).toFixed(0)}%`}
+                  value={formatMoney(taxAmount)}
+                />
               </div>
             )}
 
-            <div className="mt-1 flex justify-between border-t border-rule pt-2 text-lg font-semibold">
-              <dt>{t("sell.total")}</dt>
-              <dd className="tabular">{formatMoney(total)}</dd>
+            <div className="mt-1 border-t border-rule pt-2">
+              <SummaryRow label={t("sell.total")} value={formatMoney(total)} strong />
             </div>
           </dl>
         </Card>
 
-        <Card className="flex flex-col gap-3 p-4">
-          <label className="flex flex-col gap-1.5">
+        <Card glass className="flex flex-col gap-3 p-4">
+          <div className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-muted">
               {t("sell.paymentMethod")}
             </span>
-            <select
-              value={method}
-              onChange={(e) => setMethod(e.target.value as typeof method)}
-              className={inputClass}
+            {/* A segmented toggle rather than a dropdown: the payment method
+                is picked once per sale and read at a glance by whoever is
+                watching the till, not typed -- the accent-soft selected state
+                is the one place in the summary panel color is doing more than
+                labelling, per the reference's own selected-state pattern. */}
+            <div
+              role="radiogroup"
+              aria-label={t("sell.paymentMethod")}
+              className="grid grid-cols-2 gap-2"
             >
               {PAYMENT_METHODS.map((m) => (
-                <option key={m} value={m}>{t(`paymentMethod.${m}`)}</option>
+                <button
+                  key={m}
+                  type="button"
+                  role="radio"
+                  aria-checked={method === m}
+                  onClick={() => setMethod(m)}
+                  className={`rounded-full border px-3 py-2 text-sm font-medium transition-colors duration-150 ${
+                    method === m
+                      ? "border-accent/40 bg-accent-soft text-accent"
+                      : "border-rule text-muted hover:border-accent/40 hover:text-accent"
+                  }`}
+                >
+                  {t(`paymentMethod.${m}`)}
+                </button>
               ))}
-            </select>
-          </label>
+            </div>
+          </div>
 
           {method === "tunai" && (
             <label className="flex flex-col gap-1.5">
