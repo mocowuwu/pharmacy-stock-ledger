@@ -333,14 +333,79 @@ export async function checkUpdate(paths) {
  * against it -- the same thing running the installer script again by hand
  * does, including the pre-upgrade backup and the restart at the end. See
  * `update.mjs` for why it is *that* file's job and not this one's.
+ *
+ * `onProgress` gets a snapshot each time something moves; see `applyUpdate`.
  */
-export async function update(paths, config) {
+export async function update(paths, config, onProgress) {
   try {
-    const result = await applyUpdate(paths, config);
+    const result = await applyUpdate(paths, config, onProgress);
     return { ...result, status: await status(paths, config) };
   } catch (error) {
-    return { ok: false, reason: error.message ?? String(error), status: await status(paths, config) };
+    return {
+      ok: false,
+      reason: error.message ?? String(error),
+      logFile: error.logFile ?? null,
+      status: await status(paths, config),
+    };
   }
+}
+
+/**
+ * The update in flight from the control panel, if any -- there is only ever
+ * one, since the panel disables every other button while one runs.
+ *
+ * Kept in memory rather than on disk: it describes this run of this process,
+ * and `logs/update.log` is the record that outlives it.
+ */
+let updateProgress = { active: false, progress: null, done: null };
+
+/** What the panel polls while `startUpdate` is running, to show real progress. */
+export function updateStatus() {
+  const now = Date.now();
+  const progress = updateProgress.progress;
+  return {
+    ...updateProgress,
+    // Durations rather than timestamps, so the page never has to trust the
+    // browser's clock against this process's.
+    elapsedMs: progress ? now - progress.startedAt : 0,
+    quietMs: progress ? now - progress.lastOutputAt : 0,
+  };
+}
+
+/**
+ * Starts an update and returns at once rather than when it finishes.
+ *
+ * The install underneath runs for many minutes on a small machine. Holding a
+ * single HTTP request open that long was the original design, and it gave the
+ * owner a button reading "Sedang berjalan…" and nothing else for a quarter of
+ * an hour -- the same screen whether it was building, waiting on a UAC prompt
+ * hidden behind the browser, or dead. `updateStatus` is where the page watches
+ * it happen instead.
+ */
+export function startUpdate(paths, config) {
+  if (updateProgress.active) return { ok: true, alreadyRunning: true };
+
+  updateProgress = { active: true, progress: null, done: null };
+  update(paths, config, (progress) => {
+    updateProgress = { ...updateProgress, progress };
+  }).then(
+    (done) => {
+      updateProgress = { ...updateProgress, active: false, done };
+    },
+    // `update` catches everything itself; this is for a throw from the status
+    // check after it. Left unhandled, `active` would stay true for good and
+    // the page would poll a finished update forever -- the very hang this
+    // replaced.
+    (error) => {
+      updateProgress = {
+        ...updateProgress,
+        active: false,
+        done: { ok: false, reason: error.message ?? String(error) },
+      };
+    },
+  );
+
+  return { ok: true, started: true };
 }
 
 /* -------------------------------------------------------------------- logs */

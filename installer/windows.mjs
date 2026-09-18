@@ -222,6 +222,10 @@ export async function installWindowsService(paths, nodePath, runner, appPort) {
     `schtasks /Run /TN "${TASK_NAME}"`,
   ];
 
+  // Said before the prompt, not after: the control panel's update watches for
+  // this line to tell the owner it is waiting on them, since the dialog can
+  // open behind the browser they are looking at.
+  ui.info("Windows will ask for permission. Click Yes.");
   try {
     await elevate(paths, systemTask);
     return {

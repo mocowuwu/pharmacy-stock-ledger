@@ -194,8 +194,18 @@ const commands = {
     const current = await config();
     refuseIfDisabled(current);
     ui.info("this backs up the database first, then stops the pharmacy while it upgrades");
-    const result = await operations.update(paths, current);
-    if (!result.ok) ui.fail(result.reason);
+    // The installer's own lines, as they happen -- the same ones the panel
+    // shows under its progress bar. Counted, so a snapshot that only moved the
+    // byte count prints nothing and no line is printed twice.
+    let printed = 0;
+    const result = await operations.update(paths, current, (progress) => {
+      const fresh = Math.min(progress.lineCount - printed, progress.lines.length);
+      if (fresh > 0) progress.lines.slice(-fresh).forEach((line) => ui.detail(line));
+      printed = progress.lineCount;
+    });
+    if (!result.ok) {
+      ui.fail(result.reason, result.logFile ? `The full log is in ${result.logFile}` : undefined);
+    }
     ui.ok(`updated to ${result.version}`);
     report(result.status);
   },

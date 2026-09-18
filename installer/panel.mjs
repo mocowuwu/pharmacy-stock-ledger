@@ -75,6 +75,10 @@ const T = {
       "Tailscale tidak merespons. Buka aplikasi Tailscale, pastikan sudah " +
       "masuk dan berjalan, lalu coba lagi.",
   },
+  updateAdminWarning:
+    "Memasang pembaruan mendaftarkan ulang layanan latar belakang. Windows " +
+    "akan meminta izin di tengah proses -- klik Ya walau jendelanya muncul " +
+    "di belakang peramban ini.",
   remoteNoHttps:
     "Sertifikat HTTPS belum diaktifkan untuk jaringan Tailscale Anda, jadi " +
     "alamat ini memakai nomor IP. Lalu lintasnya tetap terenkripsi antar " +
@@ -100,6 +104,40 @@ const T = {
   updateAvailable: "Versi baru tersedia:",
   updateInstalled: "Terpasang:",
   updateDone: "Pembaruan selesai. Versi sekarang:",
+  updatePhases: {
+    release: "Memeriksa versi terbaru di GitHub…",
+    download: "Mengunduh versi",
+    extract: "Membongkar arsip…",
+    install: "Memasang pembaruan…",
+    done: "Selesai",
+  },
+  /**
+   * The installer's steps, by the English title it prints. A step missing here
+   * shows its English title rather than nothing -- a newer release may add one
+   * before this panel has heard of it.
+   */
+  updateSteps: {
+    "Checking the machine": "Memeriksa komputer dan mencadangkan basis data",
+    "Fetching PostgreSQL": "Menyiapkan PostgreSQL",
+    "Setting up the database": "Menyalakan basis data",
+    "Installing the application": "Memasang aplikasi — mengunduh paket, beberapa menit",
+    "Writing the configuration": "Menulis konfigurasi",
+    "Building": "Membangun aplikasi — langkah paling lama",
+    "Preparing the database": "Memperbarui struktur basis data",
+    "Creating the owner account": "Memeriksa akun pemilik",
+    "Adding the pharmacy command": "Memasang perintah apotek",
+    "Making it start by itself": "Mendaftarkan apotek agar menyala sendiri",
+  },
+  updateElapsed: "Waktu berjalan:",
+  updateNeedsAdmin:
+    "Windows meminta izin administrator, dan pembaruan menunggu sampai " +
+    "dijawab. Cari jendela izinnya -- bisa tersembunyi di belakang peramban " +
+    "ini atau berkedip di taskbar -- lalu klik Ya.",
+  updateQuiet:
+    "Belum ada kabar baru selama {t}. Langkah ini memang bisa lama di komputer " +
+    "kecil; tetap biarkan halaman ini terbuka.",
+  updateLog: "Catatan lengkap:",
+  updateDetails: "Rincian proses",
   folders: "Lokasi berkas",
   foldersHint:
     "Rekaman apotek disimpan di folder basis data. Cadangan yang belum disalin " +
@@ -264,7 +302,37 @@ function page(folders, needsAdministrator, controlPath) {
     max-height:260px; overflow:auto; margin:0;
     font-size:12.5px; white-space:pre-wrap; word-break:break-word;
   }
-  #message { margin:0 0 18px; padding:12px 16px; border-radius:9px; display:none; }
+  #update-progress { margin-top:16px; }
+  .bar-head { display:flex; justify-content:space-between; gap:12px; font-weight:500; }
+  .bar-head #update-percent { font-variant-numeric:tabular-nums; color:var(--accent); }
+  .bar {
+    height:10px; border-radius:99px; background:var(--surface-2);
+    overflow:hidden; margin:8px 0 6px;
+  }
+  .bar .fill {
+    height:100%; width:0; border-radius:99px; background:var(--accent);
+    transition:width .6s ease;
+  }
+  /* Moving stripes while it runs: the percentage only advances between
+     steps, and the build step alone can hold it still for ten minutes. The
+     stripes are what say "alive" in between. */
+  #update-progress.running .fill {
+    background-image:linear-gradient(45deg,rgba(255,255,255,.28) 25%,transparent 25%,
+      transparent 50%,rgba(255,255,255,.28) 50%,rgba(255,255,255,.28) 75%,transparent 75%);
+    background-size:20px 20px; animation:stripes 1s linear infinite;
+  }
+  @keyframes stripes { to { background-position:20px 0; } }
+  @media (prefers-reduced-motion: reduce) { #update-progress.running .fill { animation:none; } }
+  #update-progress.failed .fill { background:var(--critical); }
+  .notice {
+    margin:10px 0 0; padding:10px 14px; border-radius:9px;
+    background:var(--critical-soft); color:var(--critical); font-weight:500;
+  }
+  .notice.soft { background:var(--notice-soft); color:var(--notice); font-weight:400; }
+  details { margin-top:10px; }
+  summary { cursor:pointer; color:var(--muted); font-size:13.5px; }
+  details pre { margin-top:8px; }
+  #message { margin:0 0 18px; padding:12px 16px; border-radius:9px; display:none; white-space:pre-line; }
   #message.show { display:block; }
   #message.bad { background:var(--critical-soft); color:var(--critical); }
   #message.good { background:var(--notice-soft); color:var(--notice); }
@@ -321,7 +389,24 @@ function page(folders, needsAdministrator, controlPath) {
       <button data-action="update" id="update-now" hidden>${T.updateNow}</button>
     </div>
     <p class="hint" id="update-status">—</p>
+    <div id="update-progress" hidden>
+      <div class="bar-head">
+        <span id="update-label">—</span>
+        <span id="update-percent">0%</span>
+      </div>
+      <div class="bar" id="update-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="fill" id="update-fill"></div>
+      </div>
+      <p class="hint" id="update-meta"></p>
+      <p class="notice" id="update-admin" hidden>${T.updateNeedsAdmin}</p>
+      <p class="notice soft" id="update-quiet" hidden></p>
+      <details id="update-details" open>
+        <summary>${T.updateDetails}</summary>
+        <pre id="update-log"></pre>
+      </details>
+    </div>
     <p class="hint">${T.updateHint}</p>
+    ${needsAdministrator ? `<p class="hint">${T.updateAdminWarning}</p>` : ""}
   </section>
 
   <section>
@@ -421,6 +506,85 @@ function page(folders, needsAdministrator, controlPath) {
     document.querySelectorAll("button[data-action]").forEach((b) => (b.disabled = on));
   }
 
+  const clock = (ms) => {
+    const seconds = Math.floor(ms / 1000);
+    return Math.floor(seconds / 60) + ":" + String(seconds % 60).padStart(2, "0");
+  };
+
+  function updateLabel(p) {
+    if (p.phase === "download") {
+      const mb = (p.bytes / 1024 / 1024).toFixed(1);
+      return T.updatePhases.download + " " + (p.version || "") + "… " + mb + " MB";
+    }
+    if (p.phase === "install" && p.step) return T.updateSteps[p.step] || p.step;
+    return T.updatePhases[p.phase] || T.updatePhases.install;
+  }
+
+  function paintUpdate(u) {
+    const p = u.progress || { phase: "release", percent: 0, lines: [] };
+    const failed = u.done && u.done.ok === false;
+    const percent = u.done && u.done.ok ? 100 : Math.round(p.percent);
+
+    const box = $("update-progress");
+    box.hidden = false;
+    box.className = u.active ? "running" : failed ? "failed" : "";
+    $("update-fill").style.width = percent + "%";
+    $("update-bar").setAttribute("aria-valuenow", String(percent));
+    $("update-percent").textContent = percent + "%";
+    $("update-label").textContent = failed ? T.failed : updateLabel(p);
+    $("update-meta").textContent = T.updateElapsed + " " + clock(u.elapsedMs || 0);
+
+    // Only while it is actually waiting: a notice that outlives the prompt
+    // sends the owner hunting for a dialog that is no longer there.
+    $("update-admin").hidden = !(u.active && p.needsAdmin);
+    const quiet = u.active && !p.needsAdmin && u.quietMs > 90000;
+    $("update-quiet").hidden = !quiet;
+    if (quiet) $("update-quiet").textContent = T.updateQuiet.replace("{t}", clock(u.quietMs));
+
+    // Follows the tail unless the owner has scrolled up to read something.
+    const log = $("update-log");
+    const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 30;
+    log.textContent = p.lines.join("\\n");
+    if (atBottom) log.scrollTop = log.scrollHeight;
+  }
+
+  // The install behind "Pasang pembaruan" runs for many minutes, so it is
+  // started and then polled rather than awaited in one request -- see
+  // startUpdate in operations.mjs. That is also what lets it survive a UAC
+  // prompt mid-install, and a reload of this page: nothing is sitting on the
+  // network waiting for the answer.
+  async function pollUpdate() {
+    for (;;) {
+      let u;
+      try {
+        u = await api("/api/update-status");
+      } catch {
+        // A poll that fails is not the update failing -- the panel process is
+        // still running it. Try again rather than declaring anything.
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        continue;
+      }
+      paintUpdate(u);
+
+      if (!u.active && u.done) {
+        const result = u.done;
+        if (result.status) paint(result.status);
+        if (result.ok === false) {
+          say(
+            T.failed + " " + (result.reason || "") +
+              (result.logFile ? "\\n\\n" + T.updateLog + " " + result.logFile : ""),
+            false,
+          );
+        } else {
+          $("update-now").hidden = true;
+          $("update-status").textContent = T.updateDone + " " + result.version;
+        }
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+
   document.querySelectorAll("button[data-action]").forEach((button) => {
     button.addEventListener("click", async () => {
       setBusy(true);
@@ -435,6 +599,16 @@ function page(folders, needsAdministrator, controlPath) {
             ? "/api/remote/" + (button.dataset.remote === "on" ? "off" : "on")
             : "/api/" + button.dataset.action;
         const result = await api(path, "POST");
+
+        if (button.dataset.action === "update") {
+          // Busy stays on and the button stays disabled for the whole poll --
+          // the alternative is every other button staying clickable while an
+          // install is mid-flight underneath them. The finally block below
+          // restores the button once pollUpdate resolves.
+          await pollUpdate();
+          return;
+        }
+
         if (result.status) paint(result.status);
         // An operation that refused is a 200 carrying ok:false -- a declined
         // administrator prompt is an answer, not a server error. Saying so is
@@ -448,10 +622,6 @@ function page(folders, needsAdministrator, controlPath) {
           $("update-status").textContent = result.updateAvailable
             ? T.updateAvailable + " " + result.current + " → " + result.latest
             : T.upToDate + " (" + result.current + ")";
-        }
-        else if (button.dataset.action === "update") {
-          $("update-now").hidden = true;
-          $("update-status").textContent = T.updateDone + " " + result.version;
         }
         else if (result.message) say(T.remoteNoHttps, true);
         else if (result.address) say(result.address, true);
@@ -489,6 +659,22 @@ function page(folders, needsAdministrator, controlPath) {
   $("open-app").addEventListener("click", () => {
     window.open($("address").textContent, "_blank", "noopener");
   });
+
+  // A page reloaded, or reopened from the desktop icon, mid-update picks the
+  // progress back up instead of offering a second update on top of the first.
+  api("/api/update-status").then((u) => {
+    if (!u.active) return;
+    const button = $("update-now");
+    button.hidden = false;
+    const original = button.textContent;
+    button.textContent = T.working;
+    setBusy(true);
+    pollUpdate().finally(() => {
+      button.textContent = original;
+      setBusy(false);
+      refresh();
+    });
+  }).catch(() => {});
 
   refresh();
   setInterval(refresh, 4000);
@@ -632,6 +818,10 @@ async function main() {
         });
       }
 
+      if (request.method === "GET" && url.pathname === "/api/update-status") {
+        return send(200, operations.updateStatus());
+      }
+
       // Everything below changes something, so nothing below answers to GET.
       if (request.method !== "POST") return send(405, "method not allowed", "text/plain");
 
@@ -642,19 +832,10 @@ async function main() {
       if (url.pathname === "/api/restart") return send(200, await operations.restart(paths, config));
       if (url.pathname === "/api/backup") return send(200, await operations.backup(paths, config));
       if (url.pathname === "/api/check-update") return send(200, await operations.checkUpdate(paths));
-      if (url.pathname === "/api/update") {
-        // The install this runs can take several minutes -- longer than the
-        // idle timeout below would otherwise allow while nobody else is
-        // making a request. Kept alive here rather than raising IDLE_MS
-        // itself, which would let a genuinely abandoned tab linger just as
-        // long.
-        const keepAlive = setInterval(() => (lastSeen = Date.now()), 30_000);
-        try {
-          return send(200, await operations.update(paths, config));
-        } finally {
-          clearInterval(keepAlive);
-        }
-      }
+      // Starts the update and returns immediately -- the install this kicks
+      // off can take several minutes, and the panel polls /api/update-status
+      // for progress instead of holding one request open that long.
+      if (url.pathname === "/api/update") return send(200, operations.startUpdate(paths, config));
 
       const folder = url.pathname.match(/^\/api\/reveal\/([a-z]+)$/u)?.[1];
       if (folder) return send(200, await operations.reveal(paths, folder));
@@ -711,7 +892,13 @@ async function main() {
   });
 
   // Nobody looking, nothing to serve. The pharmacy is untouched by this.
+  //
+  // Except mid-update. The installer is this process's child, writing into a
+  // pipe this process holds; exiting would close that pipe under it and leave
+  // the pharmacy stopped halfway through an upgrade because a browser tab was
+  // closed.
   setInterval(() => {
+    if (operations.updateStatus().active) return;
     if (Date.now() - lastSeen > IDLE_MS) process.exit(0);
   }, 30_000);
 }

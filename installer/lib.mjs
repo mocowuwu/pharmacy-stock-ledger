@@ -103,8 +103,14 @@ export function run(command, args, options = {}) {
 
     let output = "";
     if (!options.inherit) {
-      child.stdout?.on("data", (d) => (output += d));
-      child.stderr?.on("data", (d) => (output += d));
+      child.stdout?.on("data", (d) => {
+        output += d;
+        options.onOutput?.(d.toString());
+      });
+      child.stderr?.on("data", (d) => {
+        output += d;
+        options.onOutput?.(d.toString());
+      });
     }
 
     // A child that never exits -- waiting on an interactive prompt with no
@@ -325,8 +331,29 @@ export function lanAddress() {
 export async function download(url, destination, options = {}) {
   await mkdir(dirname(destination), { recursive: true });
 
-  const response = await fetch(url, { redirect: "follow" });
+  // A slow connection is not a bug and must be allowed to take minutes; a
+  // connection gone silent is, and a stall timer -- reset on every chunk --
+  // catches the second without punishing the first.
+  const STALL_MS = 60_000;
+  const controller = new AbortController();
+  let stallTimer = setTimeout(() => controller.abort(), STALL_MS);
+  const resetStall = () => {
+    clearTimeout(stallTimer);
+    stallTimer = setTimeout(() => controller.abort(), STALL_MS);
+  };
+
+  let response;
+  try {
+    response = await fetch(url, { redirect: "follow", signal: controller.signal });
+  } catch (error) {
+    clearTimeout(stallTimer);
+    if (error.name === "AbortError") {
+      throw new Error(`download stalled for ${url} (no data for ${STALL_MS / 1000}s)`);
+    }
+    throw error;
+  }
   if (!response.ok || !response.body) {
+    clearTimeout(stallTimer);
     throw new Error(`download failed (${response.status}) for ${url}`);
   }
 
@@ -337,8 +364,10 @@ export async function download(url, destination, options = {}) {
   const hash = createHash("sha256");
   const source = Readable.fromWeb(response.body);
   source.on("data", (chunk) => {
+    resetStall();
     hash.update(chunk);
     received += chunk.length;
+    options.onBytes?.(received, total);
     if (!total || !process.stdout.isTTY) return;
     const percent = Math.floor((received / total) * 100);
     if (percent >= lastPrinted + 10) {
@@ -347,7 +376,16 @@ export async function download(url, destination, options = {}) {
     }
   });
 
-  await pipeline(source, createWriteStream(destination));
+  try {
+    await pipeline(source, createWriteStream(destination));
+  } catch (error) {
+    if (error.name === "AbortError") {
+      throw new Error(`download stalled for ${url} (no data for ${STALL_MS / 1000}s)`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(stallTimer);
+  }
   if (process.stdout.isTTY && total) process.stdout.write("\r[2K");
 
   const digest = hash.digest("hex");
