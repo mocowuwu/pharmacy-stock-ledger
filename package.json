@@ -1,6 +1,6 @@
 {
   "name": "pharmacy-stock-ledger",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "scripts": {
     "dev": "tsx scripts/dev.ts",
@@ -16,6 +16,7 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:serve": "tsx scripts/db-server.ts",
     "reset-password": "tsx scripts/reset-password.ts",
+    "accounts": "tsx scripts/accounts.ts",
     "check-ledger": "tsx scripts/check-ledger.ts",
     "alerts": "tsx scripts/run-alerts.ts",
     "digest": "tsx scripts/run-digest.ts",

@@ -136,6 +136,9 @@ export function run(command, args, options = {}) {
           `${command} ${args.join(" ")} did not finish within ${options.timeoutMs}ms`,
         );
         error.timedOut = true;
+        // What it had said before it went quiet -- often the whole reason it
+        // went quiet, such as a URL it is waiting for somebody to open.
+        error.output = output;
         return reject(error);
       }
       if (code === 0) return resolve(output);

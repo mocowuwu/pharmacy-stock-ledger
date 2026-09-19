@@ -210,6 +210,69 @@ const commands = {
     report(result.status);
   },
 
+  /**
+   * Every password this installation can show: the database's, which the
+   * installer generated and which belongs to the machine, and the accounts --
+   * whose working passwords nothing can show, because they are stored only as
+   * hashes. For those, `reset-password` below issues a new temporary one.
+   */
+  async passwords() {
+    const current = await config();
+    const db = operations.databaseCredentials(current);
+    ui.title("Database (PostgreSQL)");
+    ui.info(`host       ${db.host}`);
+    ui.info(`port       ${db.port}`);
+    ui.info(`database   ${db.database}`);
+    ui.info(`user       ${db.user}`);
+    ui.info(`password   ${db.password}`);
+    ui.info(`url        ${db.url}`);
+
+    ui.title("Accounts");
+    const listed = await operations.accounts(paths, current);
+    if (!listed.ok) {
+      ui.warn(
+        listed.code === "db-down"
+          ? "the database is not running -- start it with: pharmacy start"
+          : `could not list accounts: ${listed.reason ?? listed.code}`,
+      );
+      return;
+    }
+    for (const account of listed.accounts) {
+      const role = account.isOwner ? "owner" : account.isPharmacist ? "pharmacist" : "staff";
+      const flags = [
+        account.status,
+        account.mustChangePassword ? "temporary password pending" : null,
+        account.locked ? "locked" : null,
+      ].filter(Boolean);
+      ui.info(`${account.username.padEnd(16)} ${role.padEnd(11)} ${flags.join(", ")}`);
+    }
+    ui.blank();
+    ui.detail("Working passwords are stored only as hashes and cannot be shown by anything.");
+    ui.detail("To issue a new temporary one:  pharmacy reset-password <username>");
+  },
+
+  /** A new temporary password for one account, shown once. */
+  async "reset-password"() {
+    const username = process.argv[3];
+    if (!username) ui.fail("say whose: pharmacy reset-password <username>");
+    const result = await operations.resetAccount(paths, await config(), username);
+    if (!result.ok) {
+      ui.fail(
+        result.code === "no-account"
+          ? `there is no account named "${username}".`
+          : result.code === "db-down"
+            ? "the database is not running -- start it with: pharmacy start"
+            : (result.reason ?? result.code),
+      );
+    }
+    ui.box([
+      `username:  ${result.username}${result.isOwner ? " (owner)" : ""}`,
+      `password:  ${result.temporaryPassword}`,
+    ]);
+    ui.info("Shown once. It must be replaced at the next sign-in.");
+    ui.detail(`signed out of ${result.sessionsRevoked} session(s)`);
+  },
+
   async logs() {
     const { lines, missing } = await operations.logs(paths);
     if (missing) {
@@ -274,6 +337,8 @@ async function main() {
     ui.info("check-update   is a newer version published?");
     ui.info("update     download and install the latest version");
     ui.info("logs       the last 60 lines");
+    ui.info("passwords  the database password, and every account");
+    ui.info("reset-password <user>   a new temporary password, shown once");
     ui.info("remote     on | off -- reach it from another building, via Tailscale");
     ui.info("disable    stop it and turn off autostart and the control panel");
     ui.info("uninstall  remove the software, keeping the records");

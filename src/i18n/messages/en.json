@@ -270,6 +270,7 @@
     "user_not_found": "Account not found.",
     "cannot_suspend_owner": "The owner cannot be suspended.",
     "cannot_suspend_self": "You cannot suspend your own account.",
+    "cannot_manage_owner": "Only the owner can change the owner's account.",
     "invalid_days": "Enter a whole number of days between 1 and 3650.",
     "urgent_window_too_wide": "The red window must be shorter than the amber one.",
     "digest_email_required": "Give an address to send the daily email to.",

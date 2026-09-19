@@ -14,6 +14,35 @@ export function pharmacyTimezone(): string {
 }
 
 /**
+ * Makes the owner's chosen timezone the one this process works in.
+ *
+ * The zone is a business setting, chosen on the Settings screen -- but most of
+ * what depends on it asks synchronously and has no database to hand: the
+ * expiry refusal in the ledger, the date a sale or return is numbered under,
+ * every time printed on a receipt. They read `pharmacyTimezone()`, which used
+ * to mean only the `.env.local` value the installer writes once (always
+ * Asia/Jakarta). A pharmacy in Makassar that picked WITA in Settings then got
+ * WITA in its reports and WIB on its receipts, with an early-morning sale
+ * numbered under the previous day.
+ *
+ * So whoever reads or saves the settings row calls this, and the environment
+ * variable is what it updates: it is the one thing every server bundle in the
+ * process genuinely shares. The value in `.env.local` remains the fallback for
+ * the moments before the settings have been read.
+ */
+export function adoptPharmacyTimezone(zone: string | null | undefined): void {
+  if (!zone) return;
+  try {
+    // An unknown zone would make every date format throw. The settings screen
+    // validates before saving, so this only guards a row edited by hand.
+    new Intl.DateTimeFormat("en-CA", { timeZone: zone });
+  } catch {
+    return;
+  }
+  process.env.PHARMACY_TIMEZONE = zone;
+}
+
+/**
  * Today's calendar date in the pharmacy's own timezone, as `YYYY-MM-DD`.
  *
  * `en-CA` is used purely because it formats as ISO; the locale is an

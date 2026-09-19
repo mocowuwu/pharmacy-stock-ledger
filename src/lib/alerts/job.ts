@@ -1,7 +1,7 @@
 import { and, eq, gt, inArray, lt, ne, sql } from "drizzle-orm";
 import type { Database } from "@/db/client";
 import { alerts, batches, items, settings, stockMovements } from "@/db/schema";
-import { today } from "@/lib/format/date";
+import { adoptPharmacyTimezone, pharmacyTimezone, today } from "@/lib/format/date";
 import {
   computeAlerts,
   DEFAULT_THRESHOLDS,
@@ -58,11 +58,14 @@ export async function runAlertJob(
   db: Database,
   options: { on?: string } = {},
 ): Promise<AlertJobResult> {
+  // The settings first: "today" is a day in the owner's chosen timezone, and
+  // it decides which batches are quarantined as expired a few lines down.
+  const [config] = await db.select().from(settings).where(eq(settings.id, 1));
+  adoptPharmacyTimezone(config?.timezone);
   const on = options.on ?? today();
 
   const quarantined = await quarantineExpired(db, on);
 
-  const [config] = await db.select().from(settings).where(eq(settings.id, 1));
   const thresholds = config
     ? {
         expiringUrgentDays: config.expiringUrgentDays,
@@ -97,7 +100,9 @@ export async function runAlertJob(
   const lastSales = await db
     .select({
       itemId: stockMovements.itemId,
-      lastSoldAt: sql<string>`max(${stockMovements.createdAt})::date`,
+      // The day in the pharmacy's timezone, not the database's: a sale rung
+      // up just after midnight belongs to the day it was rung up in.
+      lastSoldAt: sql<string>`(max(${stockMovements.createdAt}) at time zone ${pharmacyTimezone()})::date`,
     })
     .from(stockMovements)
     .where(eq(stockMovements.type, "sale"))

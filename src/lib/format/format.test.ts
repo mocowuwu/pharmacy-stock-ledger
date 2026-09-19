@@ -117,3 +117,25 @@ describe("expiry dates", () => {
     expect(isExpired(addDays(jakarta, 5), "Asia/Jakarta")).toBe(false);
   });
 });
+
+describe("adopting the owner's timezone", () => {
+  it("makes the Settings zone the one today() and isExpired() use", async () => {
+    const { adoptPharmacyTimezone, pharmacyTimezone } = await import("./date");
+    const before = process.env.PHARMACY_TIMEZONE;
+    try {
+      adoptPharmacyTimezone("Asia/Makassar");
+      expect(pharmacyTimezone()).toBe("Asia/Makassar");
+    } finally {
+      if (before === undefined) delete process.env.PHARMACY_TIMEZONE;
+      else process.env.PHARMACY_TIMEZONE = before;
+    }
+  });
+
+  it("ignores a blank or unknown zone rather than breaking every date", async () => {
+    const { adoptPharmacyTimezone, pharmacyTimezone } = await import("./date");
+    const before = pharmacyTimezone();
+    adoptPharmacyTimezone("");
+    adoptPharmacyTimezone("Mars/Olympus_Mons");
+    expect(pharmacyTimezone()).toBe(before);
+  });
+});

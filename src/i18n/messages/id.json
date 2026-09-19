@@ -270,6 +270,7 @@
     "user_not_found": "Akun tidak ditemukan.",
     "cannot_suspend_owner": "Akun pemilik tidak bisa ditangguhkan.",
     "cannot_suspend_self": "Anda tidak bisa menangguhkan akun Anda sendiri.",
+    "cannot_manage_owner": "Hanya pemilik yang bisa mengubah akun pemilik.",
     "invalid_days": "Masukkan jumlah hari bulat antara 1 dan 3650.",
     "urgent_window_too_wide": "Jendela merah harus lebih pendek daripada jendela kuning.",
     "digest_email_required": "Isi alamat tujuan email harian.",

@@ -353,6 +353,13 @@ It needs [Tailscale](https://tailscale.com/download) installed on this machine
 and signed in. The command will not sign in for you — that is an account
 credential — but it says so plainly rather than failing.
 
+The control panel carries a step-by-step walkthrough under the remote-access
+button (**Panduan Tailscale**), in Indonesian, that ticks each step off against
+what `tailscale status` actually reports: installed, signed in (and as whom),
+MagicDNS and HTTPS certificates on, other devices on the tailnet. If
+`tailscale serve` stops to ask for Serve/HTTPS to be approved for the tailnet,
+the panel shows the approval link it printed rather than hanging.
+
 What it does:
 
 - `tailscale serve` puts a **real HTTPS certificate** in front of the app, so

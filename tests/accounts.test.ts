@@ -5,6 +5,7 @@ import {
   normaliseUsername,
   permissionsToStore,
   refusalToSaveSettings,
+  refusalToManage,
   refusalToSuspend,
 } from "@/lib/accounts/rules";
 import { PERMISSION_TEMPLATES } from "@/lib/auth/permissions";
@@ -38,6 +39,20 @@ describe("suspending an account", () => {
 
   it("allows suspending somebody else", () => {
     expect(refusalToSuspend({ id: "owner-1", isOwner: true }, staff)).toBeNull();
+  });
+});
+
+describe("managing the owner's account", () => {
+  it("refuses a manager holding users.manage", () => {
+    // Otherwise a reset hands the manager the owner's temporary password, and
+    // with it the one account nobody can suspend.
+    expect(refusalToManage(staff, { isOwner: true })).toBe("cannot_manage_owner");
+  });
+
+  it("lets the owner manage themselves and anyone else", () => {
+    expect(refusalToManage(owner, { isOwner: true })).toBeNull();
+    expect(refusalToManage(owner, { isOwner: false })).toBeNull();
+    expect(refusalToManage(staff, { isOwner: false })).toBeNull();
   });
 });
 

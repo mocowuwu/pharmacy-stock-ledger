@@ -16,6 +16,7 @@ import {
 export type AccountRefusal =
   | "cannot_suspend_owner"
   | "cannot_suspend_self"
+  | "cannot_manage_owner"
   | "invalid_username"
   | "name_required"
   | "user_not_found";
@@ -35,6 +36,21 @@ export type Target = { id: string; isOwner: boolean; status: "active" | "suspend
 export function refusalToSuspend(actor: Actor, target: Target): AccountRefusal | null {
   if (target.isOwner) return "cannot_suspend_owner";
   if (target.id === actor.id) return "cannot_suspend_self";
+  return null;
+}
+
+/**
+ * Whether an account may be edited, reset or signed out by this actor.
+ *
+ * Only the owner touches the owner. `users.manage` can be granted to a
+ * manager, and without this it reached the owner's account like any other:
+ * a manager could issue the owner a temporary password, sign in with it, and
+ * *be* the owner -- the one account that cannot be suspended, demoted or
+ * stripped -- while the real owner was locked out and needed the server
+ * machine to get back in.
+ */
+export function refusalToManage(actor: Actor, target: { isOwner: boolean }): AccountRefusal | null {
+  if (target.isOwner && !actor.isOwner) return "cannot_manage_owner";
   return null;
 }
 

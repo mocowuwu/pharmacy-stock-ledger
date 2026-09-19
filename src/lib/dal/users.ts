@@ -16,6 +16,7 @@ import {
   isValidUsername,
   normaliseUsername,
   permissionsToStore,
+  refusalToManage,
   refusalToSuspend,
 } from "@/lib/accounts/rules";
 
@@ -198,6 +199,7 @@ export async function updateUser(id: string, input: EditUserInput) {
   const db = await getDb();
 
   const target = await requireTarget(id);
+  refuseOwnerToNonOwner(session, target);
   const permissions = permissionsToStore(target, input.permissions);
 
   const username = normaliseUsername(input.username);
@@ -328,6 +330,7 @@ export async function resetUserPassword(id: string) {
   const db = await getDb();
 
   const target = await requireTarget(id);
+  refuseOwnerToNonOwner(session, target);
   const temporaryPassword = generateTemporaryPassword();
 
   await db.transaction(async (tx) => {
@@ -364,7 +367,7 @@ export async function resetUserPassword(id: string) {
 export async function revokeUserSessions(id: string) {
   const session = await assertPermission("users.manage");
   const db = await getDb();
-  await requireTarget(id);
+  refuseOwnerToNonOwner(session, await requireTarget(id));
 
   const revoked = await db
     .update(sessions)
@@ -385,6 +388,18 @@ export async function revokeUserSessions(id: string) {
 }
 
 /* ----------------------------------------------------------------- helpers */
+
+/** Only the owner edits, resets or signs out the owner. See refusalToManage. */
+function refuseOwnerToNonOwner(
+  session: { user: { id: string; isOwner: boolean } },
+  target: { isOwner: boolean },
+) {
+  const refusal = refusalToManage(
+    { id: session.user.id, isOwner: session.user.isOwner },
+    target,
+  );
+  if (refusal) throw new UserError(refusal);
+}
 
 async function requireTarget(id: string) {
   const db = await getDb();

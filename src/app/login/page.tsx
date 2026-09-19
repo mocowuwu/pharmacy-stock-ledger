@@ -1,6 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import { publicBranding } from "@/lib/dal/settings";
 import { Card } from "@/components/ui";
+import { MAKER } from "@/lib/brand";
+import { isSafeNextPath } from "@/lib/auth/redirect";
 import { LoginForm } from "./LoginForm";
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
@@ -10,7 +12,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const nextParam = typeof params.next === "string" ? params.next : "";
   // Only same-origin paths are carried through, so the sign-in form cannot be
   // used to bounce someone to another site.
-  const next = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "";
+  const next = isSafeNextPath(nextParam) ? nextParam : "";
 
   return (
     <main className="relative flex flex-1 items-center justify-center overflow-hidden px-4 py-12">
@@ -37,6 +39,11 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         <Card className="p-6">
           <LoginForm next={next} />
         </Card>
+        {/* The maker's mark: below the form and quiet, so the pharmacy's own
+            name above stays the thing this screen is about. */}
+        <p className="mt-10 text-center text-xs font-medium tracking-[0.2em] text-faint select-none">
+          {MAKER}
+        </p>
       </div>
     </main>
   );

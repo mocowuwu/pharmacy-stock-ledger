@@ -3,6 +3,7 @@ import { requireSession } from "@/lib/dal/session";
 import { canAny, type Permission } from "@/lib/auth/permissions";
 import { SidebarNav, TopNav, type NavEntry } from "@/components/Sidebar";
 import { getSettings } from "@/lib/dal/settings";
+import { MAKER } from "@/lib/brand";
 import { MODULE_NAV, moduleFlags, type ModuleKey } from "@/lib/catalogue/modules";
 import { TutorialLauncher, TutorialProvider } from "@/components/Tutorial";
 import { signOut } from "../actions";
@@ -117,6 +118,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
                 {t("nav.signOut")}
               </button>
             </form>
+            <p className="px-3 pt-3 text-[0.7rem] font-medium tracking-[0.2em] text-sidebar-muted/70 select-none">
+              {MAKER}
+            </p>
           </div>
         </aside>
 
@@ -148,6 +152,11 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-7 sm:px-8 sm:py-9">
             {children}
           </main>
+          {/* On a phone there is no sidebar to carry the maker's mark. Never
+              printed: the receipt belongs to the pharmacy. */}
+          <p className="pb-5 text-center text-[0.7rem] font-medium tracking-[0.2em] text-faint select-none md:hidden print:hidden">
+            {MAKER}
+          </p>
         </div>
       </div>
     </TutorialProvider>

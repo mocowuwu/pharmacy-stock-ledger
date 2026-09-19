@@ -146,6 +146,12 @@ The control panel shows the last backup on its front page. **Look at it in the
 first week** — the failure this is guarding against is a backup that silently
 stopped working, and the only way to catch that is to have looked once.
 
+**Switch on the off-site copy** while you are there: *Cadangan cloud ->
+Hubungkan Google Drive*, sign in with the pharmacy's Google account, allow.
+Then press *Cadangkan sekarang* once and check that a file appeared in the
+**Apotek-Cadangan** folder in Drive. A backup on the machine that dies is not a
+backup.
+
 Leave the digest's mail settings until you are ready: until **Test the
 connection** succeeds it writes to `.data/digest/` and you can read exactly what
 would have arrived. It will be recorded as failing in `jobs.log` until then,

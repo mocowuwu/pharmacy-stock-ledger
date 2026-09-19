@@ -87,10 +87,11 @@ export async function checkForUpdate(paths) {
 const INSTALL_STEPS = [
   ["Checking the machine", 8],
   ["Fetching PostgreSQL", 3],
+  ["Fetching the cloud backup tool", 1],
   ["Setting up the database", 4],
   ["Installing the application", 30],
   ["Writing the configuration", 1],
-  ["Building", 40],
+  ["Building", 39],
   ["Preparing the database", 6],
   ["Creating the owner account", 3],
   ["Adding the pharmacy command", 2],

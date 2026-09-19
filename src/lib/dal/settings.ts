@@ -6,7 +6,7 @@ import { getDb } from "@/db";
 import { settings, taxRates } from "@/db/schema";
 import { assertPermission, requireSession } from "./session";
 import { recordAudit } from "@/lib/audit";
-import { addDays, today } from "@/lib/format/date";
+import { addDays, adoptPharmacyTimezone, today } from "@/lib/format/date";
 import { refusalToSaveSettings } from "@/lib/accounts/rules";
 import { isKnownTimezone } from "@/lib/format/timezones";
 import { verifyMail } from "@/lib/digest/send";
@@ -24,6 +24,7 @@ export const getSettings = cache(async () => {
   await requireSession();
   const db = await getDb();
   const [row] = await db.select().from(settings).where(eq(settings.id, 1));
+  adoptPharmacyTimezone(row?.timezone);
 
   // The migration seeds this row, but a screen should not crash if it is
   // missing -- the defaults here match the column defaults.
@@ -189,6 +190,7 @@ export async function updateSettings(input: SettingsInput) {
       updatedAt: new Date(),
     })
     .where(eq(settings.id, 1));
+  adoptPharmacyTimezone(input.timezone);
 
   await recordAudit({
     userId: session.user.id,
@@ -345,9 +347,13 @@ export const publicBranding = cache(async () => {
     .select({
       businessName: settings.businessName,
       businessTagline: settings.businessTagline,
+      timezone: settings.timezone,
     })
     .from(settings)
     .where(eq(settings.id, 1));
+  // The sign-in screen is the first thing served after a restart, so this is
+  // where the process first learns the owner's timezone.
+  adoptPharmacyTimezone(row?.timezone);
 
   return {
     businessName: row?.businessName?.trim() || null,

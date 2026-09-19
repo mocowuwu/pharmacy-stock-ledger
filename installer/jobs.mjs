@@ -75,7 +75,14 @@ async function runDue(paths, config, log) {
       // Postgres stack trace embedded in it helps nobody and hides the two
       // fields that matter.
       const summary = (error.message ?? String(error)).split("\n")[0];
-      state[name] = { at: new Date().toISOString(), ok: false, error: summary };
+      // The one failure with a very different meaning: the dump was written
+      // and is safe on this machine, and only the copy to the cloud did not
+      // happen. The panel says exactly that rather than a bare "failed".
+      const uploadFailed =
+        name === "backup" &&
+        /Backup written\./u.test(error.output ?? "") &&
+        /did not reach|never left this machine/u.test(error.output ?? "");
+      state[name] = { at: new Date().toISOString(), ok: false, error: summary, uploadFailed };
       await note(`${name}: FAILED -- ${summary}\n${error.message ?? error}`);
       log(`job ${name} failed: ${summary}`);
     }

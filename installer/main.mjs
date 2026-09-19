@@ -28,6 +28,7 @@ import {
   waitUntilReady,
 } from "./postgres.mjs";
 import { backup } from "./operations.mjs";
+import { ensureRclone, RCLONE_VERSION } from "./cloud.mjs";
 import { installPanelShortcut as installMacPanelShortcut } from "./macos.mjs";
 import { installService } from "./service.mjs";
 import {
@@ -186,7 +187,7 @@ export async function install() {
     // broken install unrepairable by the only tool that repairs it.
     try {
       const existing = JSON.parse(await readFile(paths.config, "utf8"));
-      const taken = await backup(paths, existing);
+      const taken = await backup(paths, existing, { upload: false });
       ui.ok(`backed up first: ${taken.file ?? paths.backups}`);
     } catch (error) {
       ui.warn(`could not take a backup before upgrading: ${error.message}`);
@@ -220,6 +221,22 @@ export async function install() {
 
   ui.step("Fetching PostgreSQL");
   await fetchPostgres(paths);
+
+  /* ------------------------------------------------- 2b. cloud backup tool */
+
+  // Fetched now so that "Hubungkan Google Drive" in the control panel is one
+  // click and a Google sign-in, not a download on the clinic's connection at
+  // the moment the owner is waiting. Optional in the plainest sense: a
+  // pharmacy that cannot fetch it today installs anyway, and the panel fetches
+  // it later with the same function.
+  ui.step("Fetching the cloud backup tool");
+  const rclone = await ensureRclone(paths);
+  if (rclone.ok) {
+    ui.ok(rclone.fresh ? `rclone ${RCLONE_VERSION} downloaded` : `rclone ${RCLONE_VERSION} already here`);
+  } else {
+    ui.warn(`could not fetch rclone: ${rclone.reason}`);
+    ui.detail("cloud backup can still be switched on later from the control panel");
+  }
 
   /* -------------------------------------------------- 3. cluster and role */
 

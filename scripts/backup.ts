@@ -21,7 +21,9 @@
  * ## Getting it off the machine automatically
  *
  * Set `BACKUP_RCLONE_REMOTE` in `.env.local` (e.g. `gdrive:pharmacy-backups`)
- * and the dump is copied there with `rclone copy` after it lands locally.
+ * and the dump is copied there with `rclone copy` after it lands locally. On
+ * an installed pharmacy the control panel's "Hubungkan Google Drive" button
+ * does all of that -- see `installer/cloud.mjs`.
  * rclone, not a hand-rolled Google API client, because token refresh for a
  * script nobody watches is exactly the kind of thing worth handing to a tool
  * that already does it for a living -- see README.md for one-time setup. With
@@ -108,25 +110,36 @@ async function main() {
   const remote = argument("remote") ?? process.env.BACKUP_RCLONE_REMOTE;
   if (remote) {
     console.log(`Uploading to ${remote}`);
-    const upload = await run("rclone", ["copy", file, remote]);
+    // The whole folder rather than today's file alone, limited to the last
+    // month. A day the internet was down is then uploaded by the next day that
+    // it is not, instead of being the one gap in the off-site copies nobody
+    // notices until they need it. rclone skips what is already there, so on a
+    // normal day this is still one file.
+    const upload = await run("rclone", [
+      "copy",
+      directory,
+      remote,
+      "--include",
+      "pharmacy-*.dump",
+      "--max-age",
+      "31d",
+    ]);
 
     if (upload.missing) {
       console.error(
         "\nThe dump is safe at " +
           file +
           ", but rclone is not installed, so it never left this machine.\n" +
-          "Install it from https://rclone.org/downloads/ and run `rclone config`\n" +
-          "once to set up the " +
-          JSON.stringify(remote.split(":")[0]) +
-          " remote -- see README.md.",
+          "Open the control panel and press \"Hubungkan Google Drive\" under\n" +
+          "\"Cadangan cloud\" -- it installs rclone and signs in for you.",
       );
       process.exit(1);
     }
     if (upload.code !== 0) {
       console.error(
         `\nrclone exited with ${upload.code}. The dump is safe at ${file},\n` +
-          "but it did not reach " + remote + " -- check the network and the remote's\n" +
-          "credentials (`rclone config reconnect " + remote.split(":")[0] + ":`).",
+          "but it did not reach " + remote + " -- check the internet connection. If it\n" +
+          "keeps failing, connect Google Drive again from the control panel.",
       );
       process.exit(upload.code ?? 1);
     }
@@ -141,8 +154,8 @@ async function main() {
   } else {
     console.log("Two things left, and neither is optional:");
     console.log("  1. Copy it off this machine. A backup on the machine that dies");
-    console.log("     is not a backup. Set BACKUP_RCLONE_REMOTE in .env.local to");
-    console.log("     automate this -- see README.md.");
+    console.log("     is not a backup. Connect Google Drive in the control panel");
+    console.log("     to automate this.");
     console.log("  2. Restore it into a scratch database and look at the data.");
     console.log("     npm run restore -- " + file + " --into pharmacy_restore_test");
   }

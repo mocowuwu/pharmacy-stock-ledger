@@ -9,6 +9,7 @@ import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { createSession, setSessionCookie } from "@/lib/auth/session";
 import { AuthEvents, recordAudit } from "@/lib/audit";
 import { LOCALE_COOKIE } from "@/i18n/config";
+import { isSafeNextPath } from "@/lib/auth/redirect";
 
 export type SignInState = {
   error?: "invalid" | "suspended" | "locked";
@@ -169,5 +170,7 @@ export async function signIn(
   });
 
   if (user.mustChangePassword) redirect("/change-password");
-  redirect(next && next.startsWith("/") && !next.startsWith("//") ? next : "/");
+  // Checked again here, not only on the page: the form field is the client's to
+  // change, and a server action is as reachable as any route.
+  redirect(isSafeNextPath(next) ? next : "/");
 }

@@ -103,39 +103,44 @@ npm run alerts
 
 ### Backing up to Google Drive (or anything else `rclone` reaches)
 
-`npm run backup` writes to local disk only until it is told otherwise. To have
-it also push each dump off the machine automatically, one-time setup:
+`npm run backup` writes to local disk only until it is told otherwise. On an
+installed pharmacy, switching on the off-site copy is one button:
 
-```bash
-# 1. Install rclone: https://rclone.org/downloads/
-# 2. Authorize it against Google Drive (opens a browser once):
-rclone config
-#    -> "n" for a new remote, name it e.g. "gdrive", pick "Google Drive" as
-#       the type, accept the defaults, and complete the browser sign-in.
-```
+**Control panel -> Cadangan cloud (Google Drive) -> Hubungkan Google Drive.**
 
-Then in `.env.local`:
+That downloads rclone into the install folder (pinned to a version, checked
+against a checksum copied into `installer/cloud.mjs`, and fetched by the
+installer already if the internet was up), opens Google's sign-in in the
+browser, and writes `BACKUP_RCLONE_REMOTE=apotek-gdrive:Apotek-Cadangan` into
+`.env.local` once Google says yes. From then on the daily backup the supervisor
+already runs is also the daily upload. The owner sees their backups in a
+folder called **Apotek-Cadangan** in their own Drive.
 
-```
-BACKUP_RCLONE_REMOTE=gdrive:pharmacy-backups
-```
+Three details that matter:
 
-The next `npm run backup` -- whether run by hand, by the control panel's
-"back up now" button, or by the supervisor's daily job -- dumps locally as
-before and then runs `rclone copy` to that folder. rclone owns the OAuth
-token and its refresh entirely outside this app; nothing Google-shaped is
-stored in `.env.local`, the database, or the audit log. Leave the variable
-unset and nothing changes from today.
+- **The rclone config lives in the install folder** (`rclone.conf` beside
+  `pharmacy.json`), not in the user's profile. On Windows the daily job runs as
+  SYSTEM, whose profile is not the owner's; a config in `%APPDATA%` would work
+  from the button and never from the job.
+- **The scope is `drive.file`**: rclone sees only the files it created, not the
+  rest of the owner's Drive. Google's token is rclone's to keep and refresh;
+  nothing Google-shaped enters `.env.local`, the database, or the audit log.
+- **Each run uploads the last month of dumps, not only today's.** rclone skips
+  what is already there, so a day the internet was down is filled in by the
+  next day that it is not.
 
 A failed upload does not discard the local dump -- it stays in `backups/`
 exactly as it would without this feature -- but it does make `npm run backup`
-exit non-zero, so the daily job and the control panel report the day's backup
-as failed rather than silently skipping the off-site copy. The usual cause is
-the OAuth token expiring after months of disuse: `rclone config reconnect
-gdrive:` fixes it without redoing the whole setup.
+exit non-zero, so the daily job and the control panel report it. The panel
+says specifically that the dump is safe locally and only the upload failed.
+The usual cause is the internet; if it keeps failing, press **Hubungkan ulang**.
+The installer's own pre-upgrade backup never uploads: that dump exists to roll
+back to in the next ten minutes, and a slow connection must not fail it.
 
-This is one destination among many rclone supports (OneDrive, Dropbox, S3,
-a NAS over SFTP, ...) -- same variable, different remote.
+Set up by hand instead (another rclone destination -- OneDrive, Dropbox, S3, a
+NAS over SFTP): run `rclone config` once, then set
+`BACKUP_RCLONE_REMOTE=<remote>:<folder>` in `.env.local`. The panel reports a
+hand-made remote as such and leaves its config alone.
 
 ### Concurrency tests
 

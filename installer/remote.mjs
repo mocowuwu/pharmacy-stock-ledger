@@ -25,7 +25,12 @@ import { exists, isWindows, run, updateEnv } from "./lib.mjs";
  * machine in the same building should not use this.
  */
 
-const DOWNLOAD = "https://tailscale.com/download/windows";
+export const DOWNLOAD =
+  {
+    win32: "https://tailscale.com/download/windows",
+    darwin: "https://tailscale.com/download/mac",
+    linux: "https://tailscale.com/download/linux",
+  }[process.platform] ?? "https://tailscale.com/download";
 
 /** Where Tailscale puts its command line, per platform, before trying PATH. */
 const CANDIDATES = {
@@ -79,7 +84,25 @@ export async function tailscaleState() {
   const name = (status.Self?.DNSName ?? "").replace(/\.$/u, "");
   const ip = (status.Self?.TailscaleIPs ?? []).find((address) => address.includes("."));
 
-  return { state: "running", binary, name, ip };
+  // For the panel's walkthrough, which ticks its steps off against these
+  // rather than asking the owner whether they did them. CertDomains is only
+  // present once HTTPS certificates are switched on for the tailnet.
+  const self = status.Self ?? {};
+  const account = status.User?.[String(self.UserID)]?.LoginName ?? null;
+  const peers = Object.values(status.Peer ?? {});
+
+  return {
+    state: "running",
+    binary,
+    name,
+    ip,
+    account,
+    tailnet: status.CurrentTailnet?.Name ?? null,
+    magicDns: Boolean(status.CurrentTailnet?.MagicDNSEnabled),
+    https: Array.isArray(status.CertDomains) && status.CertDomains.length > 0,
+    devices: peers.length,
+    devicesOnline: peers.filter((peer) => peer.Online).length,
+  };
 }
 
 /* ------------------------------------------------------------------- on */
@@ -131,6 +154,20 @@ export async function enableRemote(paths, config) {
     // tailscaled not warmed up), and it is not the HTTPS fallback below.
     // Report it as its own thing, because "try again" is the only remedy that
     // fits and it fits every one of those causes.
+    // `tailscale serve` on a tailnet that has not allowed Serve or HTTPS yet
+    // prints a login.tailscale.com link and then waits for somebody to open it
+    // and click Enable. With no console in front of anyone, that wait looked
+    // exactly like a hang. The link is the whole remedy, so it travels.
+    const consent = /https:\/\/login\.tailscale\.com\/f\/[^\s"']+/u.exec(error.output ?? "")?.[0];
+    if (consent) {
+      return {
+        ok: false,
+        code: "tailscale-serve-consent",
+        url: consent,
+        reason: "Tailscale needs Serve/HTTPS enabled for this tailnet first.",
+        remedy: `Open ${consent}, approve it, and run this again.`,
+      };
+    }
     if (error.timedOut) {
       return {
         ok: false,

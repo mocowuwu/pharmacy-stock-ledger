@@ -102,6 +102,26 @@ relax one without saying so explicitly.
   hides menu entries and entry points; it never refuses a request, never hides
   data already recorded, and never gates a safety rule. Permissions are the
   control. A switched-off screen is still reachable by URL and still works.
+- **Only the owner manages the owner.** `users.manage` can be granted to a
+  manager; it must not reach the owner's account. Editing, resetting or
+  signing out the owner is refused for anyone else (`refusalToManage` in
+  `src/lib/accounts/rules.ts`) -- a reset would otherwise hand a manager the
+  owner's temporary password and, with it, the one account nobody can suspend.
+- **Account passwords are never shown, anywhere -- including the control
+  panel.** The panel's "Kata sandi" section and `pharmacy passwords` show the
+  database password (the installer's, the machine's) and list accounts; for an
+  account they can only issue a new temporary password, through
+  `scripts/account-reset.ts`, the same code `reset-password.ts` uses. The SMTP
+  password stays off the panel too: it is a browser.
+- **The Settings timezone is the one the process works in.** Reading or saving
+  the settings row calls `adoptPharmacyTimezone`; `PHARMACY_TIMEZONE` in
+  `.env.local` is only the fallback before the row is read. Without it the till
+  and receipts ran on the installer's Asia/Jakarta while reports followed
+  Settings.
+- **The cloud backup's rclone config lives in the install folder**
+  (`installer/cloud.mjs`), because on Windows the daily job runs as SYSTEM and
+  would never see a config in the owner's profile. It is pointed at only when
+  the destination is ours, so a hand-made remote is never shadowed.
 - **CSV writes money as a plain integer**, never a formatted amount: `15000`,
   not `Rp 15.000`. A formatted amount is text to a spreadsheet, so a column of
   them sums to zero -- `parseFloat("15.000")` arriving from the other direction.
