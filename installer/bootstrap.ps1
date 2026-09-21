@@ -15,6 +15,12 @@ $ErrorActionPreference = "Stop"
 $NodeMajorMin = 20
 $NodeVersion  = "v22.20.0"
 
+# PROCESSOR_ARCHITECTURE is the architecture of *this process*, so it reads
+# AMD64 for a 32-bit or emulated shell on an ARM machine; PROCESSOR_ARCHITEW6432
+# carries the real one in that case.
+$RealArch     = if ($env:PROCESSOR_ARCHITEW6432) { $env:PROCESSOR_ARCHITEW6432 } else { $env:PROCESSOR_ARCHITECTURE }
+$IsArmMachine = $RealArch -notin @("AMD64", "x86")
+
 function Say  { param($m) Write-Host "   $m" }
 function Die  { param($m) Write-Host ""; Write-Host "Stopped. $m" -ForegroundColor Red; Write-Host ""; exit 1 }
 
@@ -23,6 +29,13 @@ function Find-Node {
     if (-not $command) { return $null }
     try { $major = [int](& node -p "process.versions.node.split('.')[0]") } catch { return $null }
     if ($major -lt $NodeMajorMin) { return $null }
+    # On Windows on ARM the whole stack runs as x64 under emulation (see below).
+    # A native ARM Node would install ARM native modules beside an x64 PostgreSQL,
+    # which is not the combination that was tested -- fetch an x64 Node instead.
+    if ($IsArmMachine) {
+        try { $arch = (& node -p "process.arch").Trim() } catch { return $null }
+        if ($arch -ne "x64") { return $null }
+    }
     return $command.Source
 }
 
@@ -84,30 +97,15 @@ if ($drive -and $drive.DisplayRoot -like "\\*") {
 
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 
-# The PostgreSQL binaries this installer fetches are published for x64 only, so
-# an ARM machine cannot be quietly half-supported.
+# Windows on ARM runs the x64 build under Windows' own x64 emulation. The
+# PostgreSQL binaries this installer fetches are published for x64 only, so the
+# whole stack -- Node, PostgreSQL, the app -- is x64 there, and it is what was
+# tested on an ARM machine. It is not refused, and needs no opt-in.
 #
-# This check belongs here, not inside Get-Node where it used to live. Find-Node
-# runs first, so on an ARM machine that happened to have Node installed the
-# refusal never fired at all -- the install went straight on to fetch a
-# PostgreSQL that does not exist for it. A guard that only guards the path
-# nobody took is not a guard.
-#
-# Windows 11 on ARM does emulate x64, and the whole stack was in fact first
-# proven that way; but emulated is not what a pharmacy should be running on
-# unknowingly, and nobody has tested it under load. Refuse by default, and say
-# what it is -- but let someone who has made that call anyway say so
-# explicitly, rather than editing this file to remove the guard.
-if ($env:PROCESSOR_ARCHITECTURE -notin @("AMD64", "x86")) {
-    if ($env:PHARMACY_ALLOW_ARM_EMULATION -ne "1") {
-        Die ("unsupported processor: $env:PROCESSOR_ARCHITECTURE. This needs a 64-bit Intel or`n" +
-             "AMD machine -- the PostgreSQL build the pharmacy uses is published for those only.`n`n" +
-             "Windows on ARM can run the x64 build under emulation, but nobody has tested this`n" +
-             "under real load and it is not what a live pharmacy till should run unknowingly.`n" +
-             "To proceed anyway, set PHARMACY_ALLOW_ARM_EMULATION=1 and run this again.")
-    }
-    Say "Running on $env:PROCESSOR_ARCHITECTURE under x64 emulation -- PHARMACY_ALLOW_ARM_EMULATION=1 was set."
-    Say "This is unproven under real load. Treat it as a trial, not a go-live machine."
+# This lives here rather than inside Get-Node so that it applies whichever Node
+# turns up first; Find-Node skips a native ARM Node for the same reason.
+if ($IsArmMachine) {
+    Say "Windows on ARM ($env:PROCESSOR_ARCHITECTURE): using the x64 build under Windows' emulation."
 }
 
 $NodeBin = Find-Node

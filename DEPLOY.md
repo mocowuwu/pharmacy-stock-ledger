@@ -511,8 +511,9 @@ NAT'd VM), and surviving a reboot.
 - **Antivirus holding a file open** mid-copy, during `npm ci` or the build.
   This is the classic Windows install failure and it reads as a corrupt file
   rather than as a lock.
-- **PostgreSQL is x64-only** here, so an ARM Windows machine is refused up
-  front rather than half-installed.
+- **PostgreSQL is x64-only** here, so on an ARM Windows machine the installer
+  runs the whole stack as x64 under Windows' own emulation (it fetches an x64
+  Node too, and ignores a native ARM one). No setting is needed.
 - **The install directory must be a local disk.** A network folder or a mapped
   drive is refused: PostgreSQL needs fsync semantics a share does not give, and
   the boot task runs as SYSTEM, which cannot see a per-user mapped drive at all.

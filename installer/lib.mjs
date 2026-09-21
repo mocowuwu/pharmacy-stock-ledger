@@ -193,6 +193,9 @@ export function targetTriple() {
     "linux-x64": "x86_64-unknown-linux-gnu",
     "linux-arm64": "aarch64-unknown-linux-gnu",
     "win32-x64": "x86_64-pc-windows-msvc",
+    // No native build is published; Windows on ARM runs the x64 one under
+    // emulation. Only reached if a native ARM Node is somehow in use.
+    "win32-arm64": "x86_64-pc-windows-msvc",
   };
   return triples[key] ?? null;
 }
