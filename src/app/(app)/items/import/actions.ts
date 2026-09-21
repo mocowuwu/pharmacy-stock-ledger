@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { commitImport, ImportError, previewImport } from "@/lib/dal/import";
 import { PermissionError } from "@/lib/dal/session";
-import type { RowError } from "@/lib/catalogue/import";
+import { importFileToCsv, type RowError } from "@/lib/catalogue/import";
 
 export type ImportState = {
   stage: "idle" | "previewed" | "done";
@@ -45,7 +45,9 @@ export async function importAction(
   if (!(file instanceof File) || file.size === 0) {
     return { stage: "idle", formError: "no_file" };
   }
-  const csvText = await file.text();
+  const read = importFileToCsv(new Uint8Array(await file.arrayBuffer()));
+  if ("error" in read) return { stage: "idle", formError: read.error };
+  const csvText = read.csv;
 
   try {
     const preview = await previewImport(csvText);

@@ -112,7 +112,7 @@ export function ImportForm() {
                 <input
                   type="file"
                   name="file"
-                  accept=".csv,text/csv"
+                  accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                   required
                   className="text-sm"
                 />

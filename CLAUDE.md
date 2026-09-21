@@ -167,6 +167,24 @@ API, the decoder -- rather than hiding the button. A button that is simply absen
 is indistinguishable from a feature that was never built, and nobody can act on
 that; "the camera needs https" is something the owner can fix.
 
+**The import template is a workbook, and only its first sheet is read.**
+`/items/import/template` serves an .xlsx: a Data sheet to fill in, and a Guide
+sheet (`src/lib/catalogue/import-guide.ts`) saying what every column wants,
+translated into the downloader's language. The column names on the Data sheet
+are fixed English identifiers and stay untranslated -- they are what
+`parseImportCsv` matches. An uploaded .xlsx is turned into CSV by
+`importFileToCsv` and goes through the one validator; there is no second set of
+rules. `src/lib/format/xlsx.ts` is a small reader and writer on `fflate` rather
+than a spreadsheet library, which would add tens of megabytes to a machine a
+shopkeeper installs. The template writes every cell as text so a date stays
+`2027-12-31` and a barcode keeps its leading zeros.
+
+**Add a dependency by editing `package-lock.json`, not by `npm install` on a
+Mac.** npm on macOS prunes the optional platform packages from the lock (esbuild
+and friends for Windows and Linux), which is exactly what broke `npm ci` on
+Windows once. Check `git diff --stat package-lock.json` after any install: a
+new package is a handful of added lines, never hundreds of removed ones.
+
 **Money and dates go through `src/lib/format/`.** Never `parseFloat` a price:
 `parseFloat("15.000")` is 15, and in Indonesian that string means fifteen
 thousand.

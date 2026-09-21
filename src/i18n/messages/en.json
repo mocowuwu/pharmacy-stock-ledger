@@ -282,15 +282,15 @@
     "owner_only": "Only the owner can do that.",
     "confirmation_mismatch": "The confirmation phrase did not match, so nothing was changed.",
     "no_file": "Choose a CSV file first.",
-    "unreadable_file": "That file could not be read as CSV.",
+    "unreadable_file": "That file could not be read as Excel or CSV.",
     "too_many_rows": "That file has more than 2,000 rows. Split it into smaller files.",
     "empty_file": "That file has no data rows."
   },
   "itemsImport": {
     "title": "Import Catalogue",
-    "subtitle": "Add many items and their opening stock at once from a CSV file",
-    "templateTitle": "CSV template",
-    "templateHint": "Download the template, fill in one row per item, and upload it back. The opening-stock columns (lot, expiry, quantity, cost, supplier) can stay blank to add catalogue only.",
+    "subtitle": "Add many items and their opening stock at once from an Excel or CSV file",
+    "templateTitle": "Excel template",
+    "templateHint": "Download the template. Fill in the first sheet (Data), one row per item; the second sheet (Guide) explains what goes in every column. The opening-stock columns (lot, expiry, quantity, cost, supplier) can stay blank to add catalogue only. When done, upload the .xlsx or .csv file.",
     "downloadTemplate": "Download template",
     "upload": "Check file",
     "checking": "Checking...",
@@ -314,6 +314,148 @@
       "duplicate_barcode": "That barcode is already used by another item, or appears more than once in this file.",
       "invalid_date": "The expiry date must be in YYYY-MM-DD format.",
       "already_expired": "That date has already passed. Expired stock cannot be received."
+    },
+    "guide": {
+      "sheetData": "Data",
+      "sheetGuide": "Guide",
+      "exampleNote": "Example row -- delete before uploading",
+      "title": "How to fill in the catalogue import template",
+      "intro": "Fill in the \"Data\" sheet (the first sheet), one row per item. This \"Guide\" sheet is for reading only and is not imported.",
+      "howTitle": "Before you start",
+      "how": {
+        "1": "One row is one new item. The import only adds items; existing items are never changed, and a code that is already in use is rejected.",
+        "2": "Row 2 on the Data sheet is only an example. Delete or overwrite it before uploading, otherwise it is imported as an item too.",
+        "3": "Do not change, delete or translate the column names in row 1. The system reads those names.",
+        "4": "Only four columns are required to add an item: generic_name, form, unit and drug_class. Every other column may stay blank.",
+        "5": "The last five columns (lot_number, expiry_date, qty, unit_cost, supplier) are opening stock. Leave them all blank to add the catalogue only. If you fill any one, expiry_date, qty and supplier become required.",
+        "6": "A row can hold only one opening-stock batch. If an item has several batches, enter one here and record the rest through Receive stock.",
+        "7": "Categories and suppliers must already exist under Categories and Suppliers (upper or lower case does not matter). A name that does not exist is rejected. If opening stock has no real supplier, use the \"Saldo Awal\" supplier.",
+        "8": "Money is a plain number in rupiah: 15000, not Rp 15.000. Dates are YYYY-MM-DD: 2027-12-31, not 31/12/2027.",
+        "9": "At most {max} rows per file. Rows with a problem are shown before you confirm and are skipped; the correct rows can still be imported. Save as .xlsx or .csv and upload; for .xlsx only the first sheet is read."
+      },
+      "columnsTitle": "What goes in each column",
+      "classTitle": "Filling in the drug_class column",
+      "classIntro": "Write the code from the first column, exactly as shown (lower case).",
+      "formTitle": "Filling in the form column",
+      "formIntro": "Write the code from the first column, exactly as shown (lower case, in English). Not the name in the second column: \"capsule\", not \"Kapsul\".",
+      "head": {
+        "column": "Column",
+        "required": "Required?",
+        "meaning": "Meaning",
+        "accepted": "What to enter",
+        "example": "Example",
+        "code": "Code",
+        "name": "Name",
+        "note": "Note"
+      },
+      "requirement": {
+        "required": "Required",
+        "optional": "May be blank",
+        "batchRequired": "Required if opening stock is filled in"
+      },
+      "classNote": {
+        "bebas": "Green circle on the packaging.",
+        "bebas_terbatas": "Blue circle on the packaging.",
+        "keras": "Red circle with the letter K. Returned items are not put back into stock.",
+        "owa": "Pharmacy-only over-the-counter medicine (Obat Wajib Apotek). Returned items are not put back into stock.",
+        "psikotropika": "A class recorded in the SIPNAP register. Returned items are not put back into stock.",
+        "narkotika": "A class recorded in the SIPNAP register. Returned items are not put back into stock.",
+        "jamu": "Traditional medicine.",
+        "oht": "Standardised herbal medicine.",
+        "fitofarmaka": "Herbal medicine that has passed clinical trials.",
+        "alkes": "For example: blood pressure monitor, plasters, thermometer.",
+        "consumable": "For example: cotton wool, syringes, gloves."
+      },
+      "columns": {
+        "code": {
+          "meaning": "The item's code in this pharmacy. Leave blank to have one made from the generic name.",
+          "accepted": "Letters and digits, no spaces. Must not match another item's code."
+        },
+        "generic_name": {
+          "meaning": "The active ingredient, or the item's name.",
+          "accepted": "Free text. Example: Amoxicillin"
+        },
+        "brand_name": {
+          "meaning": "The brand name on the packaging, if any.",
+          "accepted": "Free text."
+        },
+        "form": {
+          "meaning": "Dosage form.",
+          "accepted": "One of the codes in the dosage form list below, exactly as shown. Example: tablet, capsule, syrup."
+        },
+        "strength": {
+          "meaning": "Strength or dose per unit.",
+          "accepted": "Free text. Example: 500 mg, 125 mg/5 mL"
+        },
+        "unit": {
+          "meaning": "The smallest unit that is counted and sold one at a time.",
+          "accepted": "Free text. Example: tablet, kapsul, botol, vial."
+        },
+        "pack_size": {
+          "meaning": "How many units are in one box or pack, in the unit given in the unit column. Used to turn a number of boxes into units when receiving stock.",
+          "accepted": "A whole number, 1 or more. Example: 100 if a box holds 100 units."
+        },
+        "category": {
+          "meaning": "The item's category.",
+          "accepted": "The name of a category that already exists under Categories. Leave blank if uncategorised."
+        },
+        "drug_class": {
+          "meaning": "The drug class as shown on the packaging.",
+          "accepted": "One of the codes in the drug class list below. Example: bebas, bebas_terbatas, keras."
+        },
+        "nie": {
+          "meaning": "The BPOM marketing authorisation number (NIE). Needed if a product is recalled.",
+          "accepted": "Free text, exactly as on the packaging."
+        },
+        "is_tax_exempt": {
+          "meaning": "Mark if this item is exempt from PPN.",
+          "accepted": "yes or no. Also read as yes: 1, y, ya, true. Blank or anything else means not exempt."
+        },
+        "reorder_point": {
+          "meaning": "The minimum stock level. The low-stock alert appears at this quantity.",
+          "accepted": "A whole number, 0 or more. Blank is read as 0."
+        },
+        "reorder_qty": {
+          "meaning": "Suggested quantity to reorder.",
+          "accepted": "A whole number, 1 or more. May be blank."
+        },
+        "default_price": {
+          "meaning": "Selling price per unit, in rupiah.",
+          "accepted": "A plain number with no Rp, dots or commas. Example: 12000. Blank is read as 0."
+        },
+        "min_shelf_life_days": {
+          "meaning": "The shortest remaining shelf life (in days) that may be accepted when stock arrives.",
+          "accepted": "A whole number, 0 or more. May be blank."
+        },
+        "barcode": {
+          "meaning": "The barcode on the packaging.",
+          "accepted": "Exactly as printed; do not drop leading zeros. Must not match another item's barcode."
+        },
+        "notes": {
+          "meaning": "Free notes about the item.",
+          "accepted": "Free text."
+        },
+        "lot_number": {
+          "meaning": "Opening stock: the lot number as printed on the packaging.",
+          "accepted": "Text. May be blank if it is really not known."
+        },
+        "expiry_date": {
+          "meaning": "Opening stock: the batch's expiry date.",
+          "accepted": "YYYY-MM-DD. Example: 2027-12-31. Must not have passed; expired stock is rejected."
+        },
+        "qty": {
+          "meaning": "Opening stock: how many units of this batch are on hand now, in units.",
+          "accepted": "A whole number, 1 or more."
+        },
+        "unit_cost": {
+          "meaning": "Opening stock: purchase price per unit, in rupiah.",
+          "accepted": "A plain number with no Rp, dots or commas. Example: 9000. Blank is read as 0."
+        },
+        "supplier": {
+          "meaning": "Opening stock: the supplier of this batch.",
+          "accepted": "The name of a supplier that already exists under Suppliers. If unknown, use Saldo Awal."
+        }
+      }
     }
   },
   "receive": {

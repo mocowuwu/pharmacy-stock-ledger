@@ -7,6 +7,7 @@ import { DOSAGE_FORMS, DRUG_CLASSES, type DosageForm, type DrugClass } from "./e
 import { codePrefix, nextCode, normaliseCode } from "./code";
 import { parseMoney } from "@/lib/format/money";
 import { isExpired, today } from "@/lib/format/date";
+import { looksLikeZip, readFirstSheet } from "@/lib/format/xlsx";
 
 /**
  * Bulk import from a spreadsheet.
@@ -90,6 +91,26 @@ export type ImportPreview = {
   errors: RowError[];
   totalRows: number;
 };
+
+/**
+ * An uploaded file as CSV text, whichever it was.
+ *
+ * A workbook is read from its first sheet only and turned into the same CSV the
+ * rest of the pipeline already validates, so there is one set of rules for both
+ * and the preview-then-commit step still carries plain text between its two
+ * submits. The second sheet of our template is the guide; it is never read.
+ */
+export function importFileToCsv(bytes: Uint8Array): { csv: string } | { error: string } {
+  if (!looksLikeZip(bytes)) return { csv: new TextDecoder("utf-8").decode(bytes) };
+
+  const sheet = readFirstSheet(bytes);
+  if (!sheet) return { error: "unreadable_file" };
+
+  // Papa skips truly empty lines only; a row of blank cells would arrive as
+  // a row of commas and be reported as a row of missing required fields.
+  const rows = sheet.filter((cells) => cells.some((cell) => cell.trim() !== ""));
+  return { csv: Papa.unparse(rows) };
+}
 
 /** Splits raw CSV text into rows keyed by the fixed header contract. */
 export function parseImportCsv(csvText: string): { rows: ParsedRow[]; error: string | null } {

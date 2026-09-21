@@ -1,14 +1,17 @@
+import { getTranslations } from "next-intl/server";
 import { assertPermission, PermissionError } from "@/lib/dal/session";
-import { IMPORT_COLUMNS } from "@/lib/catalogue/import";
-import { csvHeaders, toCsv } from "@/lib/format/csv";
+import { buildImportTemplateSheets, type Translate } from "@/lib/catalogue/import-guide";
+import { buildXlsx } from "@/lib/format/xlsx";
 
 /**
- * The import template.
+ * The import template: an Excel workbook with the sheet to fill in, and a
+ * second sheet that explains every column.
  *
- * Column names are fixed, English, snake_case identifiers -- not translated --
- * because they are a machine-matched contract between this download and the
- * upload on `/items/import`. Translating them would break that match for a
- * user working in the other locale.
+ * Column names on the data sheet are fixed, English, snake_case identifiers --
+ * not translated -- because they are a machine-matched contract between this
+ * download and the upload on `/items/import`. Translating them would break
+ * that match for a user working in the other locale. The guide sheet is
+ * translated, into the language of whoever is downloading.
  */
 export async function GET() {
   try {
@@ -18,34 +21,14 @@ export async function GET() {
     throw error;
   }
 
-  const example = [
-    "AMOX001",
-    "Amoxicillin",
-    "Generik",
-    "capsule",
-    "500 mg",
-    "kapsul",
-    "10",
-    "",
-    "bebas_terbatas",
-    "",
-    "0",
-    "0",
-    "",
-    "12000",
-    "",
-    "",
-    "Contoh baris -- hapus sebelum mengunggah",
-    "LOT-001",
-    "2027-12-31",
-    "100",
-    "9000",
-    "Saldo Awal",
-  ];
+  const t = (await getTranslations()) as unknown as Translate;
+  const body = buildXlsx(buildImportTemplateSheets(t));
 
-  const body = toCsv([...IMPORT_COLUMNS], [example]);
-
-  return new Response(body, {
-    headers: csvHeaders("template-impor-katalog.csv"),
+  return new Response(Buffer.from(body), {
+    headers: {
+      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Disposition": 'attachment; filename="template-impor-katalog.xlsx"',
+      "Cache-Control": "no-store",
+    },
   });
 }

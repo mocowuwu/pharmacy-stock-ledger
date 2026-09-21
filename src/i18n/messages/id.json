@@ -282,15 +282,15 @@
     "owner_only": "Hanya pemilik yang bisa melakukannya.",
     "confirmation_mismatch": "Frasa konfirmasi tidak cocok, jadi tidak ada yang diubah.",
     "no_file": "Pilih berkas CSV terlebih dahulu.",
-    "unreadable_file": "Berkas ini tidak terbaca sebagai CSV.",
+    "unreadable_file": "Berkas ini tidak terbaca sebagai Excel atau CSV.",
     "too_many_rows": "Berkas ini lebih dari 2.000 baris. Bagi menjadi beberapa berkas.",
     "empty_file": "Berkas ini tidak berisi baris data."
   },
   "itemsImport": {
     "title": "Impor Katalog",
-    "subtitle": "Tambah banyak barang dan stok awal sekaligus dari berkas CSV",
-    "templateTitle": "Templat CSV",
-    "templateHint": "Unduh templat, isi satu baris per barang, lalu unggah kembali. Kolom stok awal (bets, kedaluwarsa, jumlah, harga modal, pemasok) boleh dikosongkan jika hanya ingin menambah katalog.",
+    "subtitle": "Tambah banyak barang dan stok awal sekaligus dari berkas Excel atau CSV",
+    "templateTitle": "Templat Excel",
+    "templateHint": "Unduh templat. Sheet pertama (Data) diisi satu baris per barang; sheet kedua (Petunjuk) menjelaskan apa yang harus diisi di setiap kolom. Kolom stok awal (bets, kedaluwarsa, jumlah, harga modal, pemasok) boleh dikosongkan jika hanya ingin menambah katalog. Setelah diisi, unggah berkas .xlsx atau .csv.",
     "downloadTemplate": "Unduh templat",
     "upload": "Periksa berkas",
     "checking": "Memeriksa...",
@@ -314,6 +314,148 @@
       "duplicate_barcode": "Barcode ini sudah dipakai barang lain, atau muncul lebih dari sekali di berkas ini.",
       "invalid_date": "Tanggal kedaluwarsa harus berformat YYYY-MM-DD.",
       "already_expired": "Tanggal ini sudah lewat. Stok kedaluwarsa tidak dapat diterima."
+    },
+    "guide": {
+      "sheetData": "Data",
+      "sheetGuide": "Petunjuk",
+      "exampleNote": "Contoh baris -- hapus sebelum mengunggah",
+      "title": "Petunjuk pengisian templat impor katalog",
+      "intro": "Isi sheet \"Data\" (sheet pertama), satu baris untuk satu barang. Sheet \"Petunjuk\" ini hanya bacaan dan tidak ikut diimpor.",
+      "howTitle": "Sebelum mulai",
+      "how": {
+        "1": "Satu baris berisi satu barang baru. Impor hanya menambah barang; barang yang sudah ada tidak diubah, dan kode yang sudah dipakai ditolak.",
+        "2": "Baris 2 di sheet Data hanyalah contoh. Hapus atau timpa baris itu sebelum mengunggah, kalau tidak, contoh tersebut ikut masuk sebagai barang.",
+        "3": "Jangan mengubah, menghapus, atau menerjemahkan nama kolom di baris 1. Nama kolom itulah yang dibaca sistem.",
+        "4": "Hanya empat kolom yang wajib untuk menambah barang: generic_name, form, unit, dan drug_class. Kolom lain boleh kosong.",
+        "5": "Lima kolom terakhir (lot_number, expiry_date, qty, unit_cost, supplier) adalah stok awal. Kosongkan semuanya bila hanya menambah katalog. Bila salah satu diisi, expiry_date, qty, dan supplier menjadi wajib.",
+        "6": "Satu baris hanya bisa memuat satu bets stok awal. Bila barang punya beberapa bets, isi satu di sini dan catat sisanya lewat menu Terima Barang.",
+        "7": "Kategori dan pemasok harus sudah ada di menu Kategori dan Pemasok (huruf besar atau kecil tidak masalah). Nama yang belum ada ditolak. Bila stok awal tidak punya pemasok asli, pakai pemasok \"Saldo Awal\".",
+        "8": "Uang ditulis sebagai angka polos dalam rupiah: 15000, bukan Rp 15.000. Tanggal ditulis TTTT-BB-HH: 2027-12-31, bukan 31/12/2027.",
+        "9": "Maksimal {max} baris per berkas. Baris yang bermasalah ditampilkan sebelum Anda mengonfirmasi dan akan dilewati; baris yang benar tetap bisa diimpor. Simpan sebagai .xlsx atau .csv, lalu unggah; untuk .xlsx hanya sheet pertama yang dibaca."
+      },
+      "columnsTitle": "Isi setiap kolom",
+      "classTitle": "Isi kolom drug_class",
+      "classIntro": "Tulis kode dari kolom pertama, persis seperti tertulis (huruf kecil).",
+      "formTitle": "Isi kolom form",
+      "formIntro": "Tulis kode dari kolom pertama, persis seperti tertulis (huruf kecil, bahasa Inggris). Bukan nama di kolom kedua: \"capsule\", bukan \"Kapsul\".",
+      "head": {
+        "column": "Kolom",
+        "required": "Wajib?",
+        "meaning": "Artinya",
+        "accepted": "Yang boleh diisi",
+        "example": "Contoh",
+        "code": "Kode",
+        "name": "Nama",
+        "note": "Catatan"
+      },
+      "requirement": {
+        "required": "Wajib",
+        "optional": "Boleh kosong",
+        "batchRequired": "Wajib bila stok awal diisi"
+      },
+      "classNote": {
+        "bebas": "Lingkaran hijau di kemasan.",
+        "bebas_terbatas": "Lingkaran biru di kemasan.",
+        "keras": "Lingkaran merah dengan huruf K. Barang yang diretur tidak dimasukkan kembali ke stok.",
+        "owa": "Obat Wajib Apotek. Barang yang diretur tidak dimasukkan kembali ke stok.",
+        "psikotropika": "Golongan yang dicatat di register SIPNAP. Barang yang diretur tidak dimasukkan kembali ke stok.",
+        "narkotika": "Golongan yang dicatat di register SIPNAP. Barang yang diretur tidak dimasukkan kembali ke stok.",
+        "jamu": "Obat tradisional.",
+        "oht": "Obat tradisional terstandar.",
+        "fitofarmaka": "Obat tradisional yang telah diuji klinis.",
+        "alkes": "Contoh: tensimeter, plester, termometer.",
+        "consumable": "Contoh: kapas, spuit, sarung tangan."
+      },
+      "columns": {
+        "code": {
+          "meaning": "Kode barang di apotek ini. Kosongkan agar dibuat otomatis dari nama generik.",
+          "accepted": "Huruf dan angka tanpa spasi. Tidak boleh sama dengan kode barang lain."
+        },
+        "generic_name": {
+          "meaning": "Nama zat aktif atau nama barang.",
+          "accepted": "Teks bebas. Contoh: Amoxicillin"
+        },
+        "brand_name": {
+          "meaning": "Nama dagang di kemasan, bila ada.",
+          "accepted": "Teks bebas."
+        },
+        "form": {
+          "meaning": "Bentuk sediaan.",
+          "accepted": "Salah satu kode dari daftar bentuk sediaan di bawah, persis seperti tertulis. Contoh: tablet, capsule, syrup."
+        },
+        "strength": {
+          "meaning": "Kekuatan atau dosis per satuan.",
+          "accepted": "Teks bebas. Contoh: 500 mg, 125 mg/5 mL"
+        },
+        "unit": {
+          "meaning": "Satuan terkecil yang dihitung dan dijual satu per satu.",
+          "accepted": "Teks bebas. Contoh: tablet, kapsul, botol, vial."
+        },
+        "pack_size": {
+          "meaning": "Isi satu dus atau kemasan, dalam satuan di kolom unit. Dipakai untuk mengubah jumlah dus menjadi satuan saat menerima barang.",
+          "accepted": "Angka bulat, 1 atau lebih. Contoh: 100 bila satu dus berisi 100 satuan."
+        },
+        "category": {
+          "meaning": "Kategori barang.",
+          "accepted": "Nama kategori yang sudah ada di menu Kategori. Kosongkan bila tidak dikategorikan."
+        },
+        "drug_class": {
+          "meaning": "Golongan obat sesuai yang tertera pada kemasan.",
+          "accepted": "Salah satu kode dari daftar golongan obat di bawah. Contoh: bebas, bebas_terbatas, keras."
+        },
+        "nie": {
+          "meaning": "Nomor Izin Edar dari BPOM. Diperlukan bila ada penarikan produk.",
+          "accepted": "Teks bebas, persis seperti di kemasan."
+        },
+        "is_tax_exempt": {
+          "meaning": "Tandai bila barang ini bebas PPN.",
+          "accepted": "ya atau tidak. Yang juga dibaca sebagai ya: 1, y, yes, true. Kosong atau isian lain berarti tidak bebas PPN."
+        },
+        "reorder_point": {
+          "meaning": "Batas stok minimum. Peringatan stok menipis muncul pada jumlah ini.",
+          "accepted": "Angka bulat, 0 atau lebih. Kosong dibaca 0."
+        },
+        "reorder_qty": {
+          "meaning": "Saran jumlah untuk memesan ulang.",
+          "accepted": "Angka bulat, 1 atau lebih. Boleh kosong."
+        },
+        "default_price": {
+          "meaning": "Harga jual per satuan, dalam rupiah.",
+          "accepted": "Angka polos tanpa Rp, titik, atau koma. Contoh: 12000. Kosong dibaca 0."
+        },
+        "min_shelf_life_days": {
+          "meaning": "Sisa masa simpan terpendek (dalam hari) yang boleh diterima saat barang datang.",
+          "accepted": "Angka bulat, 0 atau lebih. Boleh kosong."
+        },
+        "barcode": {
+          "meaning": "Barcode pada kemasan.",
+          "accepted": "Persis seperti tercetak; jangan menghilangkan angka 0 di depan. Tidak boleh sama dengan barcode barang lain."
+        },
+        "notes": {
+          "meaning": "Catatan bebas tentang barang.",
+          "accepted": "Teks bebas."
+        },
+        "lot_number": {
+          "meaning": "Stok awal: nomor bets seperti tertera pada kemasan.",
+          "accepted": "Teks. Boleh kosong bila memang tidak diketahui."
+        },
+        "expiry_date": {
+          "meaning": "Stok awal: tanggal kedaluwarsa bets.",
+          "accepted": "TTTT-BB-HH. Contoh: 2027-12-31. Harus belum lewat; stok yang sudah kedaluwarsa ditolak."
+        },
+        "qty": {
+          "meaning": "Stok awal: jumlah yang ada sekarang untuk bets ini, dalam satuan.",
+          "accepted": "Angka bulat, 1 atau lebih."
+        },
+        "unit_cost": {
+          "meaning": "Stok awal: harga beli per satuan, dalam rupiah.",
+          "accepted": "Angka polos tanpa Rp, titik, atau koma. Contoh: 9000. Kosong dibaca 0."
+        },
+        "supplier": {
+          "meaning": "Stok awal: pemasok bets ini.",
+          "accepted": "Nama pemasok yang sudah ada di menu Pemasok. Bila tidak diketahui, pakai Saldo Awal."
+        }
+      }
     }
   },
   "receive": {
