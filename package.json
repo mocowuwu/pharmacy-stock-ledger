@@ -1,6 +1,6 @@
 {
   "name": "pharmacy-stock-ledger",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "scripts": {
     "dev": "tsx scripts/dev.ts",
@@ -14,6 +14,7 @@
     "test:concurrency": "CONCURRENCY_DATABASE_URL=${CONCURRENCY_DATABASE_URL:-postgres://127.0.0.1:5432/pharmacy_concurrency} vitest run",
     "test:watch": "vitest",
     "db:seed": "tsx scripts/seed.ts",
+    "db:demo": "tsx scripts/demo-data.ts --stock --first-run",
     "db:serve": "tsx scripts/db-server.ts",
     "reset-password": "tsx scripts/reset-password.ts",
     "accounts": "tsx scripts/accounts.ts",

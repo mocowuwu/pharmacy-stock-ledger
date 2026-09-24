@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE } from "@/lib/auth/session";
+import { SESSION_COOKIE, STALE_SESSION_PARAM } from "@/lib/auth/session";
 
 /**
  * Optimistic routing only.
@@ -25,6 +25,15 @@ export function proxy(request: NextRequest) {
     // So a signed-out user who followed a link lands where they meant to.
     if (pathname !== "/") url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
+  }
+
+  // A page already looked the session up and found it dead: drop the cookie
+  // and show the sign-in form, instead of sending it back to the page that
+  // sent it here. The worst a forged link can do is sign this browser out.
+  if (hasCookie && isPublic && request.nextUrl.searchParams.has(STALE_SESSION_PARAM)) {
+    const response = NextResponse.next();
+    response.cookies.delete(SESSION_COOKIE);
+    return response;
   }
 
   if (hasCookie && isPublic) {

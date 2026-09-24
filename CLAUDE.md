@@ -35,7 +35,11 @@ relax one without saying so explicitly.
   that opens on an empty screen teaches nobody the till. `resetDemoData` in
   `src/lib/dal/maintenance.ts` is the one destructive operation in the project,
   owner-only and behind a typed phrase; accounts, settings, tax rates and the
-  audit log survive it.
+  audit log survive it. The installer loads it (`npm run db:demo`) only when
+  that run created the owner, and `demo-data.ts --first-run` refuses any
+  database holding items, sales or suppliers or whose audit log records a
+  clear -- an update must never bring the samples back. Clearing empties the
+  whole catalogue, so it comes *before* real items are entered, never after.
 - **The SMTP password never reaches the browser.** The settings screen is told
   whether one is stored, never what it is, and a blank field means "keep it".
   It is stripped from the audit log too -- a log that records a secret is a

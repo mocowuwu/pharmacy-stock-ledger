@@ -2,7 +2,12 @@ import "server-only";
 
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import { resolveSession, readSessionCookie, type ActiveSession } from "@/lib/auth/session";
+import {
+  resolveSession,
+  readSessionCookie,
+  STALE_SESSION_PARAM,
+  type ActiveSession,
+} from "@/lib/auth/session";
 import { can, type Permission } from "@/lib/auth/permissions";
 
 /**
@@ -48,7 +53,11 @@ export async function requireSession(
   options: RequireOptions = {},
 ): Promise<ActiveSession> {
   const session = await getCurrentSession();
-  if (!session) redirect("/login");
+  // Marked, so the proxy clears the cookie on the way in. A cookie whose
+  // session was revoked -- a reset password, a suspended account -- would
+  // otherwise send /login straight back here, and the browser would bounce
+  // between the two until someone cleared its cookies by hand.
+  if (!session) redirect(`/login?${STALE_SESSION_PARAM}=1`);
   if (session.user.mustChangePassword && !options.allowPendingPasswordChange) {
     redirect("/change-password");
   }

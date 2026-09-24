@@ -180,7 +180,7 @@ export default async function AlertsPage({ searchParams }: PageProps<"/alerts">)
                   </div>
 
                   {mayManage && (
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div data-tour="alert-actions" className="flex shrink-0 items-center gap-2">
                       {alert.status !== "acknowledged" && (
                         <form action={acknowledge}>
                           <input type="hidden" name="alertId" value={alert.id} />

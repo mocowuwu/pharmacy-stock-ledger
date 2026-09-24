@@ -466,6 +466,24 @@ export async function install() {
   const ownerPassword = /Temporary password\s*:\s*(\S+)/u.exec(seeded)?.[1] ?? null;
   ui.ok(ownerPassword ? "owner account created" : "owner account already exists");
 
+  // A new pharmacy opens on a sample one, so the owner can learn the till and
+  // follow the tutorial on something that looks real before entering their
+  // own stock. Only when this run created the owner -- a brand-new database --
+  // and the script checks again for itself: an update must never bring the
+  // samples back after the owner cleared them, or mix them into real data.
+  let demoLoaded = false;
+  if (ownerPassword) {
+    ui.step("Loading the sample pharmacy");
+    try {
+      const demo = await npm(["run", "db:demo"], { cwd: paths.app });
+      demoLoaded = /Rang up \d+ sample sales/u.test(demo);
+      ui.ok(demoLoaded ? "sample medicines, stock and sales loaded" : "skipped");
+    } catch {
+      // Samples are a courtesy. A pharmacy that starts empty still works.
+      ui.warn("the sample data could not be loaded; the pharmacy starts empty");
+    }
+  }
+
   /* -------------------------------------------------- 9. control command */
 
   ui.step("Adding the pharmacy command");
@@ -570,6 +588,13 @@ export async function install() {
     ui.info("Sign in as the owner with this password. It is shown once:");
     ui.box([`username:  pemilik`, `password:  ${ownerPassword}`]);
     ui.info("Write it down now. You will be asked to replace it immediately.");
+    ui.blank();
+  }
+
+  if (demoLoaded) {
+    ui.info("It opens with sample medicines, stock and sales to practise on.");
+    ui.detail("Clear them before entering your own medicines, because clearing");
+    ui.detail("empties the whole catalogue: Pengaturan > Data demo, type HAPUS DEMO.");
     ui.blank();
   }
 

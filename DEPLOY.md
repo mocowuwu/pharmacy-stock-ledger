@@ -410,8 +410,9 @@ DATABASE_URL=postgres://127.0.0.1:5432/pharmacy_restore_test npm run check-ledge
 The third command is the one that matters — it proves the restored ledger still
 reconciles, rather than that files copied.
 
-Then follow `GO-LIVE.md`: settings, accounts, catalogue entry, clear the demo
-data, count, parallel run.
+A new install opens on a sample pharmacy for the owner to practise on. Then
+follow `GO-LIVE.md`: settings, accounts, clear the demo data, catalogue entry,
+count, parallel run -- clearing comes first, because it empties the catalogue.
 
 ---
 

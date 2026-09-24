@@ -97,7 +97,7 @@ export function ReceiveForm({
         here, Enter can only ever mean "look this up".
       */}
       {scanning && (
-      <Card className="p-5">
+      <Card className="p-5" tour="receive-scan">
         <Field label={t("receive.scan")} hint={t("receive.scanHint")}>
           <div className="flex gap-2">
             <input
@@ -138,7 +138,7 @@ export function ReceiveForm({
       </Card>
       )}
 
-      <form action={formAction} className="flex flex-col gap-5">
+      <form action={formAction} data-tour="receive-form" className="flex flex-col gap-5">
         {state.formError && <Alert>{t(`errors.${state.formError}`)}</Alert>}
         {state.saved && (
           <Alert tone="notice">

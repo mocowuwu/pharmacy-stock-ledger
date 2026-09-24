@@ -76,16 +76,27 @@ npx tsx scripts/make-user.ts kasir "Siti Kasir" cashier
 Templates are `cashier`, `stock_clerk` and `manager`. They pre-fill the
 permission set and every permission stays individually editable afterwards.
 
-Load a sample catalogue to look at the system with something in it (kept out of
-`db:seed` on purpose -- a real pharmacy's database should not start with
-invented items):
+A new install opens on a sample pharmacy, so the owner can learn the till and
+follow the tutorial before entering real stock. The installer runs `db:demo`
+only when it has just created the owner -- a brand-new database -- and the
+script refuses anyway if the database holds any items, sales or suppliers, or
+if the owner ever cleared the demo. An update never brings it back. To load it
+by hand on a development database:
 
 ```bash
 npx tsx scripts/demo-data.ts --stock
 ```
 
-`--stock` also books in sample batches with a deliberate spread of shelf life
-and quantity. `--clear` removes it all again.
+That is about 45 medicines and supplies across every category. `--stock` adds
+three sample suppliers, batches with a deliberate spread of shelf life and
+quantity (lots expiring within days, items below their reorder point, two with
+none at all), and a morning of activity rung up through the real till and
+ledger: sales, a void, a return, a disposal, a posted stock count, and the
+alerts all of that raises. Everything is dated today -- the ledger takes no
+back-dated entries, the demo included. Running it twice adds nothing twice.
+
+Remove it all from Settings > "Data demo" (typed confirmation, audited) --
+**before** entering real items, because clearing empties the whole catalogue.
 
 Reconcile every batch against the ledger (the invariant the design rests on;
 exits non-zero if anything disagrees, so it can be wired to an alert):
@@ -212,5 +223,5 @@ has been tested end to end; the Docker path is written but unverified.
 
 ## Going live
 
-See [GO-LIVE.md](GO-LIVE.md): backup drill, settings, accounts, entering the
-catalogue, clearing the demo data, the opening count and the parallel run.
+See [GO-LIVE.md](GO-LIVE.md): backup drill, settings, accounts, clearing the
+demo data, entering the catalogue, the opening count and the parallel run.

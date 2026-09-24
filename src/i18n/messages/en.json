@@ -39,7 +39,33 @@
     "suppliers": "Suppliers",
     "categories": "Categories",
     "returns": "Returns",
-    "counts": "Stock count"
+    "counts": "Stock count",
+    "menu": "Main menu",
+    "sellCta": "Open the till",
+    "sellCtaHint": "Ring up a new sale",
+    "alertsBadge": "{count} active alerts, {critical} urgent",
+    "groups": {
+      "sales": "Selling",
+      "stock": "Stock",
+      "records": "Reports & records",
+      "admin": "Administration"
+    },
+    "hints": {
+      "dashboard": "Today at a glance",
+      "sell": "Ring up a new sale",
+      "sales": "Every receipt issued",
+      "returns": "Medicine brought back by customers",
+      "items": "Medicines, prices and stock left",
+      "receive": "Book in a supplier delivery",
+      "alerts": "Low stock and expiring medicine",
+      "counts": "Recount what is on the shelf",
+      "dispose": "Remove damaged or expired medicine",
+      "reports": "Sales, stock and profit",
+      "suppliers": "Who you buy from",
+      "categories": "Groups of medicines",
+      "users": "Staff accounts and access",
+      "settings": "Pharmacy name, tax, features"
+    }
   },
   "auth": {
     "signIn": "Sign in",
@@ -1011,7 +1037,7 @@
     "mailOk": "Connected and signed in successfully.",
     "mailFailed": "Could not connect or sign in.",
     "demo": "Demo data",
-    "demoHint": "This installation still holds its starting demo catalogue: {items} items, {batches} batches and {sales} sales. It is there so staff can learn the till before real stock exists. Clear it on the day you begin the opening count.",
+    "demoHint": "This install still holds the sample pharmacy: {items} items, {batches} batches and {sales} sales, so staff can learn the till first. Clear it before you enter your own items: clearing empties the whole catalogue, including anything you added.",
     "demoConfirm": "Type {phrase} to confirm",
     "demoWipe": "Clear the demo data",
     "demoWiped": "Demo data cleared. The catalogue, stock and history are empty; accounts and settings are untouched.",
@@ -1084,7 +1110,7 @@
     "step": "Step {current} of {total}",
     "prompt": {
       "title": "New here?",
-      "body": "Take a two-minute walkthrough of the screens set up for your account.",
+      "body": "A short tour that shows you on the real screens where everything is and how to use it. About five minutes, and nothing is saved.",
       "start": "Start tutorial",
       "later": "Maybe later"
     },
@@ -1094,24 +1120,316 @@
       "staff": "This walkthrough only covers the screens set up for your account -- if something you use is missing here, ask the owner about your permissions. You can reopen it any time from this button."
     },
     "chapters": {
-      "dashboard": "The first screen after signing in: what needs attention today, at a glance.",
-      "sell": "Scan or search for an item, add it to the sale, and take payment. An expired batch is refused automatically, never just flagged.",
-      "items": "The medicine catalogue: names, prices and drug classes. Stock itself lives on batches, not here, so quantities are never edited from this screen.",
-      "receive": "Record a delivery from a supplier. Each delivery becomes its own batch, with its own expiry date and cost, so stock and cost tracking stay accurate down to the lot.",
-      "sales": "Every past sale, with its receipt. A sale can be voided here where that is still allowed -- not once it has been returned against.",
-      "returns": "Process a customer return. Returned medicine is quarantined rather than put straight back on the shelf, and controlled classes are never resold at all.",
-      "dispose": "Record expired or damaged stock leaving inventory as a loss, kept separate from ordinary corrections so the expiry-loss report stays honest.",
-      "counts": "Do a physical stock count and post the difference the count found, rather than overwriting what the system has on hand.",
-      "alerts": "Expiring batches, low stock and other warnings. Critical alerts, like expired stock still on the shelf, cannot be snoozed by anyone.",
-      "suppliers": "Keep supplier names and contact details for use when receiving stock.",
-      "categories": "Group items into categories to keep the catalogue and reports organised.",
-      "reports": "What sold, and -- for those with permission to see cost prices -- what it cost and what it made.",
-      "users": "Create staff accounts, set what each one can do, and issue or reset passwords.",
-      "settings": "The pharmacy's name, timezone, tax rate and which optional screens are switched on."
+      "dashboard": "The first screen after signing in. It shows at a glance what needs attention today.",
+      "sell": "Where you serve customers: find the medicine, put it in the basket, take the payment. Expired medicine is refused automatically.",
+      "items": "Every medicine you sell, with its price and how much is left.",
+      "receive": "Used whenever a delivery arrives from a supplier, so the stock goes up.",
+      "sales": "Every sale made so far, with its receipt.",
+      "returns": "Medicine brought back by customers. Returned medicine is kept apart, not simply sold again.",
+      "dispose": "For recording damaged or expired medicine thrown away from the shelf.",
+      "counts": "For recounting the shelf and matching it against the system.",
+      "alerts": "What needs doing: medicine running low, close to expiry, or already expired.",
+      "suppliers": "The suppliers the pharmacy buys from.",
+      "categories": "Groups of medicines, such as Antibiotics or Vitamins, to keep lists and reports tidy.",
+      "reports": "Sales, stock and profit for a period you choose.",
+      "users": "An account for each member of staff, and what each may do.",
+      "settings": "The pharmacy's name, tax, receipts and which features are in use."
     },
     "outro": {
       "title": "That's everything",
       "body": "You can come back to this walkthrough any time using the Tutorial button."
+    },
+    "tour": {
+      "how": "The screen dims and the part being explained lights up. Sometimes you will be asked to click or type yourself. Nothing is saved during the tutorial.",
+      "begin": "Start",
+      "open": "Open {label}",
+      "clickMenu": "Click the lit-up entry in the menu to open it.",
+      "takeMe": "Take me there",
+      "skip": "Skip this step",
+      "loading": "Opening the screen...",
+      "chapter": "Part {current} of {total}",
+      "try": {
+        "type": "Try it now: type in the lit-up field. The tutorial moves on once the result appears.",
+        "click": "Try it now: click what is lit up. The tutorial moves on by itself."
+      },
+      "stops": {
+        "dashboard": {
+          "summary": {
+            "title": "Stock summary",
+            "body": "Four numbers to check every morning: expired medicine still on the shelf, medicine that has run out, medicine expiring soon, and medicine running low. Ideally all zero."
+          },
+          "sales": {
+            "title": "Sales",
+            "body": "Today's takings and number of sales, and a 30-day chart to see busy and quiet days."
+          },
+          "catalogue": {
+            "title": "Catalogue",
+            "body": "How many medicines, categories and suppliers are recorded. Click one to open its list."
+          }
+        },
+        "sell": {
+          "search": {
+            "title": "1. Find the medicine",
+            "body": "Type a name or code, for example \"para\" for Paracetamol. With a barcode scanner, just scan the box; on a phone the camera button scans too."
+          },
+          "results": {
+            "title": "2. Pick it",
+            "body": "Each result shows the stock left and the price. Click one to put it in the basket. Medicine that has run out or expired cannot be picked."
+          },
+          "qty": {
+            "title": "3. Set the quantity",
+            "body": "Press + or −, or type the number. If it is more than is in stock, the till says so and the sale cannot be completed."
+          },
+          "lot": {
+            "title": "The lot going out",
+            "body": "The batch number and expiry that will be taken. The system always takes the one expiring soonest first, so check it against the box in your hand."
+          },
+          "summary": {
+            "title": "4. Check the total",
+            "body": "Subtotal, discount (if your account may give one), and the total to pay."
+          },
+          "pay": {
+            "title": "5. Payment",
+            "body": "Choose how the customer pays: cash, card, QRIS or transfer."
+          },
+          "tendered": {
+            "title": "6. Cash received",
+            "body": "For cash, type what the customer handed over, for example 50000. The change is worked out straight away."
+          },
+          "checkout": {
+            "title": "7. Complete the sale",
+            "body": "This saves the sale, takes the stock off the shelf and opens the receipt to print. Do not press it during the tutorial. This practice basket disappears when you leave the screen."
+          }
+        },
+        "items": {
+          "search": {
+            "title": "Search and filter",
+            "body": "Find a medicine by name, code or NIE number, or filter by category and class, then press Search."
+          },
+          "list": {
+            "title": "Medicines",
+            "body": "One row per medicine, with its class, category, stock left, selling price and minimum stock level."
+          },
+          "class": {
+            "title": "Drug class mark",
+            "body": "The same as on the packaging: green circle for over-the-counter, blue for limited OTC, red with a K for prescription-only."
+          },
+          "stock": {
+            "title": "Stock left",
+            "body": "What can still be sold, added up across every batch. Nobody types this number; it changes by itself as stock is received, sold, returned or disposed of."
+          },
+          "open": {
+            "title": "Open a medicine",
+            "body": "Click a name to see its details."
+          },
+          "batches": {
+            "title": "Its batches",
+            "body": "Each delivery is one batch with its own number, expiry date and quantity left. Expired or quarantined batches are never sold."
+          },
+          "movements": {
+            "title": "Stock history",
+            "body": "Every unit in and out: when, by whom and why -- delivery, sale, return, disposal or count. This history cannot be edited or deleted."
+          },
+          "add": {
+            "title": "Add medicines",
+            "body": "Back on the list: add a new medicine one at a time, or import many at once from an Excel file."
+          }
+        },
+        "receive": {
+          "scan": {
+            "title": "Scan the box",
+            "body": "If the box has a GS1 barcode, scan it here: the medicine, batch number and expiry fill themselves in."
+          },
+          "item": {
+            "title": "Which medicine?",
+            "body": "Choose the medicine that arrived. If it is not in the list yet, add it under Items first."
+          },
+          "supplier": {
+            "title": "From whom?",
+            "body": "Choose the supplier. \"Saldo Awal\" is only for stock already on the shelf when the system started."
+          },
+          "lot": {
+            "title": "Batch number",
+            "body": "Copy it off the packaging, usually marked \"Batch\" or \"Lot\". It is what a recall is traced by."
+          },
+          "expiry": {
+            "title": "Expiry date",
+            "body": "Required. Packaging usually shows only the month and year: pick the month and type the year."
+          },
+          "quantity": {
+            "title": "Quantity",
+            "body": "How many arrived, in the smallest unit (tablets, capsules) or in packs. The system works out the contents."
+          },
+          "cost": {
+            "title": "Purchase price",
+            "body": "What you paid per unit or per pack, from the invoice. Used to work out profit in the reports."
+          },
+          "opening": {
+            "title": "Opening stock",
+            "body": "Tick only when entering stock already on the shelf when the system started, never for a new purchase."
+          },
+          "save": {
+            "title": "Save",
+            "body": "Once saved, the stock goes up straight away and the delivery appears below under today's deliveries."
+          }
+        },
+        "sales": {
+          "list": {
+            "title": "Every sale",
+            "body": "One row per receipt: number, time, cashier, payment, total and status."
+          },
+          "open": {
+            "title": "Open a receipt",
+            "body": "Click a receipt number to see it."
+          },
+          "receipt": {
+            "title": "The receipt",
+            "body": "The sale exactly as printed for the customer, including the batch of every medicine."
+          },
+          "print": {
+            "title": "Reprint",
+            "body": "If the customer asks for the receipt again, print it from here."
+          },
+          "return": {
+            "title": "Return",
+            "body": "If a customer brings medicine back, start the return here. It is kept apart and not simply sold again."
+          },
+          "void": {
+            "title": "Void the sale",
+            "body": "For a sale entered by mistake. A reason is required, every unit goes back on the shelf, and the receipt stays on record as voided."
+          }
+        },
+        "returns": {
+          "list": {
+            "title": "Returns",
+            "body": "Every return, with its reason and the refund. A return is started from its receipt in Sales history."
+          }
+        },
+        "dispose": {
+          "queue": {
+            "title": "Waiting for disposal",
+            "body": "Expired medicine and quarantined returns appear here. Click Dispose to record throwing it away."
+          },
+          "history": {
+            "title": "Disposal history",
+            "body": "Everything disposed of and the total loss. This is how you see which medicines are being over-ordered."
+          }
+        },
+        "counts": {
+          "start": {
+            "title": "Start a stock count",
+            "body": "Start a new count, of every shelf or one category."
+          },
+          "list": {
+            "title": "Earlier counts",
+            "body": "Every stock count is kept here with its status."
+          },
+          "open": {
+            "title": "Open a count",
+            "body": "Click one to see it."
+          },
+          "lines": {
+            "title": "Count results",
+            "body": "Per batch: what the system expected, what was really on the shelf, and the difference with its reason. Posting books the difference."
+          }
+        },
+        "alerts": {
+          "filter": {
+            "title": "Filter alerts",
+            "body": "Show only one kind or level of alert."
+          },
+          "list": {
+            "title": "Alerts",
+            "body": "The most urgent are always at the top."
+          },
+          "first": {
+            "title": "One alert",
+            "body": "Red means urgent: out of stock, or expired medicine still on the shelf. Amber means reorder soon or expiring soon."
+          },
+          "actions": {
+            "title": "Follow up",
+            "body": "Mark it handled (for example, already ordered) or snooze it for a few days. Red alerts cannot be snoozed."
+          },
+          "refresh": {
+            "title": "Refresh",
+            "body": "Alerts are checked automatically every day. Press this to check now."
+          }
+        },
+        "suppliers": {
+          "list": {
+            "title": "Suppliers",
+            "body": "Saved suppliers are offered when you receive stock."
+          },
+          "add": {
+            "title": "Add a supplier",
+            "body": "Enter the name, a contact person and a phone number."
+          }
+        },
+        "categories": {
+          "list": {
+            "title": "Categories",
+            "body": "Categories group medicines in the catalogue, in stock counts and in reports."
+          },
+          "add": {
+            "title": "Add a category",
+            "body": "Create a new category here."
+          }
+        },
+        "reports": {
+          "range": {
+            "title": "Choose a period",
+            "body": "Pick the dates: today, the last 7 or 30 days, this month, or your own."
+          },
+          "pick": {
+            "title": "Open a report",
+            "body": "Click a report, for example Sales."
+          },
+          "tabs": {
+            "title": "Switch report",
+            "body": "Jump to another report without going back to the list."
+          },
+          "result": {
+            "title": "Results",
+            "body": "The figures for the chosen period. The stock card report is how you check what left the shelf against what was rung up."
+          },
+          "export": {
+            "title": "Download CSV",
+            "body": "Download this report to open in Excel or send to the accountant."
+          }
+        },
+        "users": {
+          "add": {
+            "title": "Create an account",
+            "body": "One account per member of staff, never shared. The temporary password is shown only once, and they change it at first sign-in."
+          },
+          "list": {
+            "title": "Accounts",
+            "body": "Click an account to change what it may do, reset its password or suspend it."
+          }
+        },
+        "settings": {
+          "business": {
+            "title": "Pharmacy details",
+            "body": "The pharmacy's name, address and timezone. The name appears in the menu, on the sign-in screen and on receipts."
+          },
+          "receipt": {
+            "title": "Receipt",
+            "body": "The receipt language and the note printed at its foot, such as a get-well message."
+          },
+          "modules": {
+            "title": "Features",
+            "body": "Switch off screens you do not use to keep the menu short. Anything already recorded stays safe."
+          },
+          "alerts": {
+            "title": "Alert thresholds",
+            "body": "How many days before expiry a medicine starts being flagged."
+          },
+          "demo": {
+            "title": "Demo data",
+            "body": "All the sample medicines, stock and sales. Clear them here before entering your own items, because clearing empties the whole catalogue. Accounts and settings stay."
+          }
+        }
+      }
     }
   }
 }

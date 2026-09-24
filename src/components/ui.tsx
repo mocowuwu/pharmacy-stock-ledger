@@ -106,6 +106,7 @@ export function Card({
   children,
   className = "",
   glass = false,
+  tour,
 }: {
   children: ReactNode;
   className?: string;
@@ -115,9 +116,12 @@ export function Card({
   // -- .glass and `bg-surface` both set `background`, and which one wins
   // would depend on Tailwind's generated stylesheet order, not source order.
   glass?: boolean;
+  /** An anchor for the guided tutorial to point at. */
+  tour?: string;
 }) {
   return (
     <div
+      data-tour={tour}
       className={`rounded-2xl border border-rule shadow-[var(--shadow-card),var(--edge)] ${glass ? "glass" : "bg-surface"} ${className}`}
     >
       {children}
@@ -142,7 +146,11 @@ export function PageHeader({
         </h1>
         {subtitle && <p className="mt-1.5 text-sm text-muted">{subtitle}</p>}
       </div>
-      {actions && <div className="flex items-center gap-2">{actions}</div>}
+      {actions && (
+        <div data-tour="page-actions" className="flex items-center gap-2">
+          {actions}
+        </div>
+      )}
     </div>
   );
 }

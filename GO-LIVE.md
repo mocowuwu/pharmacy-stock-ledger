@@ -70,7 +70,21 @@ Hand each person their one-time password directly. It is shown once; if it is
 lost, issue another. Tick **registered pharmacist** for the APJ and record the
 SIPA and STRA numbers — the narkotika register will need them.
 
-## 3. Enter the catalogue from paper
+## 3. Clear the demo data
+
+A new install opens on a sample pharmacy -- medicines, stock, a morning of
+sales -- so everyone can practise the till and follow the tutorial first.
+Clear it when you are ready to start for real:
+
+Settings → **Demo data** → type the confirmation phrase.
+
+**Before you enter a single real item.** Clearing empties the whole catalogue,
+not just the samples: every item, batch, sale, return, disposal, count and
+supplier goes, including anything you typed in yourself. Accounts, permissions,
+settings, tax rates and the audit log survive. The samples do not come back on
+an update.
+
+## 4. Enter the catalogue from paper
 
 Every item: name, form, strength, unit, drug class, reorder point. Use **save
 and add another**.
@@ -81,14 +95,6 @@ a list of things you cannot enter.
 
 Set reorder points from what the pharmacy actually reorders at, not from a
 guess. They drive the low-stock alerts, and alerts nobody believes get ignored.
-
-## 4. Clear the demo data
-
-Settings → **Demo data** → type the confirmation phrase.
-
-This clears the starting catalogue, its stock and its invented sales. Accounts,
-permissions, settings, tax rates and the audit log survive. Do it **after** the
-catalogue is entered and **immediately before** counting, so the two never mix.
 
 ## 5. Count, with stock frozen
 

@@ -71,6 +71,25 @@ export async function alertCounts() {
 }
 
 /**
+ * The number on the sidebar's Alerts entry. Critical is counted apart so the
+ * badge can go red for expired stock and stay amber for a low shelf.
+ */
+export async function alertBadge() {
+  await assertPermission("alerts.view");
+  const db = await getDb();
+
+  const [row] = await db
+    .select({
+      total: sql<number>`count(*)::int`,
+      critical: sql<number>`count(*) filter (where ${alerts.severity} = 'critical')::int`,
+    })
+    .from(alerts)
+    .where(LIVE);
+
+  return { total: row?.total ?? 0, critical: row?.critical ?? 0 };
+}
+
+/**
  * Acknowledging means "seen, ordered, on its way". The alert dims but stays
  * open, tagged with who acknowledged it -- it is not a way to make something
  * disappear.

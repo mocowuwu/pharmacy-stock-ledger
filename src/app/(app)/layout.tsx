@@ -1,7 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import { requireSession } from "@/lib/dal/session";
 import { canAny, type Permission } from "@/lib/auth/permissions";
-import { SidebarNav, TopNav, type NavEntry } from "@/components/Sidebar";
+import { SidebarNav, SignOutIcon, TopNav, type NavEntry, type NavGroup } from "@/components/Sidebar";
+import { alertBadge } from "@/lib/dal/alerts";
 import { getSettings } from "@/lib/dal/settings";
 import { MAKER } from "@/lib/brand";
 import { MODULE_NAV, moduleFlags, type ModuleKey } from "@/lib/catalogue/modules";
@@ -16,23 +17,23 @@ import { markTutorialSeenAction } from "./tutorial-actions";
  * Only built sections appear, so the nav can never advertise a screen that does
  * not exist.
  */
-const NAV: Array<{ key: string; href: string; permissions: Permission[] }> = [
-  { key: "dashboard", href: "/", permissions: ["items.view"] },
-  { key: "sell", href: "/sell", permissions: ["sales.create"] },
-  { key: "items", href: "/items", permissions: ["items.view"] },
-  { key: "receive", href: "/receive", permissions: ["batches.receive"] },
-  { key: "sales", href: "/sales", permissions: ["sales.create"] },
-  { key: "returns", href: "/returns", permissions: ["sales.return"] },
-  { key: "dispose", href: "/dispose", permissions: ["stock.dispose"] },
-  { key: "counts", href: "/counts", permissions: ["stock.count"] },
-  { key: "alerts", href: "/alerts", permissions: ["alerts.view"] },
-  { key: "suppliers", href: "/suppliers", permissions: ["items.view"] },
-  { key: "categories", href: "/categories", permissions: ["items.view"] },
+const NAV: Array<{ key: string; href: string; group: NavGroup; permissions: Permission[] }> = [
+  { key: "dashboard", href: "/", group: "home", permissions: ["items.view"] },
+  { key: "sell", href: "/sell", group: "home", permissions: ["sales.create"] },
+  { key: "sales", href: "/sales", group: "sales", permissions: ["sales.create"] },
+  { key: "returns", href: "/returns", group: "sales", permissions: ["sales.return"] },
+  { key: "items", href: "/items", group: "stock", permissions: ["items.view"] },
+  { key: "receive", href: "/receive", group: "stock", permissions: ["batches.receive"] },
+  { key: "alerts", href: "/alerts", group: "stock", permissions: ["alerts.view"] },
+  { key: "counts", href: "/counts", group: "stock", permissions: ["stock.count"] },
+  { key: "dispose", href: "/dispose", group: "stock", permissions: ["stock.dispose"] },
   // Reports appears for anyone holding either half of the split: a manager may
   // be able to see what sold without being able to see what it cost.
-  { key: "reports", href: "/reports", permissions: ["reports.sales", "reports.financial"] },
-  { key: "users", href: "/users", permissions: ["users.manage"] },
-  { key: "settings", href: "/settings", permissions: ["settings.manage"] },
+  { key: "reports", href: "/reports", group: "records", permissions: ["reports.sales", "reports.financial"] },
+  { key: "suppliers", href: "/suppliers", group: "records", permissions: ["items.view"] },
+  { key: "categories", href: "/categories", group: "records", permissions: ["items.view"] },
+  { key: "users", href: "/users", group: "admin", permissions: ["users.manage"] },
+  { key: "settings", href: "/settings", group: "admin", permissions: ["settings.manage"] },
 ];
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
@@ -53,7 +54,24 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   const entries: NavEntry[] = NAV.filter(
     (entry) => canAny(session.grant, entry.permissions) && !hidden.has(entry.key),
-  ).map((entry) => ({ key: entry.key, href: entry.href, label: t(`nav.${entry.key}`) }));
+  ).map((entry) => ({
+    key: entry.key,
+    href: entry.href,
+    group: entry.group,
+    label: t(`nav.${entry.key}`),
+    hint: t(`nav.hints.${entry.key}`),
+  }));
+
+  // A number on the Alerts entry is what makes the menu answer "is anything
+  // wrong?" without opening a screen. Only for people who may see alerts.
+  const badge = entries.some((e) => e.key === "alerts") ? await alertBadge() : null;
+  const groupLabels: Record<NavGroup, string> = {
+    home: "",
+    sales: t("nav.groups.sales"),
+    stock: t("nav.groups.stock"),
+    records: t("nav.groups.records"),
+    admin: t("nav.groups.admin"),
+  };
 
   const initials = session.user.fullName
     .split(/\s+/u)
@@ -73,13 +91,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         {/* The sidebar keeps its dark scale in both themes, so the content area
             carries the theme and the navigation stays a constant anchor. */}
         <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-sidebar py-5 md:flex">
-          <div className="flex items-center gap-3 px-5 pb-6">
+          <div className="flex items-center gap-3 px-5 pb-5">
             {/* The mark is the business's own initial, not a logo we invented:
                 the name is the owner's, and a fixed glyph would go stale the
                 moment they rename the pharmacy in Settings. */}
             <span
               aria-hidden="true"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-base font-bold text-accent-contrast"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-lg font-bold text-accent-contrast shadow-[0_4px_14px_-4px_var(--accent)]"
             >
               {(settings.businessName || t("app.name")).trim().charAt(0).toUpperCase()}
             </span>
@@ -93,15 +111,28 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             </span>
           </div>
 
-          <SidebarNav entries={entries} />
+          <SidebarNav
+            entries={entries}
+            groupLabels={groupLabels}
+            ariaLabel={t("nav.menu")}
+            sellCta={{ label: t("nav.sellCta"), hint: t("nav.sellCtaHint") }}
+            alerts={
+              badge && badge.total > 0
+                ? {
+                    ...badge,
+                    label: t("nav.alertsBadge", { count: badge.total, critical: badge.critical }),
+                  }
+                : null
+            }
+          />
 
-          <div className="mt-4 shrink-0 border-t border-sidebar-rule px-3 pt-4">
-            <div className="flex items-center gap-3 px-3 pb-3">
+          <div className="mt-3 shrink-0 border-t border-sidebar-rule px-3 pt-3">
+            <div className="flex items-center gap-3 rounded-xl bg-sidebar-hover/60 px-3 py-2.5">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent">
                 {initials}
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-sm text-sidebar-ink">
+                <span className="block truncate text-sm font-medium text-sidebar-ink">
                   {session.user.fullName}
                 </span>
                 <span className="block text-xs text-sidebar-muted">
@@ -109,16 +140,19 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
                 </span>
               </span>
             </div>
-            <TutorialLauncher variant="block" />
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="w-full rounded-xl px-3 py-2 text-left text-sm text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-ink"
-              >
-                {t("nav.signOut")}
-              </button>
-            </form>
-            <p className="px-3 pt-3 text-[0.7rem] font-medium tracking-[0.2em] text-sidebar-muted/70 select-none">
+            <div className="mt-2 grid grid-cols-2 gap-1">
+              <TutorialLauncher variant="block" />
+              <form action={signOut}>
+                <button
+                  type="submit"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-ink"
+                >
+                  <SignOutIcon />
+                  {t("nav.signOut")}
+                </button>
+              </form>
+            </div>
+            <p className="px-3 pt-2 text-[0.7rem] font-medium tracking-[0.2em] text-sidebar-muted/70 select-none">
               {MAKER}
             </p>
           </div>

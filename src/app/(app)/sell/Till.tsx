@@ -226,7 +226,7 @@ export function Till({
           column past the screen and the whole page scrolls sideways. */}
       <div className="flex min-w-0 flex-col gap-4">
         {/* Search sits outside any form: a scanner ends every read with Enter. */}
-        <Card className="p-4">
+        <Card className="p-4" tour="sell-search">
           {/*
             The label points at the field by id rather than wrapping it.
             Wrapping put the scan button inside the label, and a tap on a label
@@ -283,7 +283,7 @@ export function Till({
           )}
 
           {results && results.length > 0 && (
-            <ul className="mt-3 divide-y divide-rule">
+            <ul data-tour="sell-results" className="mt-3 divide-y divide-rule">
               {results.map((candidate) => (
                 <li key={candidate.id}>
                   <button
@@ -315,7 +315,7 @@ export function Till({
           )}
         </Card>
 
-        <Card className="p-4">
+        <Card className="p-4" tour="sell-basket">
           <h2 className="mb-3 font-medium">{t("sell.basket")}</h2>
           {lines.length === 0 ? (
             <p className="text-sm text-muted">{t("sell.emptyBasket")}</p>
@@ -349,7 +349,7 @@ export function Till({
                         still in the middle of entering. Too many is flagged
                         below instead, and checkout is blocked.
                       */}
-                      <div className="flex items-stretch">
+                      <div data-tour="sell-qty" className="flex items-stretch">
                         <button
                           type="button"
                           aria-label={t("sell.decrease")}
@@ -424,7 +424,7 @@ export function Till({
 
                   {/* Which lot is about to leave, so the cashier can check it
                       against the box in their hand. */}
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                  <div data-tour="sell-lot" className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                     {canOverrideBatch && line.batches.length > 1 ? (
                       <select
                         value={line.preferBatchId ?? ""}
@@ -472,7 +472,7 @@ export function Till({
           -- so it's the one panel that gets the glass (Surface 2) treatment
           instead of the app's usual opaque cards. */}
       <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
-        <Card glass className="p-4">
+        <Card glass className="p-4" tour="sell-summary">
           <dl className="flex flex-col gap-2 text-sm">
             <div>
               <SummaryRow label={t("sell.subtotal")} value={formatMoney(subtotal)} />
@@ -519,6 +519,7 @@ export function Till({
                 labelling, per the reference's own selected-state pattern. */}
             <div
               role="radiogroup"
+              data-tour="sell-pay"
               aria-label={t("sell.paymentMethod")}
               className="grid grid-cols-2 gap-2"
             >
@@ -542,7 +543,7 @@ export function Till({
           </div>
 
           {method === "tunai" && (
-            <label className="flex flex-col gap-1.5">
+            <label data-tour="sell-tendered" className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-muted">{t("sell.tendered")}</span>
               <input
                 inputMode="numeric"
@@ -551,7 +552,7 @@ export function Till({
                 className={`${inputClass} tabular text-right`}
               />
               {change != null && change >= 0 && (
-                <span className="tabular text-sm text-accent">
+                <span data-tour="sell-change" className="tabular text-sm text-accent">
                   {t("sell.change")}: {formatMoney(change)}
                 </span>
               )}
@@ -572,6 +573,7 @@ export function Till({
           <button
             type="button"
             onClick={complete}
+            data-tour="sell-checkout"
             disabled={!canCheckout}
             className={buttonPrimaryLarge}
           >

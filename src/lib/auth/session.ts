@@ -10,6 +10,13 @@ import type { Grant } from "./permissions";
 
 export const SESSION_COOKIE = "pharmacy_session";
 
+/**
+ * On the /login URL when a page found the cookie but no live session behind
+ * it. The proxy cannot ask the database, so this is how it learns the cookie is
+ * dead and must be dropped rather than honoured.
+ */
+export const STALE_SESSION_PARAM = "session_ended";
+
 /** Re-extend a sliding session at most this often, to avoid a write per request. */
 const TOUCH_INTERVAL_MS = 5 * 60 * 1000;
 

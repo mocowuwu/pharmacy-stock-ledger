@@ -4,7 +4,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
-export type NavEntry = { key: string; href: string; label: string };
+/** "home" is the ungrouped top of the menu: the dashboard and the till. */
+export type NavGroup = "home" | "sales" | "stock" | "records" | "admin";
+
+export type NavEntry = {
+  key: string;
+  href: string;
+  label: string;
+  group?: NavGroup;
+  /** One plain sentence of what the screen is for, for anyone new to it. */
+  hint?: string;
+};
+
+export type AlertBadge = { total: number; critical: number; label: string };
 
 /**
  * Line icons drawn inline rather than pulled from a package: eight glyphs is
@@ -131,8 +143,46 @@ function isActive(pathname: string, href: string, all: readonly NavEntry[]): boo
   return matches[0]?.href === href;
 }
 
-export function SidebarNav({ entries }: { entries: NavEntry[] }) {
+function Badge({ alerts }: { alerts: AlertBadge }) {
+  // Red while anything critical (expired stock) is live, amber otherwise --
+  // the same two status colours the Alerts screen uses.
+  const tone = alerts.critical > 0 ? "bg-critical text-white" : "bg-warning text-black";
+  return (
+    <span
+      title={alerts.label}
+      className={`ml-auto min-w-[1.35rem] shrink-0 rounded-full px-1.5 py-0.5 text-center text-[0.7rem] leading-none font-semibold tabular-nums ${tone}`}
+    >
+      {alerts.total > 99 ? "99+" : alerts.total}
+      <span className="sr-only"> {alerts.label}</span>
+    </span>
+  );
+}
+
+export function SidebarNav({
+  entries,
+  groupLabels,
+  ariaLabel,
+  sellCta,
+  alerts,
+}: {
+  entries: NavEntry[];
+  groupLabels: Record<NavGroup, string>;
+  ariaLabel: string;
+  sellCta: { label: string; hint: string };
+  alerts: AlertBadge | null;
+}) {
   const pathname = usePathname();
+
+  // Sections keep the order of their first entry, and one left empty by
+  // permissions or module switches is simply not drawn -- a heading over
+  // nothing is noise.
+  const groups: Array<{ group: NavGroup; items: NavEntry[] }> = [];
+  for (const entry of entries) {
+    const group = entry.group ?? "home";
+    const last = groups.find((g) => g.group === group);
+    if (last) last.items.push(entry);
+    else groups.push({ group, items: [entry] });
+  }
 
   return (
     // The link list scrolls, the sections around it do not: with every module
@@ -143,34 +193,95 @@ export function SidebarNav({ entries }: { entries: NavEntry[] }) {
     // `min-h-0` is what makes it scroll rather than overflow: a flex child's
     // default minimum is its content height, so without it the list refuses to
     // shrink and pushes the bottom section off the screen exactly as before.
-    <nav className="sidebar-scroll flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3">
-      {entries.map((entry) => {
-        const active = isActive(pathname, entry.href, entries);
-        return (
-          <Link
-            key={entry.key}
-            href={entry.href}
-            aria-current={active ? "page" : undefined}
-            // The active fill stays solid rather than becoming a tinted pill.
-            // The sidebar is dark in *both* themes while the accent is not --
-            // it darkens to #6d3beb in light mode -- so a translucent accent on
-            // this background would be legible in one theme and mud in the
-            // other. A solid fill with `--accent-contrast` is the only
-            // treatment that holds up in both. The left-edge bar is layered on
-            // top as a nod to the reference's purple border glow, not a
-            // replacement for the fill.
-            className={`flex items-center gap-3 rounded-xl border-l-2 px-3 py-2.5 text-sm transition-colors duration-150 ${
-              active
-                ? "border-accent-contrast/40 bg-accent text-accent-contrast font-medium shadow-[0_2px_10px_-2px_var(--accent)]"
-                : "border-transparent text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-ink"
-            }`}
-          >
-            <Icon name={entry.key} />
-            <span className="truncate">{entry.label}</span>
-          </Link>
-        );
-      })}
+    <nav
+      aria-label={ariaLabel}
+      className="sidebar-scroll flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3"
+    >
+      {groups.map(({ group, items }) => (
+        <div key={group} className="flex flex-col gap-0.5">
+          {groupLabels[group] ? (
+            <p className="px-3 pb-1 text-[0.68rem] font-semibold tracking-[0.12em] text-sidebar-muted/80 uppercase select-none">
+              {groupLabels[group]}
+            </p>
+          ) : null}
+          {items.map((entry) => {
+            const active = isActive(pathname, entry.href, entries);
+
+            // The till is the one screen used all day, so it is a button and
+            // not one line among fourteen: whoever sits down should find it
+            // without reading the menu.
+            if (entry.key === "sell") {
+              return (
+                <Link
+                  key={entry.key}
+                  href={entry.href}
+                  aria-current={active ? "page" : undefined}
+                  title={entry.hint}
+                  data-tour={`nav-${entry.key}`}
+                  className={`my-1.5 flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-150 ${
+                    active
+                      ? "bg-accent text-accent-contrast ring-2 ring-accent-contrast/40"
+                      : "bg-accent text-accent-contrast shadow-[0_4px_16px_-4px_var(--accent)] hover:brightness-110"
+                  }`}
+                >
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-contrast/15">
+                    <Icon name="sell" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold">{sellCta.label}</span>
+                    <span className="block truncate text-xs opacity-80">{sellCta.hint}</span>
+                  </span>
+                </Link>
+              );
+            }
+
+            return (
+              <Link
+                key={entry.key}
+                href={entry.href}
+                aria-current={active ? "page" : undefined}
+                title={entry.hint}
+                data-tour={`nav-${entry.key}`}
+                // "You are here" is a light plate with an accent bar, not the
+                // solid accent fill: that fill belongs to the till button, and
+                // two solid purple shapes in one menu read as two things to
+                // press. White at low alpha works because the sidebar is dark in
+                // both themes; the bar is the solid accent, legible in either.
+                className={`relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors duration-150 ${
+                  active
+                    ? "bg-white/10 font-medium text-sidebar-ink before:absolute before:top-1.5 before:bottom-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-accent"
+                    : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-ink"
+                }`}
+              >
+                <Icon name={entry.key} />
+                <span className="truncate">{entry.label}</span>
+                {entry.key === "alerts" && alerts ? <Badge alerts={alerts} /> : null}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
     </nav>
+  );
+}
+
+export function SignOutIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="shrink-0"
+    >
+      <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" />
+      <path d="M10 16l-4-4 4-4M6 12h10" />
+    </svg>
   );
 }
 
@@ -188,6 +299,7 @@ export function TopNav({ entries }: { entries: NavEntry[] }) {
               <Link
                 href={entry.href}
                 aria-current={active ? "page" : undefined}
+                data-tour={`nav-${entry.key}`}
                 className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm whitespace-nowrap transition-colors duration-150 ${
                   active
                     ? "bg-accent text-accent-contrast font-medium"

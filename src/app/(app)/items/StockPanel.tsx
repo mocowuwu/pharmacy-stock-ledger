@@ -40,7 +40,7 @@ export async function StockPanel({
 
   return (
     <div className="flex flex-col gap-6">
-      <Card className="p-5">
+      <Card className="p-5" tour="item-batches">
         <div className="mb-4 flex items-baseline justify-between gap-4">
           <h2 className="font-medium">{t("stock.batches")}</h2>
           <span className="tabular text-2xl font-semibold">
@@ -115,7 +115,7 @@ export async function StockPanel({
         )}
       </Card>
 
-      <Card className="p-5">
+      <Card className="p-5" tour="item-movements">
         <h2 className="mb-3 font-medium">{t("stock.movements")}</h2>
         {movements.length === 0 ? (
           <p className="text-sm text-muted">{t("stock.noMovements")}</p>

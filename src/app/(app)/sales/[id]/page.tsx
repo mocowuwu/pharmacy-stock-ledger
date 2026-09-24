@@ -70,7 +70,7 @@ export default async function SaleDetailPage({
         rest of the time. No driver integration: the browser's own print dialog
         is what every till already has.
       */}
-      <Card className="mx-auto max-w-sm p-5 print:max-w-none print:border-0 print:shadow-none">
+      <Card tour="sale-receipt" className="mx-auto max-w-sm p-5 print:max-w-none print:border-0 print:shadow-none">
         <div className="text-center">
           <div className="font-semibold">
             {settings.businessName || t("app.name")}
@@ -182,7 +182,7 @@ export default async function SaleDetailPage({
             usually happen: a void is for a sale that should never have been
             rung up, a return is for medicine that has actually come back. */}
         {sale.status === "completed" && mayReturn && returnable > 0 && (
-          <Card className="flex flex-wrap items-center justify-between gap-3 p-5">
+          <Card tour="sale-return" className="flex flex-wrap items-center justify-between gap-3 p-5">
             <div>
               <h2 className="font-medium">{t("returns.title")}</h2>
               <p className="mt-1 text-sm text-muted">
@@ -201,7 +201,7 @@ export default async function SaleDetailPage({
         {sale.status === "completed" &&
           can(session.grant, "sales.void") &&
           refunds.length === 0 && (
-          <Card className="p-5">
+          <Card className="p-5" tour="sale-void">
             <h2 className="mb-3 font-medium">{t("sales.void")}</h2>
             <form action={voidSaleAction} className="flex flex-wrap items-end gap-2">
               <input type="hidden" name="saleId" value={sale.id} />
