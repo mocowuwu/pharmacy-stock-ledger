@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { copyFile, cp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import {
@@ -12,6 +12,7 @@ import {
   layout,
   npm,
   run,
+  sourceFilter,
   targetTriple,
   ui,
   updateEnv,
@@ -99,6 +100,13 @@ async function stopRunningInstance(paths, ports) {
   ui.detail("stopped the running pharmacy");
 }
 
+/**
+ * Puts the previous version back when an upgrade fails partway, or null when
+ * there is nothing to put back -- a first install, or an upgrade whose old
+ * folder could not be set aside. See step 4.
+ */
+let restorePrevious = null;
+
 export async function install() {
   const root = resolve(argument("dir", defaultRoot()));
   const paths = layout(root);
@@ -176,25 +184,7 @@ export async function install() {
     ui.warn("an installation is already here; updating it");
     ui.detail("the database and its records are left exactly as they are");
 
-    // Before anything is stopped or replaced, and while the database is still
-    // up. An upgrade runs migrations against the pharmacy's live records; going
-    // into that without a backup taken minutes ago is the one part of this
-    // program that could lose a year of the ledger.
-    //
-    // A failure here warns rather than refuses, deliberately. The likeliest
-    // reason a backup cannot be taken is a half-finished previous upgrade --
-    // exactly the state whose fix is to run this again. Refusing would make a
-    // broken install unrepairable by the only tool that repairs it.
-    try {
-      const existing = JSON.parse(await readFile(paths.config, "utf8"));
-      const taken = await backup(paths, existing, { upload: false });
-      ui.ok(`backed up first: ${taken.file ?? paths.backups}`);
-    } catch (error) {
-      ui.warn(`could not take a backup before upgrading: ${error.message}`);
-      ui.detail("continuing, but there is no fresh backup of what is about to change");
-    }
-
-    await stopRunningInstance(paths, { pgPort, appPort });
+    // Backed up and stopped in step 3, after the downloads -- see there.
   } else {
     // A first install refuses a port somebody else holds, rather than
     // discovering it later as a confusing failure against a foreign database.
@@ -241,6 +231,32 @@ export async function install() {
   /* -------------------------------------------------- 3. cluster and role */
 
   ui.step("Setting up the database");
+
+  // An upgrade backs up and stops here, not back in step 1: nothing the
+  // downloads above touch is in use by a running pharmacy, and on a clinic
+  // connection rclone alone took ten minutes in testing -- ten minutes of a till
+  // that could have been selling, and of sales a step-1 backup would miss.
+  if (alreadyInstalled) {
+    // Before anything is stopped or replaced, and while the database is still
+    // up. An upgrade runs migrations against the pharmacy's live records; going
+    // into that without a backup taken minutes ago is the one part of this
+    // program that could lose a year of the ledger.
+    //
+    // A failure here warns rather than refuses, deliberately. The likeliest
+    // reason a backup cannot be taken is a half-finished previous upgrade --
+    // exactly the state whose fix is to run this again. Refusing would make a
+    // broken install unrepairable by the only tool that repairs it.
+    try {
+      const existing = JSON.parse(await readFile(paths.config, "utf8"));
+      const taken = await backup(paths, existing, { upload: false });
+      ui.ok(`backed up first: ${taken.file ?? paths.backups}`);
+    } catch (error) {
+      ui.warn(`could not take a backup before upgrading: ${error.message}`);
+      ui.detail("continuing, but there is no fresh backup of what is about to change");
+    }
+
+    await stopRunningInstance(paths, { pgPort, appPort });
+  }
 
   // Generated, never typed, never shown. It only ever travels from this file to
   // the app's own config, both of which sit in the install directory.
@@ -296,20 +312,48 @@ export async function install() {
 
   ui.step("Installing the application");
 
+  // An upgrade builds the new version into a fresh folder and keeps the old
+  // one beside it until the new one is built and migrated. Copying over the
+  // old folder in place meant a failed `npm ci` or build -- a dropped
+  // connection is enough -- left no version at all: the build step had
+  // already cleared `.next`, so the pharmacy would not even start again, and
+  // the till stayed dark until somebody repaired it by hand.
+  //
+  // It also means a file the new version deleted is actually gone, rather
+  // than left behind to be built into it.
+  const previous = `${paths.app}-previous`;
+  if (alreadyInstalled && resolve(paths.app) !== source && (await exists(paths.app))) {
+    await rm(previous, { recursive: true, force: true });
+    try {
+      await rename(paths.app, previous);
+      restorePrevious = async () => {
+        await stopServer(paths).catch(() => {});
+        await rm(paths.app, { recursive: true, force: true });
+        await rename(previous, paths.app);
+        const service = await installService(paths, config.appPort);
+        return service.installed;
+      };
+    } catch (error) {
+      // Windows refuses to rename a folder anything has open -- an Explorer
+      // window, an antivirus scan. Upgrading in place still works; it only
+      // loses the way back, and says so.
+      ui.warn(`could not set the current version aside: ${error.message}`);
+      ui.detail("updating in place; if this fails, run the update again");
+    }
+  }
+
   if (resolve(paths.app) !== source) {
     await cp(source, paths.app, {
       recursive: true,
-      // `.env*.local` is excluded for the same reason as `.data`: it is the
-      // developer's machine, not the pharmacy's. Copying it put a dev
-      // DATABASE_URL -- password and all -- onto the clinic's disk. Step 5
-      // overwrites it seconds later on a good run, which is exactly why this
-      // went unnoticed; on a run that stops in between it stays there, and it
-      // was never ours to copy in the first place.
-      filter: (path) =>
-        !/(^|[\\/])(node_modules|\.next|\.git|\.data|backups|downloads)([\\/]|$)/u.test(path) &&
-        !/(^|[\\/])\.env(\.[^\\/]*)?\.local$/u.test(path),
+      filter: sourceFilter(source),
     });
     ui.ok("files copied");
+  }
+
+  // The one file in the old folder that is the pharmacy's rather than the
+  // release's. Step 5 then updates it exactly as it would have in place.
+  if (restorePrevious && (await exists(join(previous, ".env.local")))) {
+    await copyFile(join(previous, ".env.local"), join(paths.app, ".env.local"));
   }
 
   ui.info("installing dependencies — this takes a few minutes");
@@ -345,10 +389,32 @@ export async function install() {
     // operator is invited to change on the line above -- and `COOKIE_SECURE`
     // back to false, which silently breaks `pharmacy remote` sign-in on every
     // upgrade in a way that looks like the password being wrong.
+    //
+    // Keys the file lacks altogether are a different matter: they get the
+    // template's value. A first install that stopped before this step wrote no
+    // file, and its re-run lands here as an "upgrade" -- which used to leave
+    // COOKIE_SECURE unset, so production defaulted it to true and nobody could
+    // sign in from a till over plain HTTP. Present keys are never touched.
+    const present = new Set(
+      (await readFile(envFile, "utf8").catch(() => ""))
+        .split("\n")
+        .map((line) => /^\s*([A-Z0-9_]+)\s*=/u.exec(line)?.[1])
+        .filter(Boolean),
+    );
+    const missing = Object.fromEntries(
+      env
+        .split("\n")
+        .map((line) => /^([A-Z0-9_]+)=(.*)$/u.exec(line))
+        .filter((match) => match && !present.has(match[1]))
+        .map((match) => [match[1], match[2]]),
+    );
     await updateEnv(envFile, {
+      ...missing,
       DATABASE_URL: connectionUrl(config.pgPort, config.dbPassword),
       PORT: config.appPort,
     });
+    const added = Object.keys(missing).filter((key) => key !== "DATABASE_URL" && key !== "PORT");
+    if (added.length > 0) ui.detail(`added missing settings: ${added.join(", ")}`);
     ui.ok("configuration updated");
     ui.detail("your settings in .env.local were left as they are");
   } else {
@@ -376,6 +442,13 @@ export async function install() {
   ui.step("Preparing the database");
   await npm(["run", "db:migrate"], { cwd: paths.app });
   ui.ok("schema up to date");
+
+  // Built and migrated: the new version stands on its own, and the old one is
+  // only disk space now.
+  if (restorePrevious) {
+    restorePrevious = null;
+    await rm(previous, { recursive: true, force: true }).catch(() => {});
+  }
 
   /* ----------------------------------------------------- 8. owner account */
 
@@ -535,6 +608,19 @@ export async function install() {
  */
 install().catch(async (error) => {
   const root = resolve(argument("dir", defaultRoot()));
-  await stopServer(layout(root)).catch(() => {});
-  ui.fail(error.message ?? String(error));
+  const restored = restorePrevious
+    ? await restorePrevious().catch((restoreError) => {
+        ui.warn(`could not put the previous version back: ${restoreError.message}`);
+        return false;
+      })
+    : false;
+  if (!restored) await stopServer(layout(root)).catch(() => {});
+  ui.fail(
+    error.message ?? String(error),
+    restored
+      ? "Nothing was changed: the previous version was put back and started\n" +
+          "again, so the pharmacy is running as it was before. Run the update\n" +
+          "again once the problem above is sorted out."
+      : undefined,
+  );
 });

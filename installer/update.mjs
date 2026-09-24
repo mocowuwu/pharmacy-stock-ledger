@@ -41,9 +41,18 @@ async function latestRelease() {
   // Bounded, because the panel's "Periksa pembaruan" and the first step of an
   // update both wait on this, and a network that swallows the request rather
   // than refusing it would otherwise leave either one spinning for good.
+  //
+  // Node reports an unreachable network as a bare "fetch failed", which tells
+  // the owner nothing they can act on; the connection is the thing to check.
   const response = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
     headers: { accept: "application/vnd.github+json" },
     signal: AbortSignal.timeout(20_000),
+  }).catch((error) => {
+    const why = error.name === "TimeoutError" ? "no answer in 20 seconds" : error.cause?.code;
+    throw new Error(
+      `could not reach GitHub to check for updates${why ? ` (${why})` : ""}. ` +
+        "Check this computer's internet connection and try again. Nothing was changed.",
+    );
   });
   if (!response.ok) {
     throw new Error(`could not reach GitHub releases (status ${response.status})`);
@@ -137,6 +146,7 @@ export async function applyUpdate(paths, config, onProgress = () => {}) {
     percent: 0,
     version: null,
     step: null,
+    detail: null,
     bytes: 0,
     needsAdmin: false,
     lines: [],
@@ -161,13 +171,23 @@ export async function applyUpdate(paths, config, onProgress = () => {}) {
     progress.lastOutputAt = Date.now();
     progress.needsAdmin = ASKS_FOR_ADMIN.test(text);
 
+    // A download inside the current step (see `download` in lib.mjs): shown
+    // beside the step's name until the next step begins.
+    if (/^downloading… /u.test(text)) progress.detail = text.replace(/^downloading… /u, "");
+
     // `1. Checking the machine` -- the installer announcing its next step.
-    const title = /^\d+\.\s+(.+)$/u.exec(text)?.[1];
+    // A step this table does not know is still named -- the page shows the
+    // title as printed -- so a newer installer's extra step never leaves the
+    // previous step's label on screen for as long as the new one takes.
+    const title = progress.phase === "install" ? /^\d+\.\s+(.+)$/u.exec(text)?.[1] : undefined;
+    if (title) {
+      progress.step = title;
+      progress.detail = null;
+    }
     const index = INSTALL_STEPS.findIndex(([name]) => name === title);
     if (index !== -1) {
       const done = INSTALL_STEPS.slice(0, index).reduce((sum, [, weight]) => sum + weight, 0);
       const [from, to] = RANGE.install;
-      progress.step = title;
       progress.percent = Math.max(progress.percent, Math.round(from + ((to - from) * done) / 100));
     }
     emit();
@@ -241,8 +261,20 @@ export async function applyUpdate(paths, config, onProgress = () => {}) {
         "--port",
         String(config.appPort),
       ],
-      { inherit: false, onOutput: forwardLines },
+      { inherit: false, onOutput: forwardLines, env: { PHARMACY_PROGRESS: "lines" } },
     );
+
+    // The installer saying it finished is not the same as the new version
+    // being in place. Every update up to 0.1.4 printed success while copying
+    // nothing (see the copy filter in main.mjs), and nothing checked. This is
+    // that check: the version on disk is the one that was downloaded, or the
+    // update failed.
+    const installed = await currentVersion(paths);
+    if (installed !== latest.version) {
+      throw new Error(
+        `the installer finished, but version ${installed} is still installed instead of ${latest.version}`,
+      );
+    }
 
     await rm(workDir, { recursive: true, force: true });
 

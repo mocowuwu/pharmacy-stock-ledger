@@ -5,7 +5,7 @@ import { createWriteStream } from "node:fs";
 import { networkInterfaces } from "node:os";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { delimiter, dirname, join } from "node:path";
+import { delimiter, dirname, join, relative } from "node:path";
 
 /**
  * Shared parts of the installer.
@@ -374,11 +374,20 @@ export async function download(url, destination, options = {}) {
     hash.update(chunk);
     received += chunk.length;
     options.onBytes?.(received, total);
-    if (!total || !process.stdout.isTTY) return;
+    if (!total) return;
     const percent = Math.floor((received / total) * 100);
-    if (percent >= lastPrinted + 10) {
-      lastPrinted = percent;
+    if (percent < lastPrinted + 10) return;
+    lastPrinted = percent;
+    if (process.stdout.isTTY) {
       process.stdout.write(`\r   ${paint(DIM, `downloading… ${percent}%`)}`);
+    } else if (process.env.PHARMACY_PROGRESS === "lines") {
+      // Run by an update, the installer writes into a pipe, not a terminal --
+      // and the carriage-return counter above printed nothing at all there.
+      // A ten-minute download on a clinic connection then showed in the
+      // control panel as ten minutes of silence. One whole line per tenth is
+      // what `update.mjs` reads back as progress.
+      const mb = (bytes) => (bytes / 1024 / 1024).toFixed(1);
+      console.log(`   downloading… ${percent}% (${mb(received)} of ${mb(total)} MB)`);
     }
   });
 
@@ -496,6 +505,30 @@ export async function updateEnv(file, updates) {
   if (updated.at(-1) !== "") updated.push("");
 
   await writeFile(file, updated.join("\n"), "utf8");
+}
+
+/**
+ * What the installer copies from a release into the install folder.
+ *
+ * `.env*.local` is excluded for the same reason as `.data`: it is the
+ * developer's machine, not the pharmacy's. Copying it put a dev DATABASE_URL
+ * -- password and all -- onto the clinic's disk.
+ *
+ * Matched against the path *inside* the source, never the absolute one. An
+ * update unpacks its release under `<install>/downloads/update-x.y.z`, so the
+ * absolute path of every file -- the source folder itself included -- contains
+ * `downloads`. Tested whole, that refused the root, copied nothing, printed
+ * "files copied", and rebuilt the old version: every update from v0.1.0 to
+ * v0.1.4 reported success and changed nothing.
+ */
+export function sourceFilter(source) {
+  return (path) => {
+    const inside = relative(source, path);
+    return (
+      !/(^|[\\/])(node_modules|\.next|\.git|\.data|backups|downloads)([\\/]|$)/u.test(inside) &&
+      !/(^|[\\/])\.env(\.[^\\/]*)?\.local$/u.test(inside)
+    );
+  };
 }
 
 export function layout(root) {

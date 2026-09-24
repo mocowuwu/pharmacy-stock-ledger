@@ -1,16 +1,29 @@
 import type { Metadata, Viewport } from "next";
-import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import "./globals.css";
 
+// Bundled in ./fonts, not fetched from Google at build time: the build runs on
+// the pharmacy's own machine at every install and update, and a clinic
+// connection that could not reach fonts.googleapis.com failed it outright.
+// See fonts/README.md.
+//
 // Plus Jakarta Sans: the design reference's body face. Legible at small sizes,
 // which matters here for dosage instructions and inventory codes.
-const sans = Plus_Jakarta_Sans({ variable: "--font-jakarta-sans", subsets: ["latin"] });
+const sans = localFont({
+  src: "./fonts/PlusJakartaSans-Variable.woff2",
+  weight: "200 800",
+  variable: "--font-jakarta-sans",
+});
 // Geist Mono stays for batch numbers and document IDs -- it disambiguates
 // 0/O and 1/l, which matters more for ledger legibility than matching the
 // reference's Courier Prime.
-const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const mono = localFont({
+  src: "./fonts/GeistMono-Variable.woff2",
+  weight: "100 900",
+  variable: "--font-geist-mono",
+});
 
 /**
  * Stated rather than left to the framework's default, because the till is run

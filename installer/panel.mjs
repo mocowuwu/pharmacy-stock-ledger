@@ -844,7 +844,10 @@ export function page(folders, needsAdministrator, controlPath) {
       const mb = (p.bytes / 1024 / 1024).toFixed(1);
       return T.updatePhases.download + " " + (p.version || "") + "… " + mb + " MB";
     }
-    if (p.phase === "install" && p.step) return T.updateSteps[p.step] || p.step;
+    if (p.phase === "install" && p.step) {
+      const step = T.updateSteps[p.step] || p.step;
+      return p.detail ? step + " — " + p.detail : step;
+    }
     return T.updatePhases[p.phase] || T.updatePhases.install;
   }
 

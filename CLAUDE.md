@@ -122,6 +122,20 @@ relax one without saying so explicitly.
   (`installer/cloud.mjs`), because on Windows the daily job runs as SYSTEM and
   would never see a config in the owner's profile. It is pointed at only when
   the destination is ours, so a hand-made remote is never shadowed.
+- **An update is not done until the new version is on disk.** The updater
+  unpacks releases under `<install>/downloads/`, and a copy filter that tested
+  absolute paths skipped every file: every update through v0.1.4 rebuilt the
+  old version and reported success. `sourceFilter` in `installer/lib.mjs`
+  matches paths inside the release only, and `applyUpdate` refuses to report
+  success unless `package.json` shows the downloaded version.
+- **A failed upgrade puts the previous version back.** `main.mjs` moves the old
+  app folder to `app-previous` before installing, and restores and restarts it
+  if anything up to the migrations fails. Before that, a dropped connection
+  mid-build left a pharmacy that would not even start.
+- **The build never touches the network for fonts.** They are bundled in
+  `src/app/fonts/` and loaded with `next/font/local`. `next/font/google`
+  fetched them during `next build`, which runs on the clinic's machine at
+  every update, and failed the build whenever Google was unreachable.
 - **CSV writes money as a plain integer**, never a formatted amount: `15000`,
   not `Rp 15.000`. A formatted amount is text to a spreadsheet, so a column of
   them sums to zero -- `parseFloat("15.000")` arriving from the other direction.
