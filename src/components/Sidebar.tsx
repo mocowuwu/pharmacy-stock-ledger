@@ -114,9 +114,23 @@ const ICONS: Record<string, ReactNode> = {
       <circle cx="8" cy="8" r="1.3" />
     </>
   ),
+  // Not menu entries: the Tutorials page's first two guides.
+  start: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="m15.5 8.5-2.2 4.8-4.8 2.2 2.2-4.8 4.8-2.2Z" />
+    </>
+  ),
+  setup: (
+    <>
+      <path d="M9 5h11M9 12h11M9 19h11" />
+      <path d="m3.5 5 1.2 1.2L7 4M3.5 12l1.2 1.2L7 11" />
+      <circle cx="5" cy="19" r="1.3" />
+    </>
+  ),
 };
 
-function Icon({ name }: { name: string }) {
+export function NavIcon({ name }: { name: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -230,7 +244,7 @@ export function SidebarNav({
                   }`}
                 >
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-contrast/15">
-                    <Icon name="sell" />
+                    <NavIcon name="sell" />
                   </span>
                   <span className="min-w-0 md:group-data-[collapsed=true]/side:sr-only">
                     <span className="block truncate text-sm font-semibold">{sellCta.label}</span>
@@ -258,7 +272,7 @@ export function SidebarNav({
                     : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-ink"
                 }`}
               >
-                <Icon name={entry.key} />
+                <NavIcon name={entry.key} />
                 <span className="truncate md:group-data-[collapsed=true]/side:sr-only">{entry.label}</span>
                 {entry.key === "alerts" && alerts ? <Badge alerts={alerts} /> : null}
               </Link>

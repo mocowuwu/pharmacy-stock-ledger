@@ -1116,12 +1116,14 @@
       "title": "Baru di sini?",
       "body": "Tur singkat yang menunjukkan langsung di layar: di mana setiap menu, dan cara memakainya. Sekitar lima menit, dan tidak ada yang tersimpan.",
       "start": "Mulai tutorial",
-      "later": "Nanti saja"
+      "later": "Nanti saja",
+      "guides": "Baca panduan"
     },
     "intro": {
       "title": "Selamat datang",
       "owner": "Panduan ini mencakup semua layar dalam sistem apotek, karena akun Anda memegang semua izin. Anda bisa membukanya lagi kapan saja lewat tombol ini.",
-      "staff": "Panduan ini hanya mencakup layar yang tersedia untuk akun Anda -- jika ada yang Anda pakai tapi tidak muncul di sini, tanyakan pemilik tentang izin Anda. Anda bisa membukanya lagi kapan saja lewat tombol ini."
+      "staff": "Panduan ini hanya mencakup layar yang tersedia untuk akun Anda -- jika ada yang Anda pakai tapi tidak muncul di sini, tanyakan pemilik tentang izin Anda. Anda bisa membukanya lagi kapan saja lewat tombol ini.",
+      "partial": "Panduan ini menunjukkan layar untuk panduan tersebut, satu bagian demi satu bagian. Bagian yang tidak bisa dipakai akun Anda dilewati."
     },
     "chapters": {
       "dashboard": "Layar pertama setelah masuk. Di sini terlihat sekilas apa yang perlu diperhatikan hari ini.",
@@ -1431,6 +1433,796 @@
           "demo": {
             "title": "Data demo",
             "body": "Semua obat, stok dan penjualan contoh. Hapus di sini sebelum memasukkan barang sendiri, karena penghapusan mengosongkan seluruh katalog. Akun dan pengaturan tetap ada."
+          }
+        }
+      }
+    }
+  },
+  "guides": {
+    "title": "Tutorial",
+    "subtitle": "Panduan langkah demi langkah untuk pekerjaan akun Anda",
+    "startHere": "Mulai dari sini",
+    "forYou": "Panduan untuk pekerjaan Anda",
+    "notListed": "Yang tampil hanya panduan untuk hal yang boleh dilakukan akun Anda. Kalau pekerjaan yang Anda perlukan tidak ada, minta pemilik apotek memeriksa hak akses Anda.",
+    "showMe": "Tunjukkan di layar",
+    "showMeHint": "Menyorot layar yang sebenarnya satu bagian demi satu bagian. Tidak ada yang disimpan.",
+    "fullTour": "Ikuti tur lengkap",
+    "fullTourHint": "Semua layar di menu Anda, satu per satu, sekitar lima menit.",
+    "back": "Semua tutorial",
+    "contents": "Isi panduan ini",
+    "next": "Panduan berikutnya",
+    "sections": "{count} bagian",
+    "tip": "Tips",
+    "careful": "Hati-hati",
+    "items": {
+      "start": {
+        "title": "Memulai",
+        "summary": "Masuk ke sistem, mengenal menu, dan beberapa aturan yang tidak pernah dilanggar sistem.",
+        "sections": {
+          "signIn": {
+            "title": "Masuk pertama kali",
+            "steps": {
+              "1": "Pemilik apotek memberi Anda nama pengguna dan kata sandi sementara. Kata sandi itu hanya ditampilkan sekali kepadanya, jadi catat saat diberikan.",
+              "2": "Buka sistem apotek di browser dan masuk dengan data tersebut.",
+              "3": "Anda langsung diminta membuat kata sandi sendiri. Layar lain tidak bisa dibuka sebelum itu.",
+              "4": "Pilih kata sandi yang hanya Anda ketahui. Pemilik tidak pernah melihatnya -- karena itulah setiap penjualan tercatat atas nama orang yang benar-benar melayani."
+            },
+            "tip": "Lupa kata sandi? Tidak ada yang bisa melihatnya, termasuk pemilik. Minta pemilik menerbitkan kata sandi sementara yang baru, lalu buat kata sandi baru lagi."
+          },
+          "menu": {
+            "title": "Mengenal menu",
+            "steps": {
+              "1": "Menu di kiri hanya menampilkan layar yang boleh dipakai akun Anda, dikelompokkan menjadi Penjualan, Stok obat, Laporan & data, dan Pengelolaan.",
+              "2": "Tombol ungu Buka kasir di bagian atas adalah tempat melayani pembeli. Layar inilah yang paling sering dipakai sepanjang hari.",
+              "3": "Arahkan kursor ke salah satu menu untuk membaca kegunaan layarnya.",
+              "4": "Di komputer, tanda panah di atas menu mengecilkannya menjadi ikon saja agar layar lebih lega. Di ponsel, menu disimpan di balik tombol ☰.",
+              "5": "Tombol Tutorial di bawah menu membawa Anda kembali ke panduan ini kapan saja. Tombol Keluar ada di sebelahnya."
+            },
+            "tip": "Bahasa sistem mengikuti pengaturan akun Anda. Untuk menggantinya, minta ke pemilik apotek."
+          },
+          "dashboard": {
+            "title": "Layar pertama",
+            "steps": {
+              "1": "Setelah masuk, Anda tiba di Beranda.",
+              "2": "Empat angka di atas perlu dicek setiap pagi: obat kedaluwarsa yang masih di rak, obat yang habis, obat yang segera kedaluwarsa, dan obat yang stoknya menipis.",
+              "3": "Di bawahnya ada omzet hari ini, grafik 30 hari terakhir, dan jumlah isi katalog.",
+              "4": "Klik salah satu angka untuk membuka peringatan atau daftar di baliknya."
+            }
+          },
+          "alerts": {
+            "title": "Angka peringatan di menu",
+            "steps": {
+              "1": "Angka di samping Peringatan pada menu menunjukkan berapa hal yang perlu dikerjakan.",
+              "2": "Merah berarti mendesak: stok habis, atau obat kedaluwarsa masih ada di rak.",
+              "3": "Kuning berarti perlu direncanakan: segera pesan ulang, atau mendekati kedaluwarsa.",
+              "4": "Lihat panduan Peringatan untuk cara menangani masing-masing."
+            }
+          },
+          "rules": {
+            "title": "Aturan yang tidak pernah dilanggar sistem",
+            "steps": {
+              "1": "Obat kedaluwarsa tidak bisa dijual. Kasir menolaknya, dan tidak ada hak akses yang bisa melewatinya.",
+              "2": "Tidak ada yang pernah dihapus. Penjualan dibatalkan, barang diarsipkan, akun ditangguhkan -- dan catatannya tetap ada.",
+              "3": "Setiap perubahan tercatat atas nama orang yang melakukannya. Jangan pernah berbagi akun atau masuk untuk orang lain.",
+              "4": "Stok tidak pernah diketik manual. Stok bertambah saat barang diterima dan berkurang saat obat terjual, dikarantina sebagai retur, atau dimusnahkan."
+            },
+            "warn": "Kalau sistem menolak sesuatu, biasanya itu untuk melindungi pasien atau catatan apotek. Tanyakan ke pemilik atau apoteker, jangan mencari jalan pintas."
+          },
+          "help": {
+            "title": "Selanjutnya",
+            "steps": {
+              "1": "Pilih panduan untuk pekerjaan yang akan Anda lakukan dari halaman Tutorial.",
+              "2": "Setiap panduan punya tombol \"Tunjukkan di layar\" yang memandu Anda di layar sebenarnya tanpa menyimpan apa pun.",
+              "3": "Apotek contoh yang ikut terpasang aman dipakai untuk latihan sampai pemilik menghapusnya."
+            }
+          }
+        }
+      },
+      "setup": {
+        "title": "Menyiapkan apotek",
+        "summary": "Untuk pemilik: urutan langkah saat apotek mulai memakai sistem ini dengan data sungguhan.",
+        "sections": {
+          "demo": {
+            "title": "1. Hapus data demo -- di awal, bukan di akhir",
+            "steps": {
+              "1": "Pemasangan baru berisi apotek contoh agar staf bisa berlatih memakai kasir.",
+              "2": "Saat siap memakai data sungguhan, buka Pengaturan dan gulir ke bagian Data demo di paling bawah.",
+              "3": "Ketik kalimat konfirmasi lalu tekan Hapus data demo.",
+              "4": "Akun, hak akses, pengaturan, tarif pajak, dan log audit tetap ada. Barang, stok, penjualan, dan semua yang terkait dengannya dikosongkan."
+            },
+            "warn": "Menghapus data demo mengosongkan seluruh katalog, termasuk barang yang Anda tambahkan sendiri. Lakukan sebelum memasukkan obat sungguhan, jangan sesudahnya."
+          },
+          "details": {
+            "title": "2. Data apotek",
+            "steps": {
+              "1": "Di Pengaturan, isi nama, deskripsi, alamat, telepon, dan nomor izin. Nama apotek muncul di menu, di layar masuk, dan di bagian atas setiap struk.",
+              "2": "Periksa zona waktu. Zona waktu menentukan kapan hari berganti, jadi menentukan tanggal sebuah penjualan dan hari tepat sebuah bets kedaluwarsa.",
+              "3": "Pilih bahasa struk dan kalimat penutup yang dicetak di bawahnya.",
+              "4": "Matikan fitur yang tidak dipakai, dan nyalakan PPN hanya jika akuntan menyatakan apotek memungutnya."
+            }
+          },
+          "lists": {
+            "title": "3. Kategori dan pemasok",
+            "steps": {
+              "1": "Tambahkan kategori untuk mengelompokkan obat, misalnya Antibiotik, Vitamin, Analgesik.",
+              "2": "Tambahkan pemasok (PBF) tempat Anda membeli, lengkap dengan nama kontak dan nomor telepon."
+            },
+            "tip": "Kerjakan ini sebelum memasukkan obat: formulir barang dan formulir penerimaan memilih dari daftar ini."
+          },
+          "catalogue": {
+            "title": "4. Masukkan daftar obat",
+            "steps": {
+              "1": "Tambahkan setiap obat di Barang → Tambah Barang, atau sekaligus banyak lewat Impor.",
+              "2": "Untuk impor, unduh templatnya, isi lembar Data (lembar Panduan menjelaskan setiap kolom), lalu unggah. Setiap baris juga bisa berisi stok yang sudah ada di rak, lengkap dengan nomor bets dan tanggal kedaluwarsa.",
+              "3": "Barang tidak menyimpan stok sendiri. Stoknya nol sampai ada barang yang diterima untuknya."
+            }
+          },
+          "opening": {
+            "title": "5. Masukkan stok yang sudah ada di rak",
+            "steps": {
+              "1": "Untuk setiap obat di rak, buka Terima Barang.",
+              "2": "Isi nomor bets dan tanggal kedaluwarsa yang tercetak di kotak, serta jumlah hasil hitungan Anda.",
+              "3": "Centang Stok awal. Tanda ini berarti stok yang sudah dimiliki, bukan pembelian baru.",
+              "4": "Kalau nomor bets stok lama tidak diketahui, centang Nomor bets tidak diketahui -- tanggal kedaluwarsa tetap wajib diisi."
+            },
+            "warn": "Stok awal hanya untuk hari pertama. Setiap barang datang sesudahnya dicatat sebagai penerimaan biasa, tanpa mencentang Stok awal."
+          },
+          "staff": {
+            "title": "6. Akun untuk staf",
+            "steps": {
+              "1": "Di Akun, buat satu akun untuk setiap orang. Jangan pernah akun bersama.",
+              "2": "Mulai dari templat Kasir, Petugas Gudang, atau Manajer, lalu sesuaikan centangnya.",
+              "3": "Berikan kata sandi sementara kepada masing-masing. Mereka membuat kata sandi sendiri saat pertama masuk."
+            }
+          },
+          "count": {
+            "title": "7. Periksa dengan stok opname",
+            "steps": {
+              "1": "Setelah stok awal masuk, lakukan stok opname per kategori.",
+              "2": "Setiap selisih menunjukkan kotak yang terlewat atau salah ketik, dan memposting opname memperbaikinya dengan alasan yang tercatat."
+            },
+            "tip": "Sejak itu, halaman Tutorial menampilkan kepada setiap staf hanya panduan untuk pekerjaan yang bisa dilakukan akunnya."
+          }
+        }
+      },
+      "cashier": {
+        "title": "Melayani di kasir",
+        "summary": "Melayani pembeli dari awal sampai akhir: mencari obat, bets, pembayaran, dan struk.",
+        "sections": {
+          "open": {
+            "title": "Membuka kasir",
+            "steps": {
+              "1": "Tekan tombol ungu Buka kasir di bagian atas menu.",
+              "2": "Kursor sudah berada di kotak pencarian, jadi Anda bisa langsung mengetik atau memindai.",
+              "3": "Setiap penjualan tercatat atas nama Anda. Kalau orang lain menggantikan di meja kasir, ia masuk dengan akunnya sendiri."
+            },
+            "tip": "Biarkan layar kasir terbuka sepanjang hari. Penjualan baru dimulai begitu penjualan sebelumnya selesai."
+          },
+          "find": {
+            "title": "1. Cari obatnya",
+            "steps": {
+              "1": "Ketik sebagian nama atau kode, misalnya \"para\" untuk Paracetamol, lalu tekan Enter.",
+              "2": "Dengan pemindai barcode, cukup pindai kotaknya. Kotak pencarian membacanya seperti ketikan.",
+              "3": "Di ponsel atau tablet, tombol kamera juga bisa memindai barcode.",
+              "4": "Setiap hasil menunjukkan sisa stok dan harga. Klik yang benar untuk memasukkannya ke keranjang."
+            },
+            "tip": "Kalau tidak ketemu, coba nama generiknya, bukan merek, atau ketik lebih sedikit huruf. Kalau memang tidak ada, obat itu belum dimasukkan ke katalog -- beri tahu petugas yang mengurus stok."
+          },
+          "basket": {
+            "title": "2. Atur jumlahnya",
+            "steps": {
+              "1": "Tekan + atau −, atau ketik angkanya di kotak jumlah.",
+              "2": "Jumlah dihitung dalam satuan terkecil: tablet, kapsul, botol.",
+              "3": "Untuk menjual beberapa obat, cari lagi dan tambahkan satu per satu. Tekan Hapus pada baris yang salah pilih."
+            },
+            "warn": "Kalau jumlahnya melebihi stok, kasir memberi tahu dan penjualan tidak bisa diselesaikan. Obat yang habis atau kedaluwarsa sama sekali tidak bisa ditambahkan."
+          },
+          "batch": {
+            "title": "3. Cek bets-nya",
+            "steps": {
+              "1": "Di bawah setiap baris, kasir menunjukkan bets mana yang keluar beserta tanggal kedaluwarsanya.",
+              "2": "Sistem selalu memilih bets yang paling cepat kedaluwarsa, supaya stok lama keluar lebih dulu.",
+              "3": "Ambil kotak dengan nomor bets itu dari rak dan pastikan cocok."
+            },
+            "tip": "Kalau kotak di tangan Anda dari bets lain, susunan raknya keliru: taruh kotak yang paling cepat kedaluwarsa di depan."
+          },
+          "batchOverride": {
+            "title": "Memilih bets lain",
+            "steps": {
+              "1": "Akun Anda boleh memilih bets selain yang paling cepat kedaluwarsa.",
+              "2": "Buka daftar bets pada baris itu dan pilih bets yang Anda serahkan.",
+              "3": "Tulis alasan singkat, misalnya \"pembeli minta kedaluwarsa lebih lama\". Alasan ini disimpan bersama penjualan."
+            }
+          },
+          "price": {
+            "title": "Mengubah harga",
+            "steps": {
+              "1": "Akun Anda boleh mengubah harga satuan pada sebuah baris.",
+              "2": "Lakukan hanya jika daftar harga dari pemilik mengizinkannya. Perubahan tercatat bersama penjualan atas nama Anda."
+            }
+          },
+          "discount": {
+            "title": "Memberi diskon",
+            "steps": {
+              "1": "Ketik jumlah diskon dalam rupiah di kolom Diskon di bawah subtotal.",
+              "2": "Total langsung diperbarui. Diskon tidak bisa lebih besar dari subtotal."
+            }
+          },
+          "pay": {
+            "title": "4. Terima pembayaran",
+            "steps": {
+              "1": "Sebutkan totalnya kepada pembeli.",
+              "2": "Pilih cara bayar: tunai, kartu debit, kartu kredit, QRIS, transfer bank, atau lainnya.",
+              "3": "Untuk tunai, ketik uang yang diberikan pembeli, misalnya 50000 atau 50.000. Kembaliannya langsung muncul."
+            }
+          },
+          "finish": {
+            "title": "5. Selesaikan penjualan",
+            "steps": {
+              "1": "Tekan Selesaikan penjualan. Stok berkurang dan nomor struk muncul.",
+              "2": "Tekan Lihat struk dan cetak untuk pembeli.",
+              "3": "Tekan Penjualan baru, atau langsung mengetik, untuk melayani pembeli berikutnya."
+            },
+            "tip": "Struk mencantumkan bets setiap obat. Kalau ada penarikan obat, dari situlah apotek tahu siapa yang menerimanya."
+          },
+          "classes": {
+            "title": "Tanda golongan obat",
+            "steps": {
+              "1": "Setiap obat menampilkan tanda yang sama dengan kemasannya.",
+              "2": "Lingkaran hijau: Obat Bebas.",
+              "3": "Lingkaran biru: Obat Bebas Terbatas, dengan peringatan.",
+              "4": "Lingkaran merah berhuruf K: Obat Keras dan obat resep lainnya."
+            },
+            "warn": "Kasir tidak memeriksa resep untuk Anda. Obat keras, psikotropika, dan narkotika mengikuti aturan apoteker -- kalau ragu, panggil apoteker sebelum menjual."
+          },
+          "mistakes": {
+            "title": "Kalau terjadi kesalahan",
+            "steps": {
+              "1": "Sebelum menekan Selesaikan penjualan, belum ada yang tersimpan. Hapus baris yang salah atau tinggalkan kasir dan mulai lagi.",
+              "2": "Setelah selesai, penjualan tidak pernah dihapus. Kesalahan dibatalkan, dan pembeli yang mengembalikan obat dicatat sebagai retur.",
+              "3": "Kalau akun Anda tidak bisa membatalkan atau menerima retur, panggil orang yang bisa dan berikan nomor struknya."
+            },
+            "warn": "Jangan pernah membuat penjualan baru untuk menutup penjualan yang salah. Stok dan omzet akan sama-sama salah."
+          },
+          "history": {
+            "title": "Mencari penjualan sebelumnya",
+            "steps": {
+              "1": "Buka Riwayat Penjualan di menu untuk melihat struk sebelumnya.",
+              "2": "Klik nomor struk untuk melihatnya dan mencetak ulang kalau pembeli meminta.",
+              "3": "Kecuali akun Anda boleh melihat semua penjualan, daftar itu hanya berisi penjualan Anda sendiri."
+            }
+          }
+        }
+      },
+      "returns": {
+        "title": "Pembatalan dan retur",
+        "summary": "Membatalkan penjualan yang salah input, dan menerima obat yang dikembalikan pembeli.",
+        "sections": {
+          "which": {
+            "title": "Batalkan atau retur?",
+            "steps": {
+              "1": "Batalkan: penjualan itu seharusnya tidak pernah terjadi -- salah obat, salah jumlah, terinput dua kali. Semua unit kembali ke bets-nya seolah tidak pernah keluar.",
+              "2": "Retur: penjualannya sungguhan, lalu pembeli datang lagi mengembalikan sebagian atau semuanya.",
+              "3": "Keduanya dimulai dari struk: buka Riwayat Penjualan dan klik nomor struknya."
+            },
+            "tip": "Obatnya belum pernah meninggalkan meja kasir? Batalkan. Sudah dibawa pulang pembeli? Retur."
+          },
+          "void": {
+            "title": "Membatalkan penjualan",
+            "steps": {
+              "1": "Buka struknya dari Riwayat Penjualan.",
+              "2": "Tekan Batalkan penjualan dan tulis alasannya, misalnya \"terinput dua kali\".",
+              "3": "Konfirmasi. Struk tetap tersimpan dengan tanda dibatalkan, beserta nama Anda dan alasannya, dan stoknya kembali.",
+              "4": "Penjualan yang dibatalkan tidak dihitung dalam angka penjualan mana pun."
+            },
+            "warn": "Penjualan yang sudah ada returnya tidak bisa dibatalkan -- unit yang diretur akan tercatat kembali dua kali. Tombol batal hilang begitu ada retur."
+          },
+          "return": {
+            "title": "Menerima retur",
+            "steps": {
+              "1": "Buka struk tempat obat itu dijual, lalu tekan Proses retur.",
+              "2": "Untuk setiap baris, isi berapa unit yang dikembalikan. Tidak bisa melebihi yang terjual, atau yang belum pernah diretur.",
+              "3": "Tulis alasan pengembaliannya, misalnya \"dosis yang diberikan salah\".",
+              "4": "Pilih cara pengembalian uang. Jumlahnya dihitung dari yang benar-benar dibayar pembeli, termasuk diskonnya.",
+              "5": "Tekan Catat retur dan serahkan uangnya kepada pembeli."
+            }
+          },
+          "quarantine": {
+            "title": "Ke mana obat retur pergi",
+            "steps": {
+              "1": "Obat retur masuk karantina, tidak kembali ke rak. Begitu kotak keluar dari meja kasir, tidak ada yang tahu bagaimana ia disimpan.",
+              "2": "Obat keras, OWA, psikotropika, dan narkotika selalu dikarantina.",
+              "3": "Obat bebas yang masih bersegel bisa dijual lagi hanya jika pemilik menyalakan pilihan itu di Pengaturan."
+            },
+            "warn": "Sisihkan kotak retur, jauh dari rak. Stok karantina dimusnahkan lewat layar Pemusnahan."
+          },
+          "after": {
+            "title": "Memeriksa retur",
+            "steps": {
+              "1": "Layar Retur mencantumkan setiap retur dengan alasan, jumlah uang kembali, dan siapa yang menerimanya.",
+              "2": "Struknya juga menampilkan retur yang dibuat untuknya."
+            }
+          }
+        }
+      },
+      "delivery": {
+        "title": "Saat barang datang",
+        "summary": "Mencatat bets baru dari pemasok supaya stok bertambah -- dan mencatatnya dengan benar agar penarikan obat bisa dilacak.",
+        "sections": {
+          "before": {
+            "title": "Sebelum mulai",
+            "steps": {
+              "1": "Cocokkan kotak dengan faktur pemasok: obatnya benar, jumlahnya benar, tidak ada yang rusak.",
+              "2": "Periksa tanggal kedaluwarsa setiap bets. Tolak obat yang sudah kedaluwarsa atau terlalu cepat kedaluwarsa, sebelum dicatat.",
+              "3": "Pastikan setiap obat sudah ada di Barang. Obat baru harus dimasukkan ke katalog dulu -- lihat panduan menambah obat baru."
+            },
+            "warn": "Catat setiap nomor bets secara terpisah. Dua bets dari obat yang sama punya tanggal kedaluwarsa berbeda, dan kalau dicampur, bets yang salah akan terjual lebih dulu."
+          },
+          "scan": {
+            "title": "Memindai kotak",
+            "steps": {
+              "1": "Buka Terima Barang di menu dan letakkan kursor di kolom pindai.",
+              "2": "Pindai barcode dan tekan Enter.",
+              "3": "Barcode GS1 (yang persegi atau panjang, berisi bets dan kedaluwarsa) langsung mengisi obat, nomor bets, dan tanggal kedaluwarsanya.",
+              "4": "Kalau barcode belum dikenal, pilih obatnya di bawah dan kode itu ikut tersimpan, sehingga lain kali langsung dikenali."
+            },
+            "tip": "Selalu cocokkan hasil pindaian dengan tulisan di kotak."
+          },
+          "form": {
+            "title": "1. Obat apa, dari siapa",
+            "steps": {
+              "1": "Pilih obat yang datang.",
+              "2": "Pilih pemasoknya. \"Saldo Awal\" hanya untuk stok yang sudah ada di rak saat sistem mulai dipakai.",
+              "3": "Periksa tanggal terima. Isinya hari ini, kecuali Anda mencatat barang kemarin yang terlambat diinput."
+            }
+          },
+          "lot": {
+            "title": "2. Nomor bets",
+            "steps": {
+              "1": "Salin persis dari kemasan. Biasanya bertanda \"Batch\", \"Lot\", atau \"No. Bets\".",
+              "2": "Hanya untuk stok lama dari catatan kertas tanpa nomor bets, centang Nomor bets tidak diketahui."
+            },
+            "tip": "Nomor bets adalah yang disebut dalam penarikan obat oleh BPOM. Kalau benar, apotek bisa menemukan setiap kotak dan setiap pembelinya."
+          },
+          "expiry": {
+            "title": "3. Tanggal kedaluwarsa",
+            "steps": {
+              "1": "Wajib untuk setiap bets.",
+              "2": "Kotak biasanya hanya mencetak bulan dan tahun: pilih bulannya dan ketik tahunnya, misalnya 2027.",
+              "3": "Bets dianggap kedaluwarsa sejak akhir bulan tersebut."
+            },
+            "warn": "Baca dua kali. Tanggal yang salah berarti obat terjual setelah kedaluwarsa, atau dibuang padahal masih baik."
+          },
+          "quantity": {
+            "title": "4. Jumlah dan harga beli",
+            "steps": {
+              "1": "Isi berapa yang datang. Pilih satuan (tablet, kapsul) atau dus/kemasan -- kalau per kemasan, sistem menghitung satuannya dari isi per kemasan.",
+              "2": "Isi harga beli dari faktur, per satuan atau per kemasan. Kalau per kemasan, harga per satuan dihitungkan otomatis.",
+              "3": "Jangan centang Stok awal. Itu hanya untuk stok yang sudah di rak saat sistem mulai dipakai."
+            },
+            "tip": "Harga beli adalah dasar laporan keuntungan, dan tersimpan bersama bets ini selamanya. Barang datang berikutnya dengan harga baru tidak mengubahnya."
+          },
+          "save": {
+            "title": "5. Simpan",
+            "steps": {
+              "1": "Tekan Simpan penerimaan. Stok langsung bertambah dan kasir bisa menjualnya.",
+              "2": "Penerimaan itu muncul di daftar Diterima hari ini.",
+              "3": "Ulangi untuk setiap bets di faktur.",
+              "4": "Taruh kotak baru di belakang kotak lama di rak, supaya yang paling cepat kedaluwarsa keluar lebih dulu."
+            }
+          },
+          "wrong": {
+            "title": "Kalau salah input",
+            "steps": {
+              "1": "Penerimaan yang sudah tersimpan tidak pernah diubah atau dihapus -- riwayat stok tidak bisa diubah.",
+              "2": "Jumlah yang salah diperbaiki lewat stok opname: hitung obat itu, dan memposting opname mencatat selisihnya beserta alasan.",
+              "3": "Segera beri tahu petugas yang mengurus stok, selagi fakturnya masih ada."
+            },
+            "warn": "Jangan mencatat penerimaan yang sama untuk kedua kalinya untuk \"memperbaiki\". Stoknya jadi dobel."
+          }
+        }
+      },
+      "medicines": {
+        "title": "Menambah obat baru",
+        "summary": "Memasukkan obat baru ke katalog: data yang penting, golongan, satuan, harga, dan barcode.",
+        "sections": {
+          "check": {
+            "title": "Pertama, pastikan belum ada",
+            "steps": {
+              "1": "Buka Barang dan cari dengan nama generik, nama merek, dan nomor NIE.",
+              "2": "Kalau ada tetapi diarsipkan, ganti filter status ke Diarsipkan dan pulihkan, jangan menambah salinannya.",
+              "3": "Kekuatan atau bentuk yang berbeda adalah barang yang berbeda: Amoxicillin 250 mg dan 500 mg adalah dua barang."
+            },
+            "tip": "Satu barang untuk satu produk yang dijual. Dua barang untuk produk yang sama membagi stoknya, dan kasir akan bilang habis padahal belum."
+          },
+          "basics": {
+            "title": "1. Nama dan bentuk",
+            "steps": {
+              "1": "Buka Barang dan tekan Tambah Barang.",
+              "2": "Nama generik: zat aktifnya, misalnya Amoxicillin. Nama merek: yang tertulis di kotak, kalau berbeda.",
+              "3": "Pilih bentuk sediaan (tablet, kapsul, sirup...) dan tulis kekuatannya, misalnya 500 mg atau 125 mg/5 mL.",
+              "4": "Kosongkan kode, maka kode dibuat otomatis dari nama generik.",
+              "5": "Isi Nomor Izin Edar (NIE) dari BPOM. Dengan nomor itulah penarikan obat dicocokkan dengan stok Anda."
+            }
+          },
+          "class": {
+            "title": "2. Golongan obat",
+            "steps": {
+              "1": "Pilih golongan yang tercetak di kemasan: Obat Bebas, Obat Bebas Terbatas, Obat Keras, OWA, jamu, herbal, alat kesehatan, atau bahan habis pakai.",
+              "2": "Psikotropika dan narkotika baru muncul di daftar setelah pemilik menyalakannya di Pengaturan.",
+              "3": "Pilih juga kategorinya, supaya barang muncul di daftar, stok opname, dan laporan yang tepat."
+            },
+            "warn": "Golongan menentukan apa yang terjadi saat retur: obat keras, OWA, psikotropika, dan narkotika selalu dikarantina. Pilih dari kotaknya, bukan dari ingatan."
+          },
+          "units": {
+            "title": "3. Satuan dan kemasan",
+            "steps": {
+              "1": "Satuan: benda terkecil yang dihitung dan dijual -- tablet, kapsul, botol, vial.",
+              "2": "Isi per kemasan: berapa satuan dalam kotak yang dikirim pemasok, misalnya 100 tablet per dus.",
+              "3": "Dengan begitu barang datang bisa dicatat per dus, dan sistem mengubahnya menjadi satuan."
+            },
+            "tip": "Kalau Anda menjual per strip isi 10 tetapi menghitung per tablet, satuannya tablet. Stok selalu dalam satuan."
+          },
+          "stockLevels": {
+            "title": "4. Kapan memesan ulang",
+            "steps": {
+              "1": "Batas stok minimum: jumlah stok saat peringatan stok menipis muncul. Isi dengan jumlah yang terjual sebelum pesanan berikutnya bisa datang.",
+              "2": "Saran jumlah pemesanan: berapa yang dipesan saat peringatan itu muncul. Angka ini tampil di peringatan.",
+              "3": "Sisa masa simpan minimum: sisa umur terpendek yang Anda terima untuk barang datang, misalnya 180 hari."
+            }
+          },
+          "price": {
+            "title": "5. Harga jual",
+            "steps": {
+              "1": "Isi harga jual per satuan dalam rupiah, misalnya 1500. Boleh pakai titik: 1.500 berarti seribu lima ratus.",
+              "2": "Centang Bebas PPN hanya untuk barang yang menurut akuntan tidak dikenai PPN.",
+              "3": "Kasir memakai harga ini. Mengubahnya nanti tidak mengubah penjualan yang sudah terjadi."
+            }
+          },
+          "barcodes": {
+            "title": "6. Barcode",
+            "steps": {
+              "1": "Setelah disimpan, buka barangnya dan tambahkan barcode di bagian Barcode -- pindai atau ketik.",
+              "2": "Satu barang bisa punya beberapa barcode, satu untuk setiap kemasan pemasok.",
+              "3": "Memindai barcode yang belum dikenal saat menerima barang juga menyimpannya ke barang yang Anda pilih."
+            }
+          },
+          "then": {
+            "title": "Setelah disimpan",
+            "steps": {
+              "1": "Barang baru menunjukkan stok 0. Itu benar: stok hanya datang dari penerimaan barang.",
+              "2": "Catat barang datangnya di Terima Barang, dengan nomor bets dan tanggal kedaluwarsa.",
+              "3": "Sejak itu obatnya bisa dicari dan dijual di kasir."
+            },
+            "warn": "Jangan mencoba menambah stok dengan mengubah data barang. Memang sengaja tidak ada kolom stok di data barang."
+          },
+          "import": {
+            "title": "Menambah banyak sekaligus",
+            "steps": {
+              "1": "Buka Barang dan tekan Impor.",
+              "2": "Unduh templatnya. Isi lembar Data, satu baris untuk satu obat; lembar Panduan menjelaskan isi setiap kolom.",
+              "3": "Jangan mengganti nama judul kolom di lembar Data.",
+              "4": "Tulis tanggal seperti 2027-12-31. Angka nol di depan barcode tetap aman karena setiap sel berupa teks.",
+              "5": "Satu baris juga bisa berisi stok yang sudah ada di rak: nomor bets, kedaluwarsa, dan jumlahnya. Itu dicatat sebagai stok awal.",
+              "6": "Unggah berkasnya. Anda melihat pratinjau dulu, dengan setiap baris yang bermasalah dan alasannya. Hanya baris yang lolos yang disimpan saat Anda konfirmasi."
+            },
+            "tip": "Untuk barang datang baru, pakai Terima Barang, bukan impor -- impor hanya mencatat stok awal."
+          },
+          "edit": {
+            "title": "Mengubah atau menghentikan barang",
+            "steps": {
+              "1": "Buka barangnya dan tekan Ubah Barang untuk memperbaiki nama, golongan, harga, atau batas stok.",
+              "2": "Barang yang tidak dijual lagi diarsipkan, bukan dihapus. Barang itu hilang dari kasir dan daftar, tetapi riwayatnya tetap ada.",
+              "3": "Pulihkan kapan saja dari filter Diarsipkan."
+            }
+          }
+        }
+      },
+      "suppliers": {
+        "title": "Pemasok dan kategori",
+        "summary": "Menjaga daftar yang dipakai untuk mengelompokkan barang datang, barang, dan laporan.",
+        "sections": {
+          "suppliers": {
+            "title": "Pemasok",
+            "steps": {
+              "1": "Buka Pemasok dan isi nama, nama kontak, dan nomor telepon.",
+              "2": "Pemasok yang tersimpan muncul sebagai pilihan di Terima Barang.",
+              "3": "Laporan Pemasok lalu menunjukkan apa yang dikirim setiap pemasok dan berapa yang akhirnya dimusnahkan."
+            }
+          },
+          "categories": {
+            "title": "Kategori",
+            "steps": {
+              "1": "Buka Kategori dan ketik nama, misalnya Antibiotik atau Vitamin.",
+              "2": "Pilih kategori pada setiap barang.",
+              "3": "Kategori mengelompokkan katalog, memungkinkan opname per rak, dan memecah laporan penjualan serta nilai stok."
+            },
+            "tip": "Beri nama kategori sesuai susunan rak. Menghitung satu kategori berarti menghitung satu rak."
+          }
+        }
+      },
+      "alerts": {
+        "title": "Peringatan dan kedaluwarsa",
+        "summary": "Arti setiap peringatan, rutinitas harian, dan cara agar tidak ada obat yang kedaluwarsa di rak.",
+        "sections": {
+          "kinds": {
+            "title": "Arti peringatan",
+            "steps": {
+              "1": "Stok kedaluwarsa di rak (merah): sebuah bets sudah lewat tanggal kedaluwarsa dan masih ada isinya. Kasir sudah menolaknya; obatnya tetap harus diturunkan dari rak.",
+              "2": "Stok habis (merah): tidak ada lagi yang bisa dijual.",
+              "3": "Segera kedaluwarsa (merah) dan Mendekati kedaluwarsa (kuning): sebuah bets hampir kedaluwarsa. Seberapa dekat diatur di Pengaturan.",
+              "4": "Stok menipis (kuning): sama dengan atau di bawah batas stok minimum barang itu.",
+              "5": "Stok tidak bergerak: lama tidak terjual dan menuju kedaluwarsa."
+            }
+          },
+          "routine": {
+            "title": "Setiap pagi",
+            "steps": {
+              "1": "Lihat angka di samping Peringatan pada menu, atau empat angka di Beranda.",
+              "2": "Buka Peringatan. Yang paling mendesak selalu di atas.",
+              "3": "Turunkan dulu stok kedaluwarsa dari rak, dan sisihkan untuk dimusnahkan.",
+              "4": "Obat yang mendekati kedaluwarsa dipindah ke depan rak supaya terjual lebih dulu.",
+              "5": "Daftar stok menipis dan habis diberikan kepada petugas yang memesan."
+            },
+            "tip": "Peringatan diperiksa otomatis setiap hari. Tombol Perbarui memeriksa ulang saat itu juga, misalnya setelah barang datang."
+          },
+          "act": {
+            "title": "Menangani peringatan",
+            "steps": {
+              "1": "Tandai sudah ditangani setelah diurus, misalnya \"sudah dipesan\". Nama Anda tercatat di situ.",
+              "2": "Tunda menyembunyikannya beberapa hari, misalnya selama pesanan sedang dikirim.",
+              "3": "Lihat barang membuka obatnya, lengkap dengan bets dan tanggal kedaluwarsanya."
+            }
+          },
+          "critical": {
+            "title": "Peringatan merah tidak bisa ditunda",
+            "steps": {
+              "1": "Stok kedaluwarsa tetap ada di daftar sampai diturunkan dari rak dan dimusnahkan di Pemusnahan.",
+              "2": "Ini disengaja: obat kedaluwarsa tidak boleh sampai terlupa di rak."
+            },
+            "warn": "Menandai peringatan stok kedaluwarsa sebagai sudah ditangani tidak menghapus obatnya. Hanya pemusnahan yang melakukannya."
+          }
+        }
+      },
+      "disposal": {
+        "title": "Memusnahkan obat kedaluwarsa atau rusak",
+        "summary": "Mencatat obat yang dimusnahkan atau dikembalikan, supaya stok dan kerugiannya sama-sama benar.",
+        "sections": {
+          "when": {
+            "title": "Apa yang masuk ke sini",
+            "steps": {
+              "1": "Bets kedaluwarsa dan retur yang dikarantina muncul sendiri di Menunggu dimusnahkan.",
+              "2": "Pemusnahan adalah kerugian: obat yang dihancurkan, rusak, atau dikembalikan ke pemasok.",
+              "3": "Bukan untuk memperbaiki salah hitung -- itu gunanya stok opname."
+            }
+          },
+          "steps": {
+            "title": "Mencatat pemusnahan",
+            "steps": {
+              "1": "Turunkan kotaknya dari rak dan pegang di tangan.",
+              "2": "Buka Pemusnahan dan tekan Musnahkan pada bets tersebut.",
+              "3": "Cocokkan nomor bets dengan kotaknya. Isi berapa yang dimusnahkan.",
+              "4": "Tulis alasannya (kedaluwarsa, rusak...) dan cara memusnahkannya (dibakar, dikembalikan ke pemasok...).",
+              "5": "Pilih saksinya, kalau ada.",
+              "6": "Tekan Musnahkan stok ini dan konfirmasi."
+            },
+            "warn": "Pemusnahan tidak bisa dibatalkan. Cocokkan nomor bets dan jumlahnya dengan yang ada di tangan sebelum konfirmasi."
+          },
+          "why": {
+            "title": "Mengapa ini penting",
+            "steps": {
+              "1": "Catatan pemusnahan menunjukkan semua yang dimusnahkan dan total kerugian 30 hari terakhir.",
+              "2": "Laporan Kerugian kedaluwarsa menunjukkan obat mana yang terus dibuang. Itulah obat yang dipesan terlalu banyak."
+            },
+            "tip": "Simpan berita acara pemusnahan bersama nomor pemusnahan yang diberikan sistem."
+          }
+        }
+      },
+      "counts": {
+        "title": "Stok opname",
+        "summary": "Menghitung isi rak, membandingkannya dengan sistem, dan memperbaiki selisihnya dengan alasan.",
+        "sections": {
+          "when": {
+            "title": "Kapan menghitung",
+            "steps": {
+              "1": "Setelah memasukkan stok awal, untuk menemukan yang terlewat.",
+              "2": "Secara rutin, misalnya sebulan sekali, satu kategori setiap kali.",
+              "3": "Setiap kali kasir bilang obat habis padahal ada di rak, atau sebaliknya."
+            },
+            "tip": "Satu kategori setiap kali jauh lebih ringan daripada menutup apotek seharian."
+          },
+          "start": {
+            "title": "1. Mulai opname",
+            "steps": {
+              "1": "Buka Stok opname dan tekan Mulai opname.",
+              "2": "Beri nama, misalnya \"Opname September -- antibiotik\".",
+              "3": "Pilih Semua atau satu kategori, lalu tekan Buka lembar hitung.",
+              "4": "Sistem mencatat apa yang menurutnya ada di rak pada saat itu, per bets."
+            }
+          },
+          "count": {
+            "title": "2. Hitung rak",
+            "steps": {
+              "1": "Tekan Cetak lembar hitung, lalu hitung dengan pulpen, per bets.",
+              "2": "Hitung setiap nomor bets terpisah, walaupun letaknya bersebelahan.",
+              "3": "Usahakan tidak menjual dari rak yang sedang dihitung sampai opname diposting."
+            },
+            "warn": "Kalau ada yang terjual di tengah opname, penjualannya tetap tercatat dengan benar -- tetapi lembar hitung dan rak akan berbeda, dan opname menunjukkan selisih yang sebenarnya tidak ada."
+          },
+          "enter": {
+            "title": "3. Ketik hasil hitungan",
+            "steps": {
+              "1": "Untuk setiap bets, ketik angka hasil hitungan dan tekan Simpan.",
+              "2": "Selisih dengan yang diharapkan sistem ditampilkan di sebelahnya.",
+              "3": "Setiap selisih perlu alasan, misalnya \"ada kotak rusak\" atau \"salah hitung saat terima barang\"."
+            }
+          },
+          "post": {
+            "title": "4. Posting opname",
+            "steps": {
+              "1": "Setelah semua baris dihitung dan semua selisih dijelaskan, tekan Posting opname.",
+              "2": "Stok diperbaiki sebesar selisih yang Anda temukan, dengan alasan Anda, di riwayat stok.",
+              "3": "Kalau opname dimulai karena keliru, batalkan saja. Tidak ada yang berubah."
+            },
+            "warn": "Posting tidak bisa dibatalkan. Hitung ulang baris dengan selisih besar sebelum memposting."
+          }
+        }
+      },
+      "reports": {
+        "title": "Laporan",
+        "summary": "Membaca penjualan, pergerakan stok, dan keuntungan untuk periode mana pun, dan mengirimkannya ke akuntan.",
+        "sections": {
+          "period": {
+            "title": "Memilih periode",
+            "steps": {
+              "1": "Buka Laporan dan pilih periodenya: hari ini, 7, 30, atau 90 hari terakhir, bulan ini, bulan lalu, atau tanggal pilihan sendiri.",
+              "2": "Klik laporan untuk membukanya. Tab di atas berpindah laporan tanpa mengubah periode.",
+              "3": "Satu hari dihitung menurut zona waktu apotek, jadi penjualan dini hari masuk ke tanggal yang benar."
+            }
+          },
+          "sales": {
+            "title": "Penjualan",
+            "steps": {
+              "1": "Omzet, uang kembali retur, dan pendapatan bersih, jumlah penjualan, serta rata-rata per penjualan.",
+              "2": "Dirinci per hari, per barang, per kategori, per kasir, dan per cara bayar.",
+              "3": "Penjualan yang dibatalkan tidak dihitung di angka mana pun."
+            }
+          },
+          "movements": {
+            "title": "Kartu stok",
+            "steps": {
+              "1": "Setiap unit masuk dan keluar per produk, dengan siapa yang mencatat dan dokumen di baliknya.",
+              "2": "Buka satu produk untuk melihat setiap pergerakannya: penerimaan, penjualan, pembatalan, retur, pemusnahan, atau opname."
+            },
+            "tip": "Inilah laporan untuk memeriksa bahwa yang keluar dari rak sama dengan yang tercatat di kasir."
+          },
+          "money": {
+            "title": "Keuntungan dan nilai stok",
+            "steps": {
+              "1": "Margin: penjualan dibandingkan harga pokoknya. Harga pokok adalah yang dicatat saat setiap bets diterima, jadi harga baru tidak mengubah margin bulan lalu.",
+              "2": "Nilai stok: nilai isi rak saat ini menurut harga beli, dan berapa lama lagi waktu untuk menjualnya.",
+              "3": "Kerugian kedaluwarsa: apa yang dimusnahkan dan mengapa.",
+              "4": "Pemasok: apa yang dikirim setiap pemasok dan berapa yang akhirnya dimusnahkan."
+            }
+          },
+          "export": {
+            "title": "Mengunduh",
+            "steps": {
+              "1": "Tekan Unduh CSV pada laporan mana pun untuk membukanya di Excel atau Google Sheets.",
+              "2": "Angka rupiah berupa angka biasa, jadi bisa dijumlahkan di spreadsheet."
+            },
+            "tip": "Ini cara termudah mengirim angka bulanan ke akuntan."
+          }
+        }
+      },
+      "accounts": {
+        "title": "Akun staf",
+        "summary": "Membuat akun untuk setiap orang, memilih apa yang boleh mereka lakukan, dan menangani kata sandi yang terlupa.",
+        "sections": {
+          "create": {
+            "title": "Membuat akun",
+            "steps": {
+              "1": "Buka Akun dan tekan Tambah akun.",
+              "2": "Isi nama pengguna (huruf kecil, tanpa spasi) dan nama lengkap seperti yang akan tampil di struk.",
+              "3": "Pilih bahasanya.",
+              "4": "Untuk apoteker, centang Apoteker terdaftar dan isi nomor SIPA dan STRA."
+            },
+            "tip": "Satu akun untuk satu orang, jangan pernah dipakai bersama. Karena itulah setiap penjualan dan perubahan bisa dilacak ke orangnya."
+          },
+          "permissions": {
+            "title": "Apa yang boleh dilakukan",
+            "steps": {
+              "1": "Mulai dari templat: Kasir, Petugas Gudang, atau Manajer.",
+              "2": "Lalu centang atau hapus centang satu per satu. Templat hanyalah titik awal.",
+              "3": "Setiap panduan di halaman ini hanya muncul untuk mereka jika mereka punya hak aksesnya."
+            },
+            "warn": "Harga beli dan keuntungan, akun, pengaturan, dan impor ditandai sensitif. Berikan dengan sengaja."
+          },
+          "password": {
+            "title": "Kata sandi sementara",
+            "steps": {
+              "1": "Saat akun dibuat, kata sandi sekali pakai ditampilkan satu kali.",
+              "2": "Catat dan berikan kepada orangnya. Kata sandi itu tidak bisa ditampilkan lagi.",
+              "3": "Mereka wajib membuat kata sandi sendiri saat pertama masuk. Anda tidak pernah mengetahuinya."
+            },
+            "warn": "Kalau hilang, tidak bisa dipulihkan -- hanya bisa diganti dengan Terbitkan kata sandi baru."
+          },
+          "manage": {
+            "title": "Perubahan selanjutnya",
+            "steps": {
+              "1": "Terbitkan kata sandi baru: untuk kata sandi terlupa atau akun terkunci. Akun itu dikeluarkan dari semua perangkat.",
+              "2": "Tangguhkan: untuk orang yang sudah berhenti. Ia langsung dikeluarkan; tidak ada catatannya yang dihapus, dan akunnya bisa diaktifkan lagi.",
+              "3": "Keluarkan dari semua perangkat: kalau ia lupa keluar di komputer bersama."
+            }
+          },
+          "owner": {
+            "title": "Akun pemilik",
+            "steps": {
+              "1": "Hanya ada satu pemilik, dan tidak ada yang bisa menangguhkan atau mengubah akun pemilik kecuali pemilik sendiri.",
+              "2": "Tidak ada yang bisa menangguhkan akunnya sendiri.",
+              "3": "Kalau pemilik terkunci, pemulihannya dilakukan di komputer tempat sistem dipasang."
+            }
+          }
+        }
+      },
+      "settings": {
+        "title": "Pengaturan",
+        "summary": "Data apotek, struk, pajak, layar yang dipakai, dan batas peringatan.",
+        "sections": {
+          "business": {
+            "title": "Apotek",
+            "steps": {
+              "1": "Nama, deskripsi, alamat, telepon, NPWP, dan nomor izin.",
+              "2": "Nama dan deskripsi muncul di menu dan layar masuk; nama apotek ada di bagian atas setiap struk.",
+              "3": "Zona waktu menentukan kapan hari berganti, jadi menentukan tanggal sebuah penjualan dan hari tepat sebuah bets kedaluwarsa."
+            }
+          },
+          "receipt": {
+            "title": "Struk",
+            "steps": {
+              "1": "Bahasa struk diatur di sini, bukan oleh masing-masing kasir -- pembeli mendapat struk yang sama siapa pun yang melayani.",
+              "2": "Kalimat penutup dicetak di bagian bawah, misalnya ucapan semoga lekas sembuh."
+            }
+          },
+          "modules": {
+            "title": "Fitur yang dinyalakan",
+            "steps": {
+              "1": "Matikan layar yang tidak dipakai apotek: retur, barcode, PPN, narkotika, pemasok, kategori, opname, pemusnahan, impor.",
+              "2": "Mematikan fitur menyembunyikannya dari menu. Tidak ada catatan yang terhapus, dan hak akses tetap menentukan siapa boleh melakukan apa."
+            },
+            "tip": "Biarkan barcode mati sampai pemindai terpasang, dan narkotika mati sampai hari pertama Anda menyediakannya."
+          },
+          "tax": {
+            "title": "PPN",
+            "steps": {
+              "1": "Nyalakan PPN hanya jika apotek memungutnya. Kalau mati, struk berupa nota biasa tanpa pajak.",
+              "2": "Pilih apakah harga sudah termasuk PPN atau belum.",
+              "3": "Tambahkan tarifnya dengan tanggal mulai berlaku. Tarif lama tetap disimpan, jadi struk yang dicetak ulang menunjukkan tarif pada harinya."
+            },
+            "warn": "Apakah apotek memungut PPN diputuskan oleh akuntan, bukan oleh sistem."
+          },
+          "thresholds": {
+            "title": "Batas peringatan dan email harian",
+            "steps": {
+              "1": "Berapa hari sebelum kedaluwarsa sebuah bets menjadi kuning, lalu merah.",
+              "2": "Kapan stok yang tidak terjual dianggap stok tidak bergerak.",
+              "3": "Email harian: ringkasan pagi berisi omzet kemarin dan hal yang perlu diperhatikan, setelah server email diatur."
+            }
+          },
+          "returns": {
+            "title": "Retur",
+            "steps": {
+              "1": "Izinkan stok bersegel kembali ke rak hanya berlaku untuk obat bebas dan alat kesehatan.",
+              "2": "Obat keras, OWA, psikotropika, dan narkotika selalu dikarantina, apa pun pengaturannya."
+            }
+          },
+          "demo": {
+            "title": "Data demo",
+            "steps": {
+              "1": "Selama apotek contoh masih terpasang, bagian ini menawarkan untuk menghapusnya.",
+              "2": "Ketik kalimat konfirmasi untuk menghapusnya. Akun, pengaturan, tarif pajak, dan log audit tetap ada."
+            },
+            "warn": "Menghapus data demo mengosongkan seluruh katalog. Lakukan sebelum memasukkan barang sungguhan, jangan sesudahnya."
           }
         }
       }

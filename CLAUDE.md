@@ -197,6 +197,15 @@ than a spreadsheet library, which would add tens of megabytes to a machine a
 shopkeeper installs. The template writes every cell as text so a date stays
 `2027-12-31` and a barcode keeps its leading zeros.
 
+**The Tutorial button opens written guides, filtered like the menu.**
+`src/lib/tutorials/guides.ts` lists each guide and section with the
+permissions (any of) and module it needs; `/tutorials` shows only what the
+account can use, and each guide's "show me" button runs the guided tour over
+just its own screens. The words are in `guides.items.*` in both catalogues, with
+steps as numbered keys (`"1"`, `"2"`...) because the catalogues are trees of
+strings. When a screen's behaviour changes, change its guide too -- a guide
+that describes the old till is worse than none.
+
 **Add a dependency by editing `package-lock.json`, not by `npm install` on a
 Mac.** npm on macOS prunes the optional platform packages from the lock (esbuild
 and friends for Windows and Linux), which is exactly what broke `npm ci` on

@@ -10,6 +10,7 @@ import {
   useState,
   useTransition,
 } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { NavEntry } from "./Sidebar";
@@ -30,15 +31,20 @@ import { HIDE_NAV_EVENT, REVEAL_NAV_EVENT } from "@/lib/ui/sidebar";
  * that can drift out of sync with the real one. What each chapter points at is
  * in `tutorial-steps.ts`.
  *
- * The layout renders two launcher buttons -- one in the sidebar's bottom
- * section, one in the mobile header, since only one of those two exists at a
- * given screen width. They share this one context rather than each carrying
- * their own state, so there is exactly one prompt and one tour mounted at a
- * time, never a hidden duplicate a screen reader or a script driving the page
- * could land on.
+ * The Tutorial button in the menu opens the written guides (`/tutorials`),
+ * not the tour: a new cashier wants "how do I take a return", and a tour of
+ * fourteen screens is the wrong answer to that. Each guide then starts this
+ * tour limited to its own screens, which is what `open(keys)` is for; without
+ * keys it is the full tour.
+ *
+ * Every launcher shares this one context rather than carrying its own state,
+ * so there is exactly one prompt and one tour mounted at a time, never a
+ * hidden duplicate a screen reader or a script driving the page could land on.
  */
 type TutorialState = {
-  open: () => void;
+  open: (keys?: readonly string[]) => void;
+  /** What a tour limited to `keys` would actually visit on this account. */
+  available: (keys: readonly string[]) => NavEntry[];
 };
 
 const TutorialContext = createContext<TutorialState | null>(null);
@@ -74,8 +80,17 @@ export function TutorialProvider({
   onSeen: () => Promise<void>;
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  // null: no tour. An empty list is never stored -- it means the full tour.
+  const [tour, setTour] = useState<{ chapters: NavEntry[]; partial: boolean } | null>(null);
+  const open = tour !== null;
   const [promptOpen, setPromptOpen] = useState(!seen);
+  const router = useRouter();
+
+  const available = useCallback(
+    (keys: readonly string[]) =>
+      keys.flatMap((key) => chapters.filter((chapter) => chapter.key === key)),
+    [chapters],
+  );
   const [, startTransition] = useTransition();
 
   // The Escape handler calls these, so they are declared above the effect and
@@ -91,7 +106,7 @@ export function TutorialProvider({
   }, [markSeen]);
 
   const closeTour = useCallback(() => {
-    setOpen(false);
+    setTour(null);
     markSeen();
   }, [markSeen]);
 
@@ -105,50 +120,99 @@ export function TutorialProvider({
     return () => window.removeEventListener("keydown", onEscape);
   }, [open, promptOpen, closeTour, dismissPrompt]);
 
-  const startTour = () => {
+  const startTour = (keys?: readonly string[]) => {
+    const limited = keys?.length ? available(keys) : [];
     setPromptOpen(false);
-    setOpen(true);
+    setTour(
+      limited.length > 0 ? { chapters: limited, partial: true } : { chapters, partial: false },
+    );
     markSeen();
   };
 
-  const openFromLauncher = () => {
-    setPromptOpen(false);
-    setOpen(true);
+  const browseGuides = () => {
+    dismissPrompt();
+    router.push("/tutorials");
   };
 
   return (
-    <TutorialContext.Provider value={{ open: openFromLauncher }}>
+    <TutorialContext.Provider value={{ open: startTour, available }}>
       {children}
 
-      {promptOpen ? <TutorialPrompt onStart={startTour} onDismiss={dismissPrompt} /> : null}
+      {promptOpen ? (
+        <TutorialPrompt
+          onStart={() => startTour()}
+          onGuides={browseGuides}
+          onDismiss={dismissPrompt}
+        />
+      ) : null}
 
-      {open ? <GuidedTour chapters={chapters} isOwner={isOwner} onClose={closeTour} /> : null}
+      {tour ? (
+        <GuidedTour
+          chapters={tour.chapters}
+          partial={tour.partial}
+          isOwner={isOwner}
+          onClose={closeTour}
+        />
+      ) : null}
     </TutorialContext.Provider>
   );
 }
 
-/** Placed in the sidebar's bottom section and, separately, the mobile header. */
+/**
+ * Placed in the sidebar's bottom section and, separately, the mobile header.
+ * A link to the guides, so it works as one: middle-click, back button, and
+ * a URL somebody can be sent.
+ */
 export function TutorialLauncher({ variant }: { variant: "block" | "compact" }) {
   const t = useTranslations("tutorial");
-  const ctx = useContext(TutorialContext);
-  if (!ctx) return null;
+  const pathname = usePathname();
+  const here = pathname === "/tutorials" || pathname.startsWith("/tutorials/");
 
   return (
-    <button
-      type="button"
-      onClick={ctx.open}
+    <Link
+      href="/tutorials"
       aria-label={t("launcher")}
+      aria-current={here ? "page" : undefined}
       title={t("launcher")}
-      className={
+      className={`${
         variant === "block"
           ? "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-ink md:group-data-[collapsed=true]/side:justify-center md:group-data-[collapsed=true]/side:px-0"
           : "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-ink"
-      }
+      } ${here ? "bg-sidebar-hover text-sidebar-ink" : ""}`}
     >
       <TutorialIcon />
       {variant === "block" ? (
         <span className="md:group-data-[collapsed=true]/side:sr-only">{t("launcher")}</span>
       ) : null}
+    </Link>
+  );
+}
+
+/**
+ * Starts the on-screen tour from a guide. Absent when none of the guide's
+ * screens are in this account's menu -- a button that would open an empty
+ * tour is worse than none.
+ */
+export function StartTourButton({
+  keys,
+  label,
+  hint,
+  className,
+}: {
+  /** Menu entries to walk through; empty for the full tour. */
+  keys: readonly string[];
+  label: string;
+  hint?: string;
+  className: string;
+}) {
+  const ctx = useContext(TutorialContext);
+  if (!ctx) return null;
+  if (keys.length > 0 && ctx.available(keys).length === 0) return null;
+
+  return (
+    <button type="button" onClick={() => ctx.open(keys)} title={hint} className={className}>
+      <TutorialIcon />
+      {label}
     </button>
   );
 }
@@ -174,7 +238,15 @@ function TutorialIcon() {
   );
 }
 
-function TutorialPrompt({ onStart, onDismiss }: { onStart: () => void; onDismiss: () => void }) {
+function TutorialPrompt({
+  onStart,
+  onGuides,
+  onDismiss,
+}: {
+  onStart: () => void;
+  onGuides: () => void;
+  onDismiss: () => void;
+}) {
   const t = useTranslations("tutorial");
 
   return (
@@ -190,13 +262,20 @@ function TutorialPrompt({ onStart, onDismiss }: { onStart: () => void; onDismiss
         </span>
         <h2 className="mt-3 text-lg font-semibold text-ink">{t("prompt.title")}</h2>
         <p className="mt-1.5 text-sm text-muted">{t("prompt.body")}</p>
-        <div className="mt-5 flex justify-end gap-2">
+        <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
           <button
             type="button"
             onClick={onDismiss}
-            className="rounded-lg px-3 py-2 text-sm text-muted hover:text-ink"
+            className="mr-auto rounded-lg px-3 py-2 text-sm text-muted hover:text-ink"
           >
             {t("prompt.later")}
+          </button>
+          <button
+            type="button"
+            onClick={onGuides}
+            className="rounded-lg px-3 py-2 text-sm text-accent hover:underline"
+          >
+            {t("prompt.guides")}
           </button>
           <button type="button" onClick={onStart} className={buttonPrimary}>
             {t("prompt.start")}
@@ -257,10 +336,13 @@ function placeCard(hole: Rect | null, card: { w: number; h: number }) {
 
 function GuidedTour({
   chapters,
+  partial,
   isOwner,
   onClose,
 }: {
   chapters: NavEntry[];
+  /** Limited to one guide's screens, so the intro must not promise every screen. */
+  partial: boolean;
   isOwner: boolean;
   onClose: () => void;
 }) {
@@ -465,7 +547,8 @@ function GuidedTour({
   let instruction: string | null = null;
   if (step.kind === "intro") {
     title = t("intro.title");
-    body = `${t(isOwner ? "intro.owner" : "intro.staff")} ${t("tour.how")}`;
+    const intro = partial ? "intro.partial" : isOwner ? "intro.owner" : "intro.staff";
+    body = `${t(intro)} ${t("tour.how")}`;
   } else if (step.kind === "outro") {
     title = t("outro.title");
     body = t("outro.body");

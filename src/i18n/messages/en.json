@@ -1116,12 +1116,14 @@
       "title": "New here?",
       "body": "A short tour that shows you on the real screens where everything is and how to use it. About five minutes, and nothing is saved.",
       "start": "Start tutorial",
-      "later": "Maybe later"
+      "later": "Maybe later",
+      "guides": "Read the guides"
     },
     "intro": {
       "title": "Welcome",
       "owner": "This walkthrough covers every screen in the pharmacy system, since your account holds every permission. You can reopen it any time from this button.",
-      "staff": "This walkthrough only covers the screens set up for your account -- if something you use is missing here, ask the owner about your permissions. You can reopen it any time from this button."
+      "staff": "This walkthrough only covers the screens set up for your account -- if something you use is missing here, ask the owner about your permissions. You can reopen it any time from this button.",
+      "partial": "This walkthrough shows the screens for this guide, one part at a time. It skips anything your account cannot use."
     },
     "chapters": {
       "dashboard": "The first screen after signing in. It shows at a glance what needs attention today.",
@@ -1431,6 +1433,796 @@
           "demo": {
             "title": "Demo data",
             "body": "All the sample medicines, stock and sales. Clear them here before entering your own items, because clearing empties the whole catalogue. Accounts and settings stay."
+          }
+        }
+      }
+    }
+  },
+  "guides": {
+    "title": "Tutorials",
+    "subtitle": "Step-by-step guides for the work your account does",
+    "startHere": "Start here",
+    "forYou": "Guides for your work",
+    "notListed": "Only the guides for what your account may do are listed. If you need a job that is not here, ask the owner to check your permissions.",
+    "showMe": "Show me on screen",
+    "showMeHint": "Lights up the real screens one part at a time. Nothing is saved.",
+    "fullTour": "Take the full tour",
+    "fullTourHint": "Every screen in your menu, one after another, in about five minutes.",
+    "back": "All tutorials",
+    "contents": "In this guide",
+    "next": "Next guide",
+    "sections": "{count} parts",
+    "tip": "Tip",
+    "careful": "Careful",
+    "items": {
+      "start": {
+        "title": "Getting started",
+        "summary": "Signing in, finding your way around, and the few rules the system never bends.",
+        "sections": {
+          "signIn": {
+            "title": "Signing in the first time",
+            "steps": {
+              "1": "The owner gives you a username and a temporary password. It is shown to them only once, so write it down when they hand it over.",
+              "2": "Open the pharmacy system in the browser and sign in with them.",
+              "3": "You are asked to set your own password straight away. Nothing else opens until you do.",
+              "4": "Choose something only you know. The owner never sees it -- that is what lets every sale be credited to the person who really made it."
+            },
+            "tip": "Forgot your password? Nobody can look it up, not even the owner. Ask them to issue a new temporary one and you will set a fresh password again."
+          },
+          "menu": {
+            "title": "Finding your way around",
+            "steps": {
+              "1": "The menu on the left only lists the screens your account may use, grouped under Selling, Stock, Reports & records and Administration.",
+              "2": "The purple Open the till button at the top is where you serve customers. It is the screen most people use all day.",
+              "3": "Hover over a menu entry to read what that screen is for.",
+              "4": "On a computer, the arrow at the top of the menu shrinks it to icons for more room. On a phone the menu is tucked away behind the ☰ button.",
+              "5": "The Tutorial button at the bottom of the menu brings you back to these guides at any time. Sign out is next to it."
+            },
+            "tip": "The system works in the language set on your account. To change it, ask the owner."
+          },
+          "dashboard": {
+            "title": "The first screen",
+            "steps": {
+              "1": "After signing in you land on the dashboard.",
+              "2": "The four numbers at the top are the ones to check every morning: expired medicine still on the shelf, medicine that has run out, medicine expiring soon, and medicine running low.",
+              "3": "Below them are today's takings and a chart of the last 30 days, and the size of the catalogue.",
+              "4": "Click a number to open the alerts or the list behind it."
+            }
+          },
+          "alerts": {
+            "title": "The alert count in the menu",
+            "steps": {
+              "1": "The number next to Alerts in the menu tells you how many things need doing.",
+              "2": "Red means something urgent: stock has run out, or expired medicine is still on the shelf.",
+              "3": "Amber means something to plan for: reorder soon, or expiring soon.",
+              "4": "See the Alerts guide for what to do about each one."
+            }
+          },
+          "rules": {
+            "title": "Rules the system never bends",
+            "steps": {
+              "1": "Expired medicine cannot be sold. The till refuses it, and no permission can override that.",
+              "2": "Nothing is ever deleted. Sales are voided, items are archived, accounts are suspended -- and the record of what happened stays.",
+              "3": "Every change is recorded under the name of the person who made it. Never share an account or sign in for someone else.",
+              "4": "Stock is never typed in by hand. It goes up when a delivery is received and down when medicine is sold, returned to quarantine or written off."
+            },
+            "warn": "If the system refuses something, it is usually protecting a patient or the records. Ask the owner or pharmacist rather than looking for a way around it."
+          },
+          "help": {
+            "title": "Where to go next",
+            "steps": {
+              "1": "Pick the guide for the job you are about to do from the Tutorials page.",
+              "2": "Each guide has a \"Show me on screen\" button that walks you through the real screens without saving anything.",
+              "3": "The demo pharmacy that comes with a new install is safe to practise on until the owner clears it."
+            }
+          }
+        }
+      },
+      "setup": {
+        "title": "Setting up the pharmacy",
+        "summary": "For the owner: the order to do things in when the pharmacy starts using the system for real.",
+        "sections": {
+          "demo": {
+            "title": "1. Clear the demo data -- first, not last",
+            "steps": {
+              "1": "A new install comes with a sample pharmacy so staff can practise on the till.",
+              "2": "When you are ready to go live, open Settings and scroll to Demo data at the bottom.",
+              "3": "Type the confirmation phrase and press Clear the demo data.",
+              "4": "Accounts, permissions, settings, tax rates and the audit log stay. Items, stock, sales and everything else built on them are emptied."
+            },
+            "warn": "Clearing empties the whole catalogue, including anything you added yourself. Do it before you enter your real medicines, never after."
+          },
+          "details": {
+            "title": "2. The pharmacy's details",
+            "steps": {
+              "1": "In Settings, fill in the name, description, address, phone and licence number. The name appears in the menu, on the sign-in screen and at the top of every receipt.",
+              "2": "Check the timezone. It decides when a day starts, which decides which day a sale belongs to and the exact day a batch expires.",
+              "3": "Choose the receipt language and the line printed at its foot.",
+              "4": "Switch off features you will not use, and set PPN only if your accountant says the pharmacy charges it."
+            }
+          },
+          "lists": {
+            "title": "3. Categories and suppliers",
+            "steps": {
+              "1": "Add the categories you want to group medicines by, for example Antibiotics, Vitamins, Analgesics.",
+              "2": "Add the suppliers (PBF) you buy from, with a contact person and phone number."
+            },
+            "tip": "Do these before the medicines: the item form and the delivery form pick from these lists."
+          },
+          "catalogue": {
+            "title": "4. Enter the medicines",
+            "steps": {
+              "1": "Add each medicine under Items → Add item, or many at once with Import.",
+              "2": "For an import, download the template, fill in the Data sheet (the Guide sheet explains every column) and upload it. A row can carry the stock already on the shelf too, with its batch number and expiry.",
+              "3": "An item holds no stock of its own. It shows zero until stock is received against it."
+            }
+          },
+          "opening": {
+            "title": "5. Enter what is already on the shelf",
+            "steps": {
+              "1": "For each medicine on the shelf, open Receive stock.",
+              "2": "Enter the batch number and expiry printed on the box, and the quantity you counted.",
+              "3": "Tick Opening stock. This marks it as stock you already had, not a new purchase.",
+              "4": "If the batch number of old stock is unknown, tick Lot number unknown -- the expiry date is still required."
+            },
+            "warn": "Opening stock is only for the first day. Every delivery after that is a normal delivery with Opening stock left unticked."
+          },
+          "staff": {
+            "title": "6. Accounts for the staff",
+            "steps": {
+              "1": "Under Accounts, create one account per person. Never a shared one.",
+              "2": "Start from the Cashier, Stock clerk or Manager template and adjust the boxes.",
+              "3": "Hand each person their temporary password. They set their own at first sign-in."
+            }
+          },
+          "count": {
+            "title": "7. Check it with a count",
+            "steps": {
+              "1": "Once the opening stock is in, run a stock count category by category.",
+              "2": "Any difference shows you a box that was missed or mistyped, and posting the count corrects it with a reason on record."
+            },
+            "tip": "From here, the Tutorials page shows each member of staff only the guides for what their account can do."
+          }
+        }
+      },
+      "cashier": {
+        "title": "Working the till",
+        "summary": "Serving a customer from start to finish: finding the medicine, the batch, the payment and the receipt.",
+        "sections": {
+          "open": {
+            "title": "Opening the till",
+            "steps": {
+              "1": "Press the purple Open the till button at the top of the menu.",
+              "2": "The cursor is already in the search box, so you can type or scan straight away.",
+              "3": "Each sale is recorded under your name. If someone else takes over the counter, they sign in with their own account."
+            },
+            "tip": "Leave the till open all day. A new sale starts as soon as the last one is completed."
+          },
+          "find": {
+            "title": "1. Find the medicine",
+            "steps": {
+              "1": "Type part of the name or the code, for example \"para\" for Paracetamol, and press Enter.",
+              "2": "With a barcode scanner, just scan the box. The search box reads it like typing.",
+              "3": "On a phone or tablet, the camera button scans the barcode too.",
+              "4": "Each result shows the stock left and the price. Click the right one to put it in the basket."
+            },
+            "tip": "If nothing is found, try the generic name instead of the brand, or fewer letters. If it really is missing, the medicine has not been added to the catalogue yet -- tell whoever manages stock."
+          },
+          "basket": {
+            "title": "2. Set the quantity",
+            "steps": {
+              "1": "Press + or −, or type the number in the quantity box.",
+              "2": "The quantity is in the smallest unit: tablets, capsules, bottles.",
+              "3": "To sell several medicines, search again and add each one. Press Remove on a line that was picked by mistake."
+            },
+            "warn": "If you ask for more than is in stock, the till says so and the sale cannot be completed. Medicine that has run out or expired cannot be added at all."
+          },
+          "batch": {
+            "title": "3. Check the batch",
+            "steps": {
+              "1": "Under each line the till shows which batch is going out and its expiry date.",
+              "2": "It always picks the batch that expires soonest, so older stock leaves first.",
+              "3": "Take the box with that batch number off the shelf and check that it matches."
+            },
+            "tip": "If the box in your hand is from a different batch, the shelf is out of order: put the soonest-expiring box at the front."
+          },
+          "batchOverride": {
+            "title": "Choosing a different batch",
+            "steps": {
+              "1": "Your account may choose a batch other than the soonest-expiring one.",
+              "2": "Open the batch list on the line and pick the one you are handing over.",
+              "3": "Type a short reason, for example \"customer needs a later expiry\". It is kept with the sale."
+            }
+          },
+          "price": {
+            "title": "Changing a price",
+            "steps": {
+              "1": "Your account may change the unit price on a line.",
+              "2": "Only do so when the owner's price list says so. The change is recorded with the sale under your name."
+            }
+          },
+          "discount": {
+            "title": "Giving a discount",
+            "steps": {
+              "1": "Type the discount amount in rupiah in the Discount field under the subtotal.",
+              "2": "The total updates straight away. The discount cannot be more than the subtotal."
+            }
+          },
+          "pay": {
+            "title": "4. Take the payment",
+            "steps": {
+              "1": "Check the total with the customer.",
+              "2": "Choose how they pay: cash, debit card, credit card, QRIS, bank transfer or other.",
+              "3": "For cash, type what the customer handed over, for example 50000 or 50.000. The change to give back appears straight away."
+            }
+          },
+          "finish": {
+            "title": "5. Complete the sale",
+            "steps": {
+              "1": "Press Complete sale. The stock comes off the shelf and the receipt number appears.",
+              "2": "Press View receipt and print it for the customer.",
+              "3": "Press New sale, or just start typing, to serve the next customer."
+            },
+            "tip": "The receipt shows the batch of every medicine. If there is ever a recall, that is how the pharmacy finds who received it."
+          },
+          "classes": {
+            "title": "Drug class marks",
+            "steps": {
+              "1": "Each medicine shows the same mark as its packaging.",
+              "2": "Green circle: Obat Bebas, over the counter.",
+              "3": "Blue circle: Obat Bebas Terbatas, over the counter with a warning.",
+              "4": "Red circle with K: Obat Keras and other prescription medicines."
+            },
+            "warn": "The till does not check prescriptions for you. Obat keras, psikotropika and narkotika follow the pharmacist's rules -- when in doubt, call the pharmacist before selling."
+          },
+          "mistakes": {
+            "title": "When something goes wrong",
+            "steps": {
+              "1": "Before pressing Complete sale, nothing is saved. Remove the wrong line or leave the till and start again.",
+              "2": "After it is completed, a sale is never deleted. A mistake is voided, and a customer bringing medicine back is a return.",
+              "3": "If your account cannot void or take returns, call whoever can, and give them the receipt number."
+            },
+            "warn": "Never ring up a new sale to cancel out a wrong one. The stock and the takings would both end up wrong."
+          },
+          "history": {
+            "title": "Finding an earlier sale",
+            "steps": {
+              "1": "Open Sales history in the menu to see earlier receipts.",
+              "2": "Click a receipt number to see it and reprint it if the customer asks.",
+              "3": "Unless your account may see everyone's, the list only shows the sales you made."
+            }
+          }
+        }
+      },
+      "returns": {
+        "title": "Voids and returns",
+        "summary": "Undoing a sale entered by mistake, and taking medicine back from a customer.",
+        "sections": {
+          "which": {
+            "title": "Void or return?",
+            "steps": {
+              "1": "Void: the sale should never have happened -- wrong item, wrong quantity, rung up twice. Every unit goes back to its batch as if it never left.",
+              "2": "Return: the sale was real, and the customer has brought some or all of it back later.",
+              "3": "Both start from the receipt: open Sales history and click the receipt number."
+            },
+            "tip": "The medicine never left the counter? Void. It went home with the customer? Return."
+          },
+          "void": {
+            "title": "Voiding a sale",
+            "steps": {
+              "1": "Open the receipt from Sales history.",
+              "2": "Press Void sale and type the reason, for example \"rung up twice\".",
+              "3": "Confirm. The receipt stays on record marked as voided, with your name and the reason, and the stock goes back.",
+              "4": "Voided sales are left out of every sales figure."
+            },
+            "warn": "A sale that has already had a return cannot be voided -- the returned units would be booked back twice. The void button disappears once there is a return."
+          },
+          "return": {
+            "title": "Taking a return",
+            "steps": {
+              "1": "Open the receipt the medicine was sold on, and press Process a return.",
+              "2": "For each line, enter how many units are coming back. You cannot return more than was sold, or more than has not already come back.",
+              "3": "Write why it is coming back, for example \"wrong dose dispensed\".",
+              "4": "Choose how the refund is paid. The refund is worked out from what the customer actually paid, discount included.",
+              "5": "Press Record the return and give the customer the refund."
+            }
+          },
+          "quarantine": {
+            "title": "Where returned medicine goes",
+            "steps": {
+              "1": "Returned medicine goes to quarantine, not back on the shelf. Once a box has left the counter, nobody knows how it was kept.",
+              "2": "Obat keras, OWA, psikotropika and narkotika are always quarantined.",
+              "3": "Sealed over-the-counter stock can go back on sale only if the owner has switched that on in Settings."
+            },
+            "warn": "Put the returned box aside, away from the shelf. Quarantined stock is written off from the Disposal screen."
+          },
+          "after": {
+            "title": "Checking returns",
+            "steps": {
+              "1": "The Returns screen lists every return with its reason, the refund and who took it.",
+              "2": "The receipt also shows the returns made against it."
+            }
+          }
+        }
+      },
+      "delivery": {
+        "title": "When a delivery arrives",
+        "summary": "Booking in a new batch from a supplier so the stock goes up -- and doing it so a recall can be traced.",
+        "sections": {
+          "before": {
+            "title": "Before you start",
+            "steps": {
+              "1": "Check the boxes against the supplier's invoice: the right medicines, the right quantities, nothing damaged.",
+              "2": "Check the expiry date on every batch. Refuse medicine that is expired or expires too soon, before it is booked in.",
+              "3": "Make sure each medicine already exists under Items. A new medicine has to be added to the catalogue first -- see the guide for new medicines."
+            },
+            "warn": "Book in each batch number separately. Two batches of the same medicine have different expiry dates, and mixing them means the wrong one is sold first."
+          },
+          "scan": {
+            "title": "Scanning the box",
+            "steps": {
+              "1": "Open Receive stock in the menu and put the cursor in the scan field.",
+              "2": "Scan the barcode and press Enter.",
+              "3": "A GS1 barcode (the square or long one with batch and expiry inside) fills in the medicine, the batch number and the expiry by itself.",
+              "4": "If the barcode is not on file yet, pick the medicine below and the code is saved with it, so it is recognised next time."
+            },
+            "tip": "Always check what the scan filled in against the printing on the box."
+          },
+          "form": {
+            "title": "1. Which medicine, from whom",
+            "steps": {
+              "1": "Choose the medicine that arrived.",
+              "2": "Choose the supplier. \"Saldo Awal\" is only for stock that was already on the shelf when the system started.",
+              "3": "Check the date received. It is today unless you are booking in yesterday's delivery late."
+            }
+          },
+          "lot": {
+            "title": "2. The batch number",
+            "steps": {
+              "1": "Copy it off the packaging exactly. It is usually marked \"Batch\", \"Lot\" or \"No. Bets\".",
+              "2": "Only for old stock from paper records with no batch number, tick Lot number unknown."
+            },
+            "tip": "The batch number is what a BPOM recall names. Getting it right is what lets the pharmacy find every box and every customer."
+          },
+          "expiry": {
+            "title": "3. The expiry date",
+            "steps": {
+              "1": "Required for every batch.",
+              "2": "Boxes usually print only a month and a year: pick the month and type the year, for example 2027.",
+              "3": "The batch is treated as expired from the end of that month."
+            },
+            "warn": "Read it twice. A wrong expiry means medicine is either sold after it expires or thrown away while it is still good."
+          },
+          "quantity": {
+            "title": "4. Quantity and cost",
+            "steps": {
+              "1": "Enter how many arrived. Switch between units (tablets, capsules) and packs -- in packs, the system works out the units from the pack size.",
+              "2": "Enter the cost price from the invoice, per unit or per pack. Per pack, the per-unit cost is worked out for you.",
+              "3": "Leave Opening stock unticked. It is only for stock that was on the shelf when the system started."
+            },
+            "tip": "The cost price is what the profit reports are built on, and it is kept with this batch forever. A later delivery at a new price does not change it."
+          },
+          "save": {
+            "title": "5. Save",
+            "steps": {
+              "1": "Press Save delivery. The stock goes up straight away and the till can sell it.",
+              "2": "The delivery appears in the list under Received today.",
+              "3": "Repeat for each batch on the invoice.",
+              "4": "Put the new boxes behind the older ones on the shelf, so the soonest expiry goes out first."
+            }
+          },
+          "wrong": {
+            "title": "If you made a mistake",
+            "steps": {
+              "1": "A saved delivery is never edited or deleted -- the stock history cannot be changed.",
+              "2": "A wrong quantity is corrected with a stock count: count that medicine, and posting the count books the difference with a reason.",
+              "3": "Tell whoever manages the stock straight away, while the invoice is still at hand."
+            },
+            "warn": "Do not book the delivery in a second time to \"fix\" it. That doubles the stock."
+          }
+        }
+      },
+      "medicines": {
+        "title": "Adding new medicines",
+        "summary": "Putting a new drug in the catalogue: the details that matter, the class, units, prices and barcodes.",
+        "sections": {
+          "check": {
+            "title": "First, check it is not already there",
+            "steps": {
+              "1": "Open Items and search by generic name, brand name and NIE number.",
+              "2": "If it is there but archived, change the status filter to Archived and restore it instead of adding a copy.",
+              "3": "A different strength or form is a different item: Amoxicillin 250 mg and 500 mg are two items."
+            },
+            "tip": "One item per product you sell. Two items for the same product split its stock, and the till will say it has run out when it has not."
+          },
+          "basics": {
+            "title": "1. The name and form",
+            "steps": {
+              "1": "Open Items and press Add item.",
+              "2": "Generic name: the active ingredient, for example Amoxicillin. Brand name: what is on the box, if different.",
+              "3": "Choose the form (tablet, capsule, syrup...) and write the strength, for example 500 mg or 125 mg/5 mL.",
+              "4": "Leave the code blank and one is made from the generic name.",
+              "5": "Enter the BPOM registration number (NIE). It is how a product recall is matched to your stock."
+            }
+          },
+          "class": {
+            "title": "2. The drug class",
+            "steps": {
+              "1": "Choose the class printed on the packaging: Obat Bebas, Obat Bebas Terbatas, Obat Keras, OWA, jamu, herbal, a medical device or a consumable.",
+              "2": "Psikotropika and narkotika appear in the list only once the owner has switched them on in Settings.",
+              "3": "Choose a category too, so the item appears in the right lists, counts and reports."
+            },
+            "warn": "The class decides what happens on a return: obat keras, OWA, psikotropika and narkotika are always quarantined. Pick it from the box, not from memory."
+          },
+          "units": {
+            "title": "3. Units and packs",
+            "steps": {
+              "1": "Unit: the smallest thing you count and sell -- tablet, capsule, bottle, vial.",
+              "2": "Units per pack: how many units come in the box the supplier sends, for example 100 tablets per box.",
+              "3": "Deliveries can then be booked in by the box, and the system turns boxes into units."
+            },
+            "tip": "If you sell strips of 10 but count single tablets, the unit is tablet. Stock is always in units."
+          },
+          "stockLevels": {
+            "title": "4. When to reorder",
+            "steps": {
+              "1": "Reorder point: the stock level at which the low-stock alert fires. Set it to what you sell before the next delivery can arrive.",
+              "2": "Suggested order quantity: how much to order when it fires. It is shown on the alert.",
+              "3": "Minimum shelf life: the shortest remaining life you want a delivery to arrive with, for example 180 days."
+            }
+          },
+          "price": {
+            "title": "5. The selling price",
+            "steps": {
+              "1": "Enter the sale price per unit in rupiah, for example 1500. Dots are fine: 1.500 means one thousand five hundred.",
+              "2": "Tick PPN exempt only for items your accountant says carry no PPN.",
+              "3": "The till charges this price. Changing it later does not change sales already made."
+            }
+          },
+          "barcodes": {
+            "title": "6. Barcodes",
+            "steps": {
+              "1": "After saving, open the item and add its barcode under Barcodes -- scan it or type it in.",
+              "2": "An item can hold several barcodes, one per supplier's packaging.",
+              "3": "Scanning an unknown barcode while receiving stock also saves it to the item you pick."
+            }
+          },
+          "then": {
+            "title": "After saving",
+            "steps": {
+              "1": "The new item shows 0 in stock. That is correct: stock only comes from receiving a delivery.",
+              "2": "Book in the delivery on Receive stock, with its batch number and expiry.",
+              "3": "From then on it can be found and sold at the till."
+            },
+            "warn": "Never try to put stock on an item by editing it. There is no stock field on an item, on purpose."
+          },
+          "import": {
+            "title": "Adding many at once",
+            "steps": {
+              "1": "Open Items and press Import.",
+              "2": "Download the template. Fill in the Data sheet, one row per medicine; the Guide sheet explains what every column wants.",
+              "3": "Do not rename the column headings on the Data sheet.",
+              "4": "Write dates as 2027-12-31. Barcodes keep their leading zeros because every cell is text.",
+              "5": "A row can also carry the stock already on the shelf: the batch number, expiry and quantity. That is booked in as opening stock.",
+              "6": "Upload the file. You see a preview first, with every row that has a problem and why. Only the rows that pass are saved when you confirm."
+            },
+            "tip": "For a new delivery, use Receive stock rather than import -- import only books in opening stock."
+          },
+          "edit": {
+            "title": "Changing or retiring an item",
+            "steps": {
+              "1": "Open the item and press Edit item to fix a name, class, price or level.",
+              "2": "An item you stop selling is archived, not deleted. It disappears from the till and the list, and its history stays.",
+              "3": "Restore it any time from the Archived filter."
+            }
+          }
+        }
+      },
+      "suppliers": {
+        "title": "Suppliers and categories",
+        "summary": "Keeping the lists that deliveries, items and reports are sorted by.",
+        "sections": {
+          "suppliers": {
+            "title": "Suppliers",
+            "steps": {
+              "1": "Open Suppliers and fill in the name, a contact person and a phone number.",
+              "2": "Saved suppliers are offered on Receive stock.",
+              "3": "The Suppliers report then shows what each one delivered and how much of it ended up written off."
+            }
+          },
+          "categories": {
+            "title": "Categories",
+            "steps": {
+              "1": "Open Categories and type a name, for example Antibiotics or Vitamins.",
+              "2": "Choose the category on each item.",
+              "3": "Categories group the catalogue, let you count one shelf at a time, and split the sales and stock-value reports."
+            },
+            "tip": "Name categories the way the shelves are laid out. Counting one category then means counting one shelf."
+          }
+        }
+      },
+      "alerts": {
+        "title": "Alerts and expiry",
+        "summary": "What each alert means, the daily routine, and what to do so nothing expires on the shelf.",
+        "sections": {
+          "kinds": {
+            "title": "What the alerts mean",
+            "steps": {
+              "1": "Expired stock on shelf (red): a batch has passed its expiry and still has units. The till already refuses it; it still has to come off the shelf.",
+              "2": "Out of stock (red): nothing left to sell.",
+              "3": "Expiring urgently (red) and Expiring soon (amber): a batch is close to its expiry. How close is set in Settings.",
+              "4": "Low stock (amber): at or below the item's reorder point.",
+              "5": "Dead stock: has not sold for a long time and is heading for expiry."
+            }
+          },
+          "routine": {
+            "title": "Every morning",
+            "steps": {
+              "1": "Look at the count next to Alerts in the menu, or the four numbers on the dashboard.",
+              "2": "Open Alerts. The most urgent are always at the top.",
+              "3": "Take expired stock off the shelf first, and put it aside for disposal.",
+              "4": "For medicine expiring soon, move it to the front of the shelf so it sells first.",
+              "5": "For low and out-of-stock medicine, pass the list to whoever orders."
+            },
+            "tip": "Alerts are checked automatically every day. The Refresh button checks again straight away, for example after a delivery."
+          },
+          "act": {
+            "title": "Handling an alert",
+            "steps": {
+              "1": "Mark as handled once it is dealt with, for example \"already ordered\". Your name is recorded on it.",
+              "2": "Snooze hides it for a few days, for example while a delivery is on its way.",
+              "3": "View item opens the medicine, with its batches and expiry dates."
+            }
+          },
+          "critical": {
+            "title": "Red alerts cannot be snoozed",
+            "steps": {
+              "1": "Expired stock stays on the list until it is off the shelf and written off in Disposal.",
+              "2": "That is deliberate: expired medicine must never be forgotten on the shelf."
+            },
+            "warn": "Marking an expired-stock alert as handled does not remove the medicine. Only writing it off does."
+          }
+        }
+      },
+      "disposal": {
+        "title": "Writing off expired or damaged stock",
+        "summary": "Recording medicine that is destroyed or sent back, so the stock and the loss are both right.",
+        "sections": {
+          "when": {
+            "title": "What goes here",
+            "steps": {
+              "1": "Expired batches and quarantined returns appear by themselves under Waiting to be written off.",
+              "2": "A write-off is a loss: medicine that is destroyed, damaged or sent back to the supplier.",
+              "3": "It is not for correcting a miscount -- that is what a stock count is for."
+            }
+          },
+          "steps": {
+            "title": "Writing it off",
+            "steps": {
+              "1": "Take the boxes off the shelf and have them in your hand.",
+              "2": "Open Disposal and press Write off on the batch.",
+              "3": "Check the batch number against the box. Enter how many are being destroyed.",
+              "4": "Write the reason (expired, damaged...) and how it was destroyed (incinerated, returned to supplier...).",
+              "5": "Choose who witnessed it, if anyone did.",
+              "6": "Press Write this stock off and confirm."
+            },
+            "warn": "A disposal cannot be undone. Check the batch number and the quantity against what is in your hand before confirming."
+          },
+          "why": {
+            "title": "Why it matters",
+            "steps": {
+              "1": "The Disposal record shows everything written off and the total loss for the last 30 days.",
+              "2": "The Expiry loss report shows which medicines keep being thrown away. Those are the ones being over-ordered."
+            },
+            "tip": "Keep any disposal paperwork (berita acara) with the disposal number the system gives you."
+          }
+        }
+      },
+      "counts": {
+        "title": "Stock counts (opname)",
+        "summary": "Counting the shelf, comparing it with the system, and correcting the difference with a reason.",
+        "sections": {
+          "when": {
+            "title": "When to count",
+            "steps": {
+              "1": "After entering opening stock, to catch anything missed.",
+              "2": "Regularly, for example once a month, one category at a time.",
+              "3": "Whenever the till says something is out of stock that is on the shelf, or the other way round."
+            },
+            "tip": "One category at a time is far less disruptive than closing the whole pharmacy for a day."
+          },
+          "start": {
+            "title": "1. Start a count",
+            "steps": {
+              "1": "Open Stock count and press Start a count.",
+              "2": "Give it a name, for example \"September opname -- antibiotics\".",
+              "3": "Choose Everything or one category, and press Open the count sheet.",
+              "4": "The system writes down what it believes is on the shelf at that moment, batch by batch."
+            }
+          },
+          "count": {
+            "title": "2. Count the shelf",
+            "steps": {
+              "1": "Press Print the sheet, and count with a pen, batch by batch.",
+              "2": "Count every batch number separately, even if they sit side by side.",
+              "3": "Try not to sell from the shelf being counted until the count is posted."
+            },
+            "warn": "If something is sold mid-count, the system still records the sale correctly -- but your sheet and the shelf will disagree, and the count will show a difference that is not real."
+          },
+          "enter": {
+            "title": "3. Type in what you counted",
+            "steps": {
+              "1": "For each batch, type the number you counted and press Save.",
+              "2": "The difference from what the system expected is shown next to it.",
+              "3": "Every difference needs a reason, for example \"damaged box found\" or \"miscounted at delivery\"."
+            }
+          },
+          "post": {
+            "title": "4. Post the count",
+            "steps": {
+              "1": "When every line is counted and every difference explained, press Post this count.",
+              "2": "The stock is corrected by the difference you found, with your reason attached, in the stock history.",
+              "3": "If the count was started by mistake, cancel it instead. Nothing changes."
+            },
+            "warn": "Posting cannot be undone. Recount any line with a large difference before posting."
+          }
+        }
+      },
+      "reports": {
+        "title": "Reports",
+        "summary": "Reading sales, stock movements and profit for any period, and sending them to the accountant.",
+        "sections": {
+          "period": {
+            "title": "Choosing the period",
+            "steps": {
+              "1": "Open Reports and choose a period: today, the last 7, 30 or 90 days, this month, last month, or your own dates.",
+              "2": "Click a report to open it. The tabs at the top switch report without losing the period.",
+              "3": "A day is a day in the pharmacy's own timezone, so an early-morning sale is counted on the right day."
+            }
+          },
+          "sales": {
+            "title": "Sales",
+            "steps": {
+              "1": "Revenue, refunds and net takings, the number of sales and the average sale.",
+              "2": "Broken down by day, by item, by category, by cashier and by payment method.",
+              "3": "Voided sales are left out of every figure."
+            }
+          },
+          "movements": {
+            "title": "Stock movements",
+            "steps": {
+              "1": "Every unit in and every unit out per product, with who recorded it and the document behind it.",
+              "2": "Open a product to see each movement: delivery, sale, void, return, disposal or count."
+            },
+            "tip": "This is the report for checking that what left the shelf matches what was rung up at the till."
+          },
+          "money": {
+            "title": "Profit and stock value",
+            "steps": {
+              "1": "Margin: what was sold against what it cost. The cost is the one recorded when each batch was received, so a new price does not change last month's margin.",
+              "2": "Stock value: what is on the shelf right now, at cost, and how long it has left to sell.",
+              "3": "Expiry loss: what was written off and why.",
+              "4": "Suppliers: what each supplier delivered and how much of it ended up written off."
+            }
+          },
+          "export": {
+            "title": "Downloading",
+            "steps": {
+              "1": "Press Download CSV on any report to open it in Excel or Google Sheets.",
+              "2": "Amounts are plain numbers, so they add up in a spreadsheet."
+            },
+            "tip": "This is the easiest way to send the month's figures to the accountant."
+          }
+        }
+      },
+      "accounts": {
+        "title": "Staff accounts",
+        "summary": "Creating an account for each person, choosing what they may do, and dealing with forgotten passwords.",
+        "sections": {
+          "create": {
+            "title": "Creating an account",
+            "steps": {
+              "1": "Open Accounts and press Add an account.",
+              "2": "Enter a username (lowercase, no spaces) and the person's full name as it should appear on receipts.",
+              "3": "Choose their language.",
+              "4": "Tick Registered pharmacist, with the SIPA and STRA numbers, for the pharmacist."
+            },
+            "tip": "One account per person, never shared. That is what lets every sale and every change be traced to who made it."
+          },
+          "permissions": {
+            "title": "What they may do",
+            "steps": {
+              "1": "Start from a template: Cashier, Stock clerk or Manager.",
+              "2": "Then tick or untick individual boxes. The template is only a starting point.",
+              "3": "Each guide on this page appears for them only if they hold what it needs."
+            },
+            "warn": "Cost prices and profit, accounts, settings and import are marked as sensitive. Grant them deliberately."
+          },
+          "password": {
+            "title": "The temporary password",
+            "steps": {
+              "1": "When the account is created, a one-time password is shown once.",
+              "2": "Write it down and hand it to the person. It cannot be shown again.",
+              "3": "They must set their own password at first sign-in. You never learn it."
+            },
+            "warn": "If it is lost, it cannot be recovered -- only replaced with Issue a new password."
+          },
+          "manage": {
+            "title": "Later changes",
+            "steps": {
+              "1": "Issue a new password: for a forgotten password or a lockout. It signs them out everywhere.",
+              "2": "Suspend: for someone who has left. They are signed out at once; nothing they recorded is deleted, and the account can be reactivated.",
+              "3": "Sign out everywhere: if they stayed signed in on a shared computer."
+            }
+          },
+          "owner": {
+            "title": "The owner's account",
+            "steps": {
+              "1": "There is exactly one owner, and nobody can suspend or change the owner's account except the owner.",
+              "2": "Nobody can suspend their own account.",
+              "3": "If the owner is locked out, recovery is done on the computer the system is installed on."
+            }
+          }
+        }
+      },
+      "settings": {
+        "title": "Settings",
+        "summary": "The pharmacy's details, receipts, tax, which screens are in use, and alert thresholds.",
+        "sections": {
+          "business": {
+            "title": "The pharmacy",
+            "steps": {
+              "1": "Name, description, address, phone, NPWP and licence number.",
+              "2": "The name and description appear in the menu and on the sign-in screen; the name tops every receipt.",
+              "3": "The timezone decides when a day starts, and so which day a sale belongs to and the exact day a batch expires."
+            }
+          },
+          "receipt": {
+            "title": "Receipts",
+            "steps": {
+              "1": "The receipt language is set here, not by each cashier -- a customer gets the same receipt whoever serves them.",
+              "2": "The footer line is printed at the bottom, for example a get-well message."
+            }
+          },
+          "modules": {
+            "title": "What is switched on",
+            "steps": {
+              "1": "Switch off screens the pharmacy does not use: returns, barcodes, PPN, narkotika, suppliers, categories, counts, disposal, import.",
+              "2": "Switching one off hides it from the menu. It does not delete anything already recorded, and permissions still decide who may do what."
+            },
+            "tip": "Leave barcodes off until a scanner is plugged in, and narkotika off until the day you first stock them."
+          },
+          "tax": {
+            "title": "PPN",
+            "steps": {
+              "1": "Switch PPN on only if the pharmacy charges it. Off means a plain nota with no tax.",
+              "2": "Choose whether prices already include PPN or are before PPN.",
+              "3": "Add the rate with the date it applies from. Old rates are kept, so a reprinted receipt shows the rate of its day."
+            },
+            "warn": "Whether the pharmacy charges PPN is for the accountant to decide, not the system."
+          },
+          "thresholds": {
+            "title": "Alert thresholds and daily email",
+            "steps": {
+              "1": "How many days before expiry a batch turns amber, and then red.",
+              "2": "When unsold stock counts as dead stock.",
+              "3": "The daily email: a morning summary of yesterday's takings and what needs attention, once a mail server is set up."
+            }
+          },
+          "returns": {
+            "title": "Returns",
+            "steps": {
+              "1": "Allow sealed stock back on the shelf applies to over-the-counter items and devices only.",
+              "2": "Obat keras, OWA, psikotropika and narkotika are always quarantined, whatever this setting says."
+            }
+          },
+          "demo": {
+            "title": "Demo data",
+            "steps": {
+              "1": "While the sample pharmacy is still installed, this section offers to clear it.",
+              "2": "Type the confirmation phrase to clear it. Accounts, settings, tax rates and the audit log stay."
+            },
+            "warn": "Clearing empties the whole catalogue. Do it before entering your real items, never after."
           }
         }
       }
