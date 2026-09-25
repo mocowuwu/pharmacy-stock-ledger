@@ -555,15 +555,20 @@ there: `git push --force origin v0.1.5:refs/heads/demo`.
    switching it on with no policies costs the app nothing and leaves the web
    API with no rows to show. Every Vercel build runs it again.
 
-3. **Create the branch** from the current release:
-   `git push origin v0.1.6:refs/heads/demo`.
+3. **Create the branch** once, from the first commit that carries this
+   setup (v0.1.6 does not): `git push origin <commit>:refs/heads/demo`.
+   Every release after that moves it on its own.
 4. **Vercel**: Add New → Project → import `mocowuwu/pharmacy-stock-ledger`.
-   Settings → Git → Production Branch: `demo`. Environment variables:
+   Settings → Git → Production Branch: `demo`.
+5. **Link the database without copying a password**: in Supabase, open the
+   project → Project Settings → Integrations → Vercel → connect it to the
+   Vercel project. That writes `POSTGRES_URL` into Vercel for you, and the app
+   reads it when `DATABASE_URL` is absent. (Pasting the pooler string into
+   `DATABASE_URL` by hand works too.)
+6. Add these in Vercel → Settings → Environment Variables:
 
    | Name | Value |
    | --- | --- |
-   | `DATABASE_URL` | the 6543 transaction-pooler string |
-   | `MIGRATE_DATABASE_URL` | the 5432 string (migrations run during each build) |
    | `DATABASE_MAX_CONNECTIONS` | `2` |
    | `CRON_SECRET` | a long random string (`openssl rand -hex 32`) |
    | `DEMO_MODE` | `1` |

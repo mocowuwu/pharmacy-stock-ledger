@@ -12,10 +12,14 @@
  */
 import "./env";
 import { Pool } from "pg";
+import { databaseUrl } from "../src/db/client";
 
 async function main() {
-  const url = process.env.MIGRATE_DATABASE_URL ?? process.env.DATABASE_URL;
-  if (!url) throw new Error("No DATABASE_URL or MIGRATE_DATABASE_URL set.");
+  if (process.env.MIGRATE_DATABASE_URL) {
+    process.env.DATABASE_URL = process.env.MIGRATE_DATABASE_URL;
+  }
+  const url = databaseUrl();
+  if (!url) throw new Error("No DATABASE_URL, POSTGRES_URL or MIGRATE_DATABASE_URL set.");
 
   const pool = new Pool({ connectionString: url, max: 1 });
   try {

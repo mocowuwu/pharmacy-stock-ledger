@@ -11,20 +11,20 @@
  * otherwise "migrate" nothing and report success.
  */
 import "./env";
-import { getDbHandle, isEphemeral } from "../src/db/client";
+import { databaseUrl, getDbHandle, isEphemeral } from "../src/db/client";
 
 async function main() {
   if (process.env.MIGRATE_DATABASE_URL) {
     process.env.DATABASE_URL = process.env.MIGRATE_DATABASE_URL;
   }
   if (process.argv.includes("--require-url") && isEphemeral()) {
-    throw new Error("No DATABASE_URL or MIGRATE_DATABASE_URL set; refusing to migrate an in-memory database.");
+    throw new Error("No DATABASE_URL, POSTGRES_URL or MIGRATE_DATABASE_URL set; refusing to migrate an in-memory database.");
   }
 
   const { db, close } = await getDbHandle();
   const target = isEphemeral()
     ? "an in-memory database (no DATABASE_URL set)"
-    : process.env.DATABASE_URL!.replace(/:[^:@/]*@/, ":***@");
+    : databaseUrl()!.replace(/:[^:@/]*@/, ":***@");
   console.log(`Applying migrations to ${target}...`);
 
   if (isEphemeral()) {
