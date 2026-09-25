@@ -143,6 +143,12 @@ relax one without saying so explicitly.
 - **CSV writes money as a plain integer**, never a formatted amount: `15000`,
   not `Rp 15.000`. A formatted amount is text to a spreadsheet, so a column of
   them sums to zero -- `parseFloat("15.000")` arriving from the other direction.
+- **The hosted demo is the only deployment with `DEMO_MODE=1`.** It runs on
+  Vercel + Supabase from the `demo` branch, which the release workflow moves
+  to each new tag -- nobody commits to it. `DEMO_MODE` labels every screen and
+  makes `sendMail` refuse; nothing else relaxes. It must never be set on a
+  clinic install. Its nightly alerts come from `/api/cron/alerts`, which
+  refuses every request when `CRON_SECRET` is unset, as it is on a clinic PC.
 
 ## Conventions
 

@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { publicBranding } from "@/lib/dal/settings";
 import { Card } from "@/components/ui";
 import { MAKER } from "@/lib/brand";
+import { isDemo } from "@/lib/demo";
 import { isSafeNextPath } from "@/lib/auth/redirect";
 import { LoginForm } from "./LoginForm";
 
@@ -32,6 +33,12 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           <h1 className="text-2xl font-semibold tracking-tight">
             {branding.businessName ?? t("app.name")}
           </h1>
+          {isDemo() && (
+            <p className="mt-2 inline-flex items-center gap-2 text-xs text-muted">
+              <span className="rounded-md border border-warning/30 bg-warning-soft px-1.5 py-0.5 text-[0.65rem] font-semibold tracking-wide text-warning-ink uppercase">{t("app.demoBadge")}</span>
+              {t("app.demoHint")}
+            </p>
+          )}
           <p className="mt-1 text-sm text-muted">
             {branding.businessTagline ?? t("auth.signInTitle")}
           </p>

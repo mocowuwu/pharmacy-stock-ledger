@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { existsSync } from "node:fs";
 import { eq } from "drizzle-orm";
 import { createTestDb, type TestDb } from "./helpers/db";
 import {
@@ -23,7 +24,7 @@ import {
   renderDigestText,
 } from "@/lib/digest/render";
 import { digestReadiness, runDigestJob } from "@/lib/digest/job";
-import { isConfigured } from "@/lib/digest/send";
+import { isConfigured, sendMail } from "@/lib/digest/send";
 import { addDays, today } from "@/lib/format/date";
 
 let db: TestDb;
@@ -295,9 +296,30 @@ describe("sending", () => {
     if (result.ran) {
       expect(result.delivery.delivered).toBe(false);
       if (!result.delivery.delivered) {
-        expect(result.delivery.previewPath).toContain("test-digest");
         expect(result.delivery.reason).toBe("not_configured");
+        if (result.delivery.reason === "not_configured") {
+          expect(result.delivery.previewPath).toContain("test-digest");
+        }
       }
+    }
+  });
+
+  it("sends nothing and writes nothing on the hosted demo", async () => {
+    const mail = { to: "someone@example.com", subject: "s", html: "<p>x</p>", text: "x" };
+    const smtp = {
+      host: "smtp.example.com", port: 587, user: null, password: null,
+      from: "apotek@example.com", secure: false,
+    };
+    const previous = process.env.DEMO_MODE;
+    process.env.DEMO_MODE = "1";
+    try {
+      // Configured, so outside the demo this would open a connection.
+      expect(await sendMail(smtp, mail, { previewDir: ".data/test-digest-demo" }))
+        .toEqual({ delivered: false, reason: "demo" });
+      expect(existsSync(".data/test-digest-demo")).toBe(false);
+    } finally {
+      if (previous === undefined) delete process.env.DEMO_MODE;
+      else process.env.DEMO_MODE = previous;
     }
   });
 

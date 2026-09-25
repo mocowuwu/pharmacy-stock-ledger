@@ -23,6 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Create release
         env:
@@ -31,3 +33,11 @@ jobs:
           gh release create "${{ github.ref_name }}" \
             --title "${{ github.ref_name }}" \
             --generate-notes
+
+      # The hosted demo (Vercel) deploys the `demo` branch and nothing else, so
+      # it moves when a release ships -- the same moment clinics can update --
+      # and never runs unreleased work from main. Nobody commits to `demo`; it
+      # only points at the latest release, and rolling the demo back is
+      # pushing an older tag here.
+      - name: Point the demo at this release
+        run: git push --force origin "${{ github.sha }}:refs/heads/demo"

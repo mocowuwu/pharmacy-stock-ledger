@@ -1,7 +1,9 @@
 {
   "app": {
     "name": "Clinic Pharmacy",
-    "tagline": "Stock and dispensing system"
+    "tagline": "Stock and dispensing system",
+    "demoBadge": "Demo",
+    "demoHint": "Sample pharmacy, not a live one"
   },
   "common": {
     "save": "Save",

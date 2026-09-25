@@ -49,6 +49,8 @@ async function main() {
 
   if (result.delivery.delivered) {
     console.log(`delivered   : ${result.delivery.messageId}`);
+  } else if (result.delivery.reason === "demo") {
+    console.log(`not sent    : DEMO_MODE is on, so mail is switched off`);
   } else {
     console.log(`not sent    : no mail server configured`);
     console.log(`preview     : ${result.delivery.previewPath}`);

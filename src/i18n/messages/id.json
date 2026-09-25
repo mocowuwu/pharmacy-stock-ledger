@@ -1,7 +1,9 @@
 {
   "app": {
     "name": "Apotek Klinik",
-    "tagline": "Sistem persediaan dan penjualan"
+    "tagline": "Sistem persediaan dan penjualan",
+    "demoBadge": "Demo",
+    "demoHint": "Apotek contoh, bukan apotek sungguhan"
   },
   "common": {
     "save": "Simpan",

@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "tsx scripts/dev.ts",
     "build": "next build",
+    "build:vercel": "tsx scripts/migrate.ts --require-url && next build",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
