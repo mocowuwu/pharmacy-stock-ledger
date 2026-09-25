@@ -65,7 +65,11 @@
       "categories": "Groups of medicines",
       "users": "Staff accounts and access",
       "settings": "Pharmacy name, tax, features"
-    }
+    },
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "collapse": "Collapse menu",
+    "expand": "Expand menu"
   },
   "auth": {
     "signIn": "Sign in",

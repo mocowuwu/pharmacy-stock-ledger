@@ -160,7 +160,7 @@ export const TOUR: Record<string, TourStop[]> = {
   ],
 };
 
-/** The first match that is actually drawn: the sidebar and the phone nav both carry every link. */
+/** The first match that is actually drawn and not parked off the side of the screen. */
 export function findTarget(selectors: string[]): HTMLElement | null {
   for (const selector of selectors) {
     let found: NodeListOf<HTMLElement>;
@@ -171,7 +171,10 @@ export function findTarget(selectors: string[]): HTMLElement | null {
     }
     for (const el of found) {
       const rect = el.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) return el;
+      // Off the side of the screen counts as not drawn: that is the phone's
+      // menu drawer while it is closed, or still sliding in.
+      const onScreen = rect.right > 0 && rect.left < window.innerWidth;
+      if (rect.width > 0 && rect.height > 0 && onScreen) return el;
     }
   }
   return null;

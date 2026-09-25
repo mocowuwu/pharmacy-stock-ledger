@@ -150,7 +150,8 @@ function Badge({ alerts }: { alerts: AlertBadge }) {
   return (
     <span
       title={alerts.label}
-      className={`ml-auto min-w-[1.35rem] shrink-0 rounded-full px-1.5 py-0.5 text-center text-[0.7rem] leading-none font-semibold tabular-nums ${tone}`}
+      // On the icon rail it shrinks to a corner count on the bell.
+      className={`ml-auto min-w-[1.35rem] shrink-0 rounded-full px-1.5 py-0.5 text-center text-[0.7rem] leading-none font-semibold tabular-nums md:group-data-[collapsed=true]/side:absolute md:group-data-[collapsed=true]/side:top-0.5 md:group-data-[collapsed=true]/side:right-1 md:group-data-[collapsed=true]/side:min-w-[1.1rem] md:group-data-[collapsed=true]/side:px-1 md:group-data-[collapsed=true]/side:text-[0.6rem] ${tone}`}
     >
       {alerts.total > 99 ? "99+" : alerts.total}
       <span className="sr-only"> {alerts.label}</span>
@@ -195,14 +196,18 @@ export function SidebarNav({
     // shrink and pushes the bottom section off the screen exactly as before.
     <nav
       aria-label={ariaLabel}
-      className="sidebar-scroll flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3"
+      className="sidebar-scroll flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 md:group-data-[collapsed=true]/side:gap-2 md:group-data-[collapsed=true]/side:px-2.5"
     >
       {groups.map(({ group, items }) => (
         <div key={group} className="flex flex-col gap-0.5">
           {groupLabels[group] ? (
-            <p className="px-3 pb-1 text-[0.68rem] font-semibold tracking-[0.12em] text-sidebar-muted/80 uppercase select-none">
-              {groupLabels[group]}
-            </p>
+            <>
+              <p className="px-3 pb-1 text-[0.68rem] font-semibold tracking-[0.12em] text-sidebar-muted/80 uppercase select-none md:group-data-[collapsed=true]/side:hidden">
+                {groupLabels[group]}
+              </p>
+              {/* On the icon rail a heading has no room; a rule keeps the groups apart. */}
+              <hr className="mx-2 mb-1.5 hidden border-sidebar-rule md:group-data-[collapsed=true]/side:block" />
+            </>
           ) : null}
           {items.map((entry) => {
             const active = isActive(pathname, entry.href, entries);
@@ -216,9 +221,9 @@ export function SidebarNav({
                   key={entry.key}
                   href={entry.href}
                   aria-current={active ? "page" : undefined}
-                  title={entry.hint}
+                  title={`${sellCta.label}: ${sellCta.hint}`}
                   data-tour={`nav-${entry.key}`}
-                  className={`my-1.5 flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-150 ${
+                  className={`my-1.5 flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-150 md:group-data-[collapsed=true]/side:justify-center md:group-data-[collapsed=true]/side:px-0 md:group-data-[collapsed=true]/side:py-2 ${
                     active
                       ? "bg-accent text-accent-contrast ring-2 ring-accent-contrast/40"
                       : "bg-accent text-accent-contrast shadow-[0_4px_16px_-4px_var(--accent)] hover:brightness-110"
@@ -227,7 +232,7 @@ export function SidebarNav({
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-contrast/15">
                     <Icon name="sell" />
                   </span>
-                  <span className="min-w-0">
+                  <span className="min-w-0 md:group-data-[collapsed=true]/side:sr-only">
                     <span className="block truncate text-sm font-semibold">{sellCta.label}</span>
                     <span className="block truncate text-xs opacity-80">{sellCta.hint}</span>
                   </span>
@@ -240,21 +245,21 @@ export function SidebarNav({
                 key={entry.key}
                 href={entry.href}
                 aria-current={active ? "page" : undefined}
-                title={entry.hint}
+                title={entry.hint ? `${entry.label}: ${entry.hint}` : entry.label}
                 data-tour={`nav-${entry.key}`}
                 // "You are here" is a light plate with an accent bar, not the
                 // solid accent fill: that fill belongs to the till button, and
                 // two solid purple shapes in one menu read as two things to
                 // press. White at low alpha works because the sidebar is dark in
                 // both themes; the bar is the solid accent, legible in either.
-                className={`relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors duration-150 ${
+                className={`relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors duration-150 md:group-data-[collapsed=true]/side:justify-center md:group-data-[collapsed=true]/side:px-0 md:group-data-[collapsed=true]/side:py-2.5 ${
                   active
                     ? "bg-white/10 font-medium text-sidebar-ink before:absolute before:top-1.5 before:bottom-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-accent"
                     : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-ink"
                 }`}
               >
                 <Icon name={entry.key} />
-                <span className="truncate">{entry.label}</span>
+                <span className="truncate md:group-data-[collapsed=true]/side:sr-only">{entry.label}</span>
                 {entry.key === "alerts" && alerts ? <Badge alerts={alerts} /> : null}
               </Link>
             );
@@ -282,37 +287,5 @@ export function SignOutIcon() {
       <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" />
       <path d="M10 16l-4-4 4-4M6 12h10" />
     </svg>
-  );
-}
-
-/** Horizontal version for narrow screens, where a fixed sidebar would eat the width. */
-export function TopNav({ entries }: { entries: NavEntry[] }) {
-  const pathname = usePathname();
-
-  return (
-    <nav className="sidebar-scroll sticky top-[3.25rem] z-30 overflow-x-auto border-b border-sidebar-rule bg-sidebar md:hidden">
-      <ul className="flex gap-1 px-3 py-2">
-        {entries.map((entry) => {
-          const active = isActive(pathname, entry.href, entries);
-          return (
-            <li key={entry.key}>
-              <Link
-                href={entry.href}
-                aria-current={active ? "page" : undefined}
-                data-tour={`nav-${entry.key}`}
-                className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm whitespace-nowrap transition-colors duration-150 ${
-                  active
-                    ? "bg-accent text-accent-contrast font-medium"
-                    : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-ink"
-                }`}
-              >
-                <Icon name={entry.key} />
-                {entry.label}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
   );
 }

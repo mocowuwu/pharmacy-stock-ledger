@@ -15,6 +15,7 @@ import { useTranslations } from "next-intl";
 import type { NavEntry } from "./Sidebar";
 import { buttonPrimary } from "@/components/ui";
 import { TOUR, findTarget, type TourStop } from "./tutorial-steps";
+import { HIDE_NAV_EVENT, REVEAL_NAV_EVENT } from "@/lib/ui/sidebar";
 
 /**
  * The tutorial is a guided tour of the real screens, not a slideshow about
@@ -137,14 +138,17 @@ export function TutorialLauncher({ variant }: { variant: "block" | "compact" }) 
       type="button"
       onClick={ctx.open}
       aria-label={t("launcher")}
+      title={t("launcher")}
       className={
         variant === "block"
-          ? "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-ink"
+          ? "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-ink md:group-data-[collapsed=true]/side:justify-center md:group-data-[collapsed=true]/side:px-0"
           : "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-ink"
       }
     >
       <TutorialIcon />
-      {variant === "block" ? t("launcher") : null}
+      {variant === "block" ? (
+        <span className="md:group-data-[collapsed=true]/side:sr-only">{t("launcher")}</span>
+      ) : null}
     </button>
   );
 }
@@ -296,6 +300,14 @@ function GuidedTour({
     },
     [steps.length],
   );
+
+  // On a phone the menu is a drawer: open it for a menu step, and put it away
+  // for a step on the page, which it would otherwise cover. On a desktop the
+  // sidebar is always there and neither event changes anything.
+  useEffect(() => {
+    if (step.kind === "intro") return;
+    window.dispatchEvent(new Event(step.kind === "nav" ? REVEAL_NAV_EVENT : HIDE_NAV_EVENT));
+  }, [step]);
 
   // A stop lives on its chapter's screen: stepping Back into the previous
   // chapter, or back out of a detail screen, has to take the person there too.

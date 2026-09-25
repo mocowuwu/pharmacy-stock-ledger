@@ -65,7 +65,11 @@
       "categories": "Kelompok obat",
       "users": "Akun staf dan hak akses",
       "settings": "Nama apotek, pajak, fitur"
-    }
+    },
+    "openMenu": "Buka menu",
+    "closeMenu": "Tutup menu",
+    "collapse": "Ciutkan menu",
+    "expand": "Lebarkan menu"
   },
   "auth": {
     "signIn": "Masuk",
