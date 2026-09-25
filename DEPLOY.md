@@ -546,7 +546,14 @@ there: `git push --force origin v0.1.5:refs/heads/demo`.
    DATABASE_URL='postgres://…:5432/postgres' npm run db:migrate
    DATABASE_URL='postgres://…:5432/postgres' npm run db:seed    # prints the owner's temporary password once
    DATABASE_URL='postgres://…:5432/postgres' npm run db:demo
+   DATABASE_URL='postgres://…:5432/postgres' npm run db:lock-data-api
    ```
+
+   The last line matters. Supabase serves every table in `public` over its
+   web API to anyone holding the anon key, unless row-level security is on.
+   The app connects as the table owner, which RLS does not restrict, so
+   switching it on with no policies costs the app nothing and leaves the web
+   API with no rows to show. Every Vercel build runs it again.
 
 3. **Create the branch** from the current release:
    `git push origin v0.1.6:refs/heads/demo`.

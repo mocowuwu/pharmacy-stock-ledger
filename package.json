@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "tsx scripts/dev.ts",
     "build": "next build",
-    "build:vercel": "tsx scripts/migrate.ts --require-url && next build",
+    "build:vercel": "tsx scripts/migrate.ts --require-url && tsx scripts/lock-data-api.ts && next build",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
@@ -16,6 +16,7 @@
     "test:watch": "vitest",
     "db:seed": "tsx scripts/seed.ts",
     "db:demo": "tsx scripts/demo-data.ts --stock --first-run",
+    "db:lock-data-api": "tsx scripts/lock-data-api.ts",
     "db:serve": "tsx scripts/db-server.ts",
     "reset-password": "tsx scripts/reset-password.ts",
     "accounts": "tsx scripts/accounts.ts",
