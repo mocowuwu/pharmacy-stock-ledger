@@ -102,9 +102,24 @@ describe("validateImportRows", () => {
     expect(errors).toEqual([{ row: 1, field: "category", message: "unknown_category" }]);
   });
 
-  it("rejects a formatted-decimal price the way manual entry would", async () => {
+  it("reads a spreadsheet's decimal price as the rupiah it says, never a hundred times it", async () => {
+    // "15.000,00" is fifteen thousand with its sen written out, and a formula
+    // cell arrives as "9090.91". Stripping the marks would read 1.500.000 and
+    // 909.091; both are rounded to the rupiah instead.
     const { rows } = parseImportCsv(
-      csvOf(['PARA004,Paracetamol,,tablet,,tablet,,,bebas,,,,,"15.000,00",,,,,,,,']),
+      csvOf([
+        'PARA004,Paracetamol,,tablet,,tablet,,,bebas,,,,,"15.000,00",,,,,,,,',
+        "PARA006,Paracetamol,,tablet,,tablet,,,bebas,,,,,9090.91,,,,,,,,",
+      ]),
+    );
+    const { errors, validRows } = await validateImportRows(ex(), rows);
+    expect(errors).toEqual([]);
+    expect(validRows.map((row) => row.defaultPrice)).toEqual([15_000, 9_091]);
+  });
+
+  it("rejects a price that cannot be read only one way", async () => {
+    const { rows } = parseImportCsv(
+      csvOf(["PARA007,Paracetamol,,tablet,,tablet,,,bebas,,,,,1.234.56,,,,,,,,"]),
     );
     const { errors } = await validateImportRows(ex(), rows);
     expect(errors).toEqual([{ row: 1, field: "default_price", message: "invalid_money" }]);

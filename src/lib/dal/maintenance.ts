@@ -21,7 +21,8 @@ import { recordAudit } from "@/lib/audit";
  *
  * **What survives:** accounts, permissions, settings, tax rates and the audit
  * log -- including the record of this wipe. What goes: items, batches, the
- * ledger, sales, returns, disposals, counts, alerts and suppliers.
+ * ledger, sales, returns, disposals, counts, alerts, suppliers, and any
+ * imported sales history (whose lines point at the items being cleared).
  */
 
 /** Typed by the owner to confirm. Deliberately not "yes". */
@@ -72,6 +73,7 @@ export async function resetDemoData(confirmation: string) {
     truncate table
       stock_movements, stock_adjustments, stock_count_lines, stock_counts,
       disposals, return_lines, returns, sale_lines, sales,
+      history_sale_lines, history_imports,
       alerts, batches, item_barcodes, items, suppliers
     restart identity cascade
   `);

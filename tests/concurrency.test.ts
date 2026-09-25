@@ -9,6 +9,7 @@ import { hashPassword } from "@/lib/auth/password";
 import { commitSale, SaleError } from "@/lib/stock/sale";
 import { applyMovement, findLedgerDrift, receiveStock, type Executor } from "@/lib/stock/ledger";
 import { addDays, today } from "@/lib/format/date";
+import { commitHistoryRows, HistoryImportError, type ValidatedHistoryRow } from "@/lib/history/import";
 
 /**
  * Real concurrency, which needs a real Postgres server.
@@ -223,6 +224,65 @@ describe.skipIf(!URL)("two tills at once", () => {
 
     expect(row.q).toBe(2);
     expect(await findLedgerDrift(ex())).toHaveLength(0);
+  });
+
+  /** Holds the history import's number-series lock for today, like a commit in progress. */
+  async function holdHistorySeries() {
+    const client: PoolClient = await pool.connect();
+    await client.query("begin");
+    await client.query("select pg_advisory_xact_lock(hashtext($1)::bigint)", [`history:${today()}`]);
+    return async () => {
+      await client.query("commit");
+      client.release();
+    };
+  }
+
+  const importFile = (fileHash: string) => {
+    const rows: ValidatedHistoryRow[] = [
+      {
+        row: 2,
+        soldOn: addDays(today(), -40),
+        receiptNumber: "N1",
+        itemId: null,
+        itemName: "Obat Lama",
+        qty: 1,
+        unitPrice: 1_000,
+        lineTotal: 1_000,
+        unitCost: null,
+        paymentMethod: null,
+        cashierName: null,
+      },
+    ];
+    return db.transaction((tx) =>
+      commitHistoryRows(tx as unknown as Executor, { actorId: cashierA, rows, fileHash, fileName: null }),
+    );
+  };
+
+  it("refuses the second of two simultaneous imports of one file by name, not by database error", async () => {
+    // Both commits pass the duplicate check in the preview before either has
+    // written anything; only the number-series lock puts them in a queue.
+    const release = await holdHistorySeries();
+    const results = Promise.allSettled([importFile("same-file"), importFile("same-file")]);
+    expect(await settled(results)).toBe(false);
+    await release();
+
+    const outcome = await results;
+    expect(outcome.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    const [failure] = outcome.filter((r) => r.status === "rejected") as PromiseRejectedResult[];
+    expect(failure.reason).toBeInstanceOf(HistoryImportError);
+    expect(failure.reason.code).toBe("already_imported");
+  });
+
+  it("numbers simultaneous imports of different files one after the other", async () => {
+    const release = await holdHistorySeries();
+    const results = Promise.allSettled(["file-a", "file-b", "file-c"].map(importFile));
+    expect(await settled(results)).toBe(false);
+    await release();
+
+    const numbers = (await results).map(
+      (r) => (r as PromiseFulfilledResult<{ importNumber: string }>).value.importNumber,
+    );
+    expect(new Set(numbers).size).toBe(3);
   });
 
   it("never issues one sale number twice", async () => {

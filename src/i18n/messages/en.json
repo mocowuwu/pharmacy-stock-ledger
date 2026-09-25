@@ -313,10 +313,16 @@
     "invalid_timezone": "That timezone is not one this system knows.",
     "owner_only": "Only the owner can do that.",
     "confirmation_mismatch": "The confirmation phrase did not match, so nothing was changed.",
-    "no_file": "Choose a CSV file first.",
+    "no_file": "Choose an Excel or CSV file first.",
     "unreadable_file": "That file could not be read as Excel or CSV.",
     "too_many_rows": "That file has more than 2,000 rows. Split it into smaller files.",
-    "empty_file": "That file has no data rows."
+    "empty_file": "That file has no data rows.",
+    "wrong_columns": "The column names in the first row do not match the template. Download the template and keep its column names.",
+    "already_imported": "This exact file has already been imported and still counts. Withdraw the earlier import first if you really mean to import it again.",
+    "nothing_to_import": "No row passed the checks.",
+    "import_not_found": "That import could not be found.",
+    "already_withdrawn": "That import has already been withdrawn.",
+    "too_many_history_rows": "That file has more than 20,000 rows. Split it by year or by month."
   },
   "itemsImport": {
     "title": "Import Catalogue",
@@ -762,13 +768,13 @@
   },
   "reports": {
     "title": "Reports",
-    "subtitle": "What the pharmacy sold, made, holds and lost",
+    "subtitle": "Sales, profit, stock and losses, for any period",
     "range": "Period",
     "from": "From",
     "to": "To",
     "apply": "Show",
-    "export": "Download CSV",
-    "exportHint": "Opens in Google Sheets or Excel. Amounts are plain numbers so they can be added up.",
+    "export": "CSV",
+    "exportHint": "The main table as CSV, for Google Sheets or anything else. Amounts are plain numbers so they can be summed.",
     "noData": "Nothing recorded in this period.",
     "preset": {
       "today": "Today",
@@ -782,15 +788,15 @@
     "nav": {
       "sales": "Sales",
       "movements": "Stock movements",
-      "margin": "Margin",
+      "margin": "Gross profit",
       "valuation": "Stock value",
       "expiry": "Expiry loss",
       "suppliers": "Suppliers"
     },
     "blurb": {
-      "sales": "Revenue by day, item, category, cashier and payment method",
+      "sales": "The sales summary, the daily trend, busy hours, and detail by item, category, cashier and payment method",
       "movements": "Every unit in and every unit out, per product, with who recorded it",
-      "margin": "What was sold against what it cost",
+      "margin": "Net sales against their cost, by item and by category",
       "valuation": "What is on the shelf right now, at cost",
       "expiry": "What was written off, and why",
       "suppliers": "What each supplier delivered, and how much of it was binned"
@@ -798,15 +804,15 @@
     "sales": {
       "revenue": "Revenue",
       "refunds": "Refunded",
-      "net": "Net takings",
-      "transactions": "Sales",
+      "net": "Net sales",
+      "transactions": "Transactions",
       "averageSale": "Average sale",
       "units": "Units sold",
       "voided": "Voided",
       "voidedHint": "Excluded from every figure on this page",
       "discount": "Discounts given",
       "tax": "VAT collected",
-      "daily": "Revenue per day",
+      "daily": "Sales per day",
       "byItem": "By item",
       "byCategory": "By category",
       "byCashier": "By cashier",
@@ -814,7 +820,22 @@
       "sold": "Sold",
       "returned": "Returned",
       "netUnits": "Net units",
-      "netRevenue": "Net revenue"
+      "netRevenue": "Net sales",
+      "transactionsShort": "Transactions",
+      "gross": "Gross",
+      "dailyNote": "The value of each day's transactions, before returns.",
+      "dailyTable": "By day",
+      "byPaymentNote": "Money in by payment method, less refunds paid back by that method. Check it against the cash count and the bank statement.",
+      "received": "Net received",
+      "unrecordedMethod": "Not recorded",
+      "byHour": "Busy hours",
+      "byHourNote": "Till transactions per hour of the day. Imported history has no time of day.",
+      "byItemNote": "ABC classes: A = the items that together make 80% of sales ({a} items), B = the next 15% ({b}), C = the rest ({c}). Never let an A item run out.",
+      "abc": "ABC",
+      "cashier": "Cashier",
+      "takings": "Transaction value",
+      "byCashierNote": "The value of the transactions each person served, VAT included, before returns.",
+      "voidedLine": "{count} sales were voided in this period and are left out of every figure."
     },
     "movements": {
       "unitsIn": "Units in",
@@ -834,16 +855,26 @@
       "by": "Recorded by",
       "reason": "Reason",
       "truncated": "There are more movements in this period than the screen lists. The totals are complete; the lists below show the most recent ones. Download the CSV for every row.",
-      "listTruncated": "Older movements for this product are not listed here. Choose it above, shorten the period, or download the CSV."
+      "listTruncated": "Older movements for this product are not listed here. Choose it above, shorten the period, or download the CSV.",
+      "ledgerTitle": "Movements",
+      "net": "Net"
     },
     "margin": {
-      "revenue": "Revenue",
+      "revenue": "Net sales",
       "cost": "Cost of goods",
-      "margin": "Margin",
+      "margin": "Gross profit",
       "marginPercent": "Margin %",
       "byItem": "By item",
       "costNote": "Cost is what each batch actually cost when it was sold, copied onto the sale at the time. A later delivery at a different price does not change a past month's margin.",
-      "netOfReturns": "Returned units take back both their price and their cost."
+      "netOfReturns": "Returned units take back both their price and their cost.",
+      "byCategory": "By category",
+      "statementTitle": "Gross profit",
+      "marginLine": "{percent} margin on net sales. Previous period ({period}): {previous}.",
+      "howTitle": "How these figures are worked out",
+      "netOfDiscount": "Net sales are after discounts and exclude VAT, so profit never looks bigger than it is.",
+      "lossMakers": "{count} items sold below their cost. Sort the Gross profit column to see them.",
+      "shareOfProfit": "Share of profit",
+      "uncosted": "Imported history worth {revenue} has no cost, so it is left out of this report. Fill in unit_cost when importing to include it."
     },
     "valuation": {
       "total": "Stock at cost",
@@ -861,7 +892,11 @@
         "beyond": "More than 180 days"
       },
       "expiredWarning": "Expired stock still counted here is money already lost. Write it off from the Disposal screen.",
-      "quarantineNote": "Quarantined and expired batches are included: the money is still tied up in them."
+      "quarantineNote": "Quarantined and expired batches are included: the money is still tied up in them.",
+      "soon": "Expiring within 90 days",
+      "soonHint": "Sell it first, or return it to the supplier while you still can.",
+      "horizonColumn": "Time left to sell",
+      "sellableNote": "Sellable stock only. Quarantined and expired batches are in the other table."
     },
     "expiry": {
       "total": "Written off",
@@ -884,6 +919,69 @@
       "disposalRate": "Written off %",
       "note": "The last column is the one worth watching. Stock that arrives close to its expiry is not cheap, whatever the invoice says.",
       "systemSupplier": "Opening balance"
+    },
+    "overview": "Overview",
+    "importHistory": "Import sales history",
+    "importHistoryBlurb": "Bring in sales from before this system, so the reports can look back",
+    "overviewMarginHint": "{percent} margin on net sales",
+    "overviewExpiryLoss": "Stock worth {value} was written off in this period. See Expiry loss.",
+    "groups": {
+      "selling": "Sales and stock",
+      "money": "Finance"
+    },
+    "print": "Print",
+    "printedBy": "Printed by {name}, {when}",
+    "exportXlsx": "Excel",
+    "exportXlsxHint": "An Excel workbook: a summary sheet and one sheet per table, with figures that sum as they are.",
+    "compare": {
+      "caption": "Compared with the period before: {period}",
+      "versus": "vs {value}",
+      "none": "nothing to compare with yet",
+      "thisPeriod": "This period",
+      "previousPeriod": "Previous period ({period})",
+      "points": "pts"
+    },
+    "table": {
+      "search": "Search by name or code…",
+      "total": "Total",
+      "showAll": "Show all ({count})",
+      "showLess": "Show fewer",
+      "sortHint": "Click to sort",
+      "noMatch": "Nothing matches the search.",
+      "share": "Share",
+      "uncategorised": "No category",
+      "date": "Date",
+      "hour": "Hour"
+    },
+    "statement": {
+      "title": "Sales summary",
+      "note": "From the prices charged to the money actually kept.",
+      "gross": "Gross sales",
+      "discount": "Discounts",
+      "returns": "Returns",
+      "returnsNote": "{count} returns, without their VAT",
+      "taxIncluded": "VAT inside prices",
+      "net": "Net sales",
+      "tax": "VAT collected",
+      "collected": "Total collected"
+    },
+    "history": {
+      "included": "Includes imported sales history: {revenue} from {lines} lines.",
+      "withoutReceipt": "{count} lines without a receipt number are not counted as transactions.",
+      "manage": "Manage imports",
+      "notInCatalogue": "history, not in catalogue",
+      "tag": "history",
+      "unknownCashier": "Cashier not recorded"
+    },
+    "workbook": {
+      "summarySheet": "Summary",
+      "figure": "Figure",
+      "thisPeriod": "This period",
+      "previousPeriod": "Previous period",
+      "change": "Change",
+      "comparedWith": "Compared with the period:",
+      "notes": "Notes",
+      "generatedBy": "Generated by {name}, {when}"
     }
   },
   "users": {
@@ -1077,7 +1175,8 @@
       "batch_override": "Choose a batch other than the earliest",
       "return": "Process returns",
       "void": "Void a sale",
-      "view_all": "See everyone's sales, not only their own"
+      "view_all": "See everyone's sales, not only their own",
+      "import_history": "Import past sales history"
     },
     "alerts": {
       "view": "See alerts",
@@ -1386,7 +1485,7 @@
         "reports": {
           "range": {
             "title": "Choose a period",
-            "body": "Pick the dates: today, the last 7 or 30 days, this month, or your own."
+            "body": "Pick the dates: today, the last 7, 30 or 90 days, this month, last month, or your own. Every figure is compared with the period before."
           },
           "pick": {
             "title": "Open a report",
@@ -1401,8 +1500,8 @@
             "body": "The figures for the chosen period. The stock card report is how you check what left the shelf against what was rung up."
           },
           "export": {
-            "title": "Download CSV",
-            "body": "Download this report to open in Excel or send to the accountant."
+            "title": "Print and download",
+            "body": "Print the report on A4, or download it as Excel (one sheet per table) or CSV to send to the accountant."
           }
         },
         "users": {
@@ -2072,22 +2171,24 @@
       },
       "reports": {
         "title": "Reports",
-        "summary": "Reading sales, stock movements and profit for any period, and sending them to the accountant.",
+        "summary": "Reading sales, profit, stock and losses for any period, comparing them with the period before, and sending them to the accountant.",
         "sections": {
           "period": {
             "title": "Choosing the period",
             "steps": {
               "1": "Open Reports and choose a period: today, the last 7, 30 or 90 days, this month, last month, or your own dates.",
-              "2": "Click a report to open it. The tabs at the top switch report without losing the period.",
-              "3": "A day is a day in the pharmacy's own timezone, so an early-morning sale is counted on the right day."
+              "2": "The Overview shows the main figures for the period. Each one is compared with the period before: an ▲ or ▼ arrow and the percentage.",
+              "3": "This month is compared with the same days of last month; last month with the month before; any other period with the same number of days just before it.",
+              "4": "The tabs at the top switch report without losing the period. A day is a day in the pharmacy's own timezone."
             }
           },
           "sales": {
             "title": "Sales",
             "steps": {
-              "1": "Revenue, refunds and net takings, the number of sales and the average sale.",
-              "2": "Broken down by day, by item, by category, by cashier and by payment method.",
-              "3": "Voided sales are left out of every figure."
+              "1": "The sales summary starts from gross sales and takes off discounts, returns and any VAT inside prices, down to net sales and the total collected.",
+              "2": "The daily chart shows this period with the previous one. Busy hours show when the till is busiest.",
+              "3": "The by-item table sorts by clicking a column heading and searches by name or code. ABC classes mark the items that make 80% of sales (A): never let those run out.",
+              "4": "By payment method: money in less money refunded. Check it against the cash count and the bank statement. Voided sales are left out of every figure."
             }
           },
           "movements": {
@@ -2101,19 +2202,30 @@
           "money": {
             "title": "Profit and stock value",
             "steps": {
-              "1": "Margin: what was sold against what it cost. The cost is the one recorded when each batch was received, so a new price does not change last month's margin.",
-              "2": "Stock value: what is on the shelf right now, at cost, and how long it has left to sell.",
-              "3": "Expiry loss: what was written off and why.",
-              "4": "Suppliers: what each supplier delivered and how much of it ended up written off."
+              "1": "Gross profit: net sales less cost of goods. The cost is the one recorded when each batch was received, so a new price does not change last month's profit.",
+              "2": "Net sales are after discounts and exclude VAT, so profit never looks bigger than it is.",
+              "3": "Stock value: what is on the shelf right now, at cost, and how long it has left to sell.",
+              "4": "Expiry loss: what was written off and why. Suppliers: what each supplier delivered and how much of it ended up written off."
             }
           },
           "export": {
-            "title": "Downloading",
+            "title": "Printing and downloading",
             "steps": {
-              "1": "Press Download CSV on any report to open it in Excel or Google Sheets.",
-              "2": "Amounts are plain numbers, so they add up in a spreadsheet."
+              "1": "Print: the report prints on A4 with the pharmacy name, the period, and who printed it. Every row prints, not only the ones on screen.",
+              "2": "Excel: one workbook with a Summary sheet and a sheet for each table. The figures are real numbers, so they sum as they are.",
+              "3": "CSV: the main table only, for Google Sheets or anything else."
             },
-            "tip": "This is the easiest way to send the month's figures to the accountant."
+            "tip": "Excel is the easiest way to send the month's figures to the accountant."
+          },
+          "history": {
+            "title": "Old sales history",
+            "steps": {
+              "1": "In Reports, press Import sales history and download the template.",
+              "2": "Fill in the Data sheet: one row per item sold, with its date, quantity, and price or total. The Guide sheet explains every column.",
+              "3": "Upload the file. You see the total, the period, and every row with a problem before you confirm. Days that already have sales at the till are flagged.",
+              "4": "History goes into the Sales and Gross profit reports but never changes stock. A wrong import can be withdrawn, with a reason."
+            },
+            "warn": "Only for days before this system was in use. Do not import sales that were already rung up at the till: they would be counted twice."
           }
         }
       },
@@ -2226,6 +2338,175 @@
             },
             "warn": "Clearing empties the whole catalogue. Do it before entering your real items, never after."
           }
+        }
+      }
+    }
+  },
+  "historyImport": {
+    "title": "Import sales history",
+    "subtitle": "Sales from before this system, from the old books or the old program",
+    "backToReports": "Back to Reports",
+    "rules": {
+      "counts": {
+        "title": "Counted in the reports",
+        "body": "Every line goes into the Sales and Gross profit reports on its date, with the breakdown by item, category, cashier and payment method."
+      },
+      "stock": {
+        "title": "Never changes stock",
+        "body": "What is on the shelf was entered as opening stock. History is a record of sales only: it takes nothing from any batch and does not appear on the stock card."
+      },
+      "today": {
+        "title": "Past days only",
+        "body": "Today's sales and later go through the till. If the wrong file goes in, the whole import can be withdrawn."
+      }
+    },
+    "templateTitle": "Excel template",
+    "templateHint": "Fill in the Data sheet, one row per item sold. The Guide sheet explains every column and has examples.",
+    "downloadTemplate": "Download template",
+    "chooseFile": "History file",
+    "fileHint": "Excel (.xlsx) or CSV. Only the first sheet is read.",
+    "upload": "Check file",
+    "checking": "Checking…",
+    "previewSummary": "{valid} of {total} rows are ready to import. {errors} rows have a problem and will be skipped.",
+    "figure": {
+      "period": "Period",
+      "total": "Total sales",
+      "units": "Units",
+      "receipts": "Receipts",
+      "withoutReceipt": "{count} rows without a receipt number",
+      "linked": "Matched to the catalogue",
+      "unlinked": "{count} rows kept under the name in the file",
+      "costed": "With a cost",
+      "uncosted": "Rows without a cost are left out of the Gross profit report"
+    },
+    "duplicate": "This file is identical to import {number}, which still counts. Importing it again would double its figures, so it cannot go ahead.",
+    "overlapTill": "{count} days in this file already have sales at the till. If the file holds those same sales, they will be counted twice.",
+    "overlapImported": "{count} days in this file are already in an earlier import. Make sure this is not a copy of the old file.",
+    "andMore": "and {count} more",
+    "errorsTitle": "{count} rows have a problem",
+    "errorsCapped": "Showing {shown} of {total}. Fix these first, then check again.",
+    "sheetRow": "Row",
+    "sampleTitle": "Some of the rows that will be imported",
+    "notInCatalogue": "(not in catalogue)",
+    "col": {
+      "date": "Date",
+      "receipt": "Receipt",
+      "item": "Item",
+      "qty": "Qty",
+      "total": "Total",
+      "cost": "Cost",
+      "number": "Number",
+      "period": "Period",
+      "lines": "Rows",
+      "importedBy": "Imported by",
+      "status": "Status"
+    },
+    "confirm": "Import {count} rows",
+    "importing": "Importing…",
+    "startOver": "Start over",
+    "done": "Import {number} is done: {lines} rows, {total} in total, {from} to {to}.",
+    "seeReport": "See it in the Sales report",
+    "another": "Import another file",
+    "pastTitle": "Earlier imports",
+    "pastEmpty": "No history has been imported yet.",
+    "pastEmptyHint": "After the first import it is listed here, and it can be withdrawn if it was wrong.",
+    "status": {
+      "active": "Counted",
+      "withdrawn": "Withdrawn"
+    },
+    "withdraw": "Withdraw import",
+    "withdrawHint": "Every row of {number} is taken out of every report. The rows stay on record, with your name and the reason.",
+    "withdrawReason": "Reason, for example: imported twice",
+    "withdrawConfirm": "Withdraw from reports",
+    "withdrawing": "Withdrawing…",
+    "error": {
+      "required": "Required.",
+      "invalid_date": "The date cannot be read. Write the year first: 2026-08-31.",
+      "date_too_old": "The date is before 2000. Check the year.",
+      "date_not_past": "Today and later dates go through the till, not through an import.",
+      "unknown_item_code": "No item has this code. Check it, or leave it blank and fill in item_name only.",
+      "item_required": "Fill in item_code or item_name.",
+      "invalid_qty": "The quantity must be a whole number above zero.",
+      "invalid_money": "The amount cannot be read. Example: 15000",
+      "price_required": "Fill in unit_price or line_total.",
+      "invalid_payment_method": "Payment method not recognised. See the list on the Guide sheet.",
+      "too_long": "Too long."
+    },
+    "guide": {
+      "sheetData": "Data",
+      "sheetGuide": "Guide",
+      "title": "How to fill in the sales history import template",
+      "intro": "Fill in the \"Data\" sheet (the first sheet), one row per item in a sale. This \"Guide\" sheet is for reading only and is not imported.",
+      "howTitle": "Before you start",
+      "how": {
+        "1": "One row is one item sold on one day. A receipt with three items is three rows with the same receipt number.",
+        "2": "History is recorded for the reports only. Stock does not change, so do not import sales whose items still have to come off the shelf.",
+        "3": "Past days only. Today's sales and later go through the till.",
+        "4": "Do not change, delete or translate the column names in row 1. The system reads those names.",
+        "5": "Every row needs date, qty, one of unit_price or line_total, and one of item_code or item_name.",
+        "6": "Dates are year first: 2026-08-31. Money is a plain number in rupiah: 15000. Date and number cells from Excel are read too.",
+        "7": "At most {max} rows per file. For more, split it by year or by month.",
+        "8": "Rows with a problem are listed with their row numbers before you confirm, and are skipped. The same file cannot be imported twice."
+      },
+      "columnsTitle": "What goes in each column",
+      "examplesTitle": "Examples",
+      "examplesIntro": "Two receipts from 1 August and one row without a receipt from 2 August. Do not copy these into the Data sheet.",
+      "paymentTitle": "Filling in the payment_method column",
+      "paymentIntro": "Write the code from the first column, or its name. Leave it blank if it was not recorded.",
+      "head": {
+        "column": "Column",
+        "required": "Required?",
+        "meaning": "Meaning",
+        "accepted": "What to enter",
+        "example": "Example",
+        "code": "Code",
+        "name": "Name"
+      },
+      "requirement": {
+        "required": "Required",
+        "optional": "May be blank",
+        "oneOf": "One of the pair is required (see the next row)"
+      },
+      "columns": {
+        "date": {
+          "meaning": "The day of the sale.",
+          "accepted": "Year-month-day, for example 2026-08-31. Must be before today."
+        },
+        "receipt_number": {
+          "meaning": "The old receipt's number.",
+          "accepted": "Any text. Rows with the same number and date count as one transaction. Leave blank if there is none; the row still counts as sales, but not as a transaction."
+        },
+        "item_code": {
+          "meaning": "The item's code in this system's catalogue.",
+          "accepted": "An existing code, for example PARA001. If filled in, it must match. Fill in this or item_name."
+        },
+        "item_name": {
+          "meaning": "The item's name as the old records have it.",
+          "accepted": "Text. If it is exactly the name of one item in the catalogue, the row is linked to that item; otherwise it is kept under this name."
+        },
+        "qty": {
+          "meaning": "How many were sold.",
+          "accepted": "A whole number above zero, in the smallest unit (tablet, bottle)."
+        },
+        "unit_price": {
+          "meaning": "The selling price per unit.",
+          "accepted": "Rupiah, for example 1000. Fill in this or line_total."
+        },
+        "line_total": {
+          "meaning": "What was paid for this row in total.",
+          "accepted": "Rupiah. If filled in, this is the figure counted (including any line discount). If blank: qty × unit_price."
+        },
+        "unit_cost": {
+          "meaning": "The cost per unit.",
+          "accepted": "Rupiah. Leave blank if unknown; the row still counts in the Sales report, but not in Gross profit."
+        },
+        "payment_method": {
+          "meaning": "How it was paid.",
+          "accepted": "One of the codes in the table below, or its name. May be blank."
+        },
+        "cashier": {
+          "meaning": "The cashier's name in the old records.",
+          "accepted": "Any text. They do not need an account in this system."
         }
       }
     }

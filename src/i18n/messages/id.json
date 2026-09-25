@@ -313,10 +313,16 @@
     "invalid_timezone": "Zona waktu itu tidak dikenali sistem.",
     "owner_only": "Hanya pemilik yang bisa melakukannya.",
     "confirmation_mismatch": "Frasa konfirmasi tidak cocok, jadi tidak ada yang diubah.",
-    "no_file": "Pilih berkas CSV terlebih dahulu.",
+    "no_file": "Pilih berkas Excel atau CSV terlebih dahulu.",
     "unreadable_file": "Berkas ini tidak terbaca sebagai Excel atau CSV.",
     "too_many_rows": "Berkas ini lebih dari 2.000 baris. Bagi menjadi beberapa berkas.",
-    "empty_file": "Berkas ini tidak berisi baris data."
+    "empty_file": "Berkas ini tidak berisi baris data.",
+    "wrong_columns": "Judul kolom di baris pertama tidak sesuai templat. Unduh templatnya dan jangan ganti nama kolom.",
+    "already_imported": "Berkas yang sama persis sudah pernah diimpor dan masih dihitung. Tarik impor lama dulu kalau memang ingin mengimpor ulang.",
+    "nothing_to_import": "Tidak ada baris yang lolos pemeriksaan.",
+    "import_not_found": "Impor itu tidak ditemukan.",
+    "already_withdrawn": "Impor itu sudah ditarik.",
+    "too_many_history_rows": "Berkas ini lebih dari 20.000 baris. Pisahkan per tahun atau per bulan."
   },
   "itemsImport": {
     "title": "Impor Katalog",
@@ -762,13 +768,13 @@
   },
   "reports": {
     "title": "Laporan",
-    "subtitle": "Apa yang dijual, dihasilkan, dimiliki dan hilang",
+    "subtitle": "Penjualan, laba, stok dan kerugian, untuk periode mana pun",
     "range": "Periode",
     "from": "Dari",
     "to": "Sampai",
     "apply": "Tampilkan",
-    "export": "Unduh CSV",
-    "exportHint": "Bisa dibuka di Google Sheets atau Excel. Nilai ditulis sebagai angka biasa supaya bisa dijumlahkan.",
+    "export": "CSV",
+    "exportHint": "Tabel utama sebagai CSV, untuk Google Sheets atau program lain. Nilai ditulis sebagai angka biasa supaya bisa dijumlahkan.",
     "noData": "Tidak ada catatan pada periode ini.",
     "preset": {
       "today": "Hari ini",
@@ -782,15 +788,15 @@
     "nav": {
       "sales": "Penjualan",
       "movements": "Kartu stok",
-      "margin": "Margin",
+      "margin": "Laba kotor",
       "valuation": "Nilai stok",
       "expiry": "Kerugian kedaluwarsa",
       "suppliers": "Pemasok"
     },
     "blurb": {
-      "sales": "Pendapatan per hari, barang, kategori, kasir dan metode pembayaran",
+      "sales": "Ringkasan penjualan, tren harian, jam ramai, dan rincian per barang, kategori, kasir dan cara bayar",
       "movements": "Setiap unit masuk dan keluar per produk, beserta siapa yang mencatat",
-      "margin": "Yang terjual dibandingkan dengan modalnya",
+      "margin": "Penjualan bersih dibandingkan harga pokoknya, per barang dan per kategori",
       "valuation": "Isi rak saat ini, dinilai dengan harga beli",
       "expiry": "Yang dimusnahkan, dan alasannya",
       "suppliers": "Kiriman tiap pemasok, dan berapa yang berakhir dimusnahkan"
@@ -798,7 +804,7 @@
     "sales": {
       "revenue": "Pendapatan",
       "refunds": "Dikembalikan",
-      "net": "Pendapatan bersih",
+      "net": "Penjualan bersih",
       "transactions": "Transaksi",
       "averageSale": "Rata-rata transaksi",
       "units": "Unit terjual",
@@ -806,7 +812,7 @@
       "voidedHint": "Tidak dihitung dalam angka mana pun di halaman ini",
       "discount": "Diskon diberikan",
       "tax": "PPN dipungut",
-      "daily": "Pendapatan per hari",
+      "daily": "Penjualan per hari",
       "byItem": "Per barang",
       "byCategory": "Per kategori",
       "byCashier": "Per kasir",
@@ -814,7 +820,22 @@
       "sold": "Terjual",
       "returned": "Diretur",
       "netUnits": "Unit bersih",
-      "netRevenue": "Pendapatan bersih"
+      "netRevenue": "Penjualan bersih",
+      "transactionsShort": "Transaksi",
+      "gross": "Kotor",
+      "dailyNote": "Nilai transaksi yang terjadi setiap hari, sebelum retur.",
+      "dailyTable": "Per hari",
+      "byPaymentNote": "Uang yang masuk per cara bayar, dikurangi uang retur yang dikembalikan lewat cara itu. Cocokkan dengan kas dan mutasi rekening.",
+      "received": "Diterima bersih",
+      "unrecordedMethod": "Tidak tercatat",
+      "byHour": "Jam ramai",
+      "byHourNote": "Jumlah transaksi kasir per jam. Riwayat impor tidak memiliki jam.",
+      "byItemNote": "Kelas ABC: A = barang yang bersama-sama menghasilkan 80% penjualan ({a} barang), B = 15% berikutnya ({b}), C = sisanya ({c}). Barang kelas A jangan sampai kosong.",
+      "abc": "ABC",
+      "cashier": "Kasir",
+      "takings": "Nilai transaksi",
+      "byCashierNote": "Nilai transaksi yang dilayani, termasuk PPN, sebelum retur.",
+      "voidedLine": "{count} penjualan dibatalkan pada periode ini dan tidak dihitung di angka mana pun."
     },
     "movements": {
       "unitsIn": "Unit masuk",
@@ -834,16 +855,26 @@
       "by": "Dicatat oleh",
       "reason": "Alasan",
       "truncated": "Pergerakan pada periode ini lebih banyak daripada yang ditampilkan. Angka totalnya tetap lengkap; daftar di bawah hanya menampilkan yang terbaru. Unduh CSV untuk seluruh barisnya.",
-      "listTruncated": "Pergerakan lama untuk produk ini tidak ditampilkan di sini. Pilih produknya di atas, persempit periodenya, atau unduh CSV."
+      "listTruncated": "Pergerakan lama untuk produk ini tidak ditampilkan di sini. Pilih produknya di atas, persempit periodenya, atau unduh CSV.",
+      "ledgerTitle": "Pergerakan",
+      "net": "Selisih"
     },
     "margin": {
-      "revenue": "Pendapatan",
-      "cost": "Harga pokok",
-      "margin": "Margin",
+      "revenue": "Penjualan bersih",
+      "cost": "Harga pokok (HPP)",
+      "margin": "Laba kotor",
       "marginPercent": "Margin %",
       "byItem": "Per barang",
       "costNote": "Harga pokok diambil dari biaya batch saat barang terjual, disalin ke transaksi pada saat itu. Kiriman berikutnya dengan harga berbeda tidak mengubah margin bulan lalu.",
-      "netOfReturns": "Unit yang diretur menarik kembali harga jual sekaligus modalnya."
+      "netOfReturns": "Unit yang diretur menarik kembali harga jual sekaligus modalnya.",
+      "byCategory": "Per kategori",
+      "statementTitle": "Laba kotor",
+      "marginLine": "Margin {percent} dari penjualan bersih. Periode sebelumnya ({period}): {previous}.",
+      "howTitle": "Cara angka ini dihitung",
+      "netOfDiscount": "Penjualan bersih sudah dikurangi diskon dan tidak termasuk PPN, jadi laba tidak terlihat lebih besar daripada yang sebenarnya.",
+      "lossMakers": "{count} barang terjual di bawah harga pokoknya. Urutkan kolom Laba kotor untuk melihatnya.",
+      "shareOfProfit": "Porsi laba",
+      "uncosted": "Riwayat impor senilai {revenue} tidak punya harga pokok, jadi tidak dihitung di laporan ini. Isi kolom unit_cost saat mengimpor supaya ikut dihitung."
     },
     "valuation": {
       "total": "Nilai stok",
@@ -861,7 +892,11 @@
         "beyond": "Lebih dari 180 hari"
       },
       "expiredWarning": "Stok kedaluwarsa yang masih terhitung di sini adalah uang yang sudah hilang. Musnahkan dari layar Pemusnahan.",
-      "quarantineNote": "Batch karantina dan kedaluwarsa ikut dihitung: uangnya masih tertahan di sana."
+      "quarantineNote": "Batch karantina dan kedaluwarsa ikut dihitung: uangnya masih tertahan di sana.",
+      "soon": "Kedaluwarsa ≤ 90 hari",
+      "soonHint": "Jual dulu, atau kembalikan ke pemasok selagi bisa.",
+      "horizonColumn": "Sisa waktu jual",
+      "sellableNote": "Hanya stok yang bisa dijual. Batch karantina dan kedaluwarsa ada di tabel sebelah."
     },
     "expiry": {
       "total": "Nilai dimusnahkan",
@@ -884,6 +919,69 @@
       "disposalRate": "Dimusnahkan %",
       "note": "Kolom terakhir yang paling perlu diperhatikan. Stok yang datang mendekati kedaluwarsa tidak murah, apa pun kata fakturnya.",
       "systemSupplier": "Saldo awal"
+    },
+    "overview": "Ringkasan",
+    "importHistory": "Impor riwayat penjualan",
+    "importHistoryBlurb": "Masukkan penjualan dari sebelum sistem ini dipakai, supaya laporan bisa melihat ke belakang",
+    "overviewMarginHint": "Margin {percent} dari penjualan bersih",
+    "overviewExpiryLoss": "Stok senilai {value} dimusnahkan pada periode ini. Lihat Kerugian kedaluwarsa.",
+    "groups": {
+      "selling": "Penjualan dan stok",
+      "money": "Keuangan"
+    },
+    "print": "Cetak",
+    "printedBy": "Dicetak oleh {name}, {when}",
+    "exportXlsx": "Excel",
+    "exportXlsxHint": "Buku kerja Excel: lembar ringkasan dan satu lembar per tabel, dengan angka yang bisa langsung dijumlahkan.",
+    "compare": {
+      "caption": "Dibandingkan dengan periode sebelumnya: {period}",
+      "versus": "vs {value}",
+      "none": "belum ada data pembanding",
+      "thisPeriod": "Periode ini",
+      "previousPeriod": "Periode sebelumnya ({period})",
+      "points": "poin"
+    },
+    "table": {
+      "search": "Cari nama atau kode…",
+      "total": "Total",
+      "showAll": "Tampilkan semua ({count})",
+      "showLess": "Tampilkan lebih sedikit",
+      "sortHint": "Klik untuk mengurutkan",
+      "noMatch": "Tidak ada yang cocok dengan pencarian.",
+      "share": "Porsi",
+      "uncategorised": "Tanpa kategori",
+      "date": "Tanggal",
+      "hour": "Jam"
+    },
+    "statement": {
+      "title": "Ringkasan penjualan",
+      "note": "Dari harga jual ke uang yang benar-benar diterima.",
+      "gross": "Penjualan kotor",
+      "discount": "Diskon",
+      "returns": "Retur",
+      "returnsNote": "{count} transaksi retur, tanpa PPN-nya",
+      "taxIncluded": "PPN dalam harga",
+      "net": "Penjualan bersih",
+      "tax": "PPN dipungut",
+      "collected": "Total diterima"
+    },
+    "history": {
+      "included": "Termasuk riwayat penjualan yang diimpor: {revenue} dari {lines} baris.",
+      "withoutReceipt": "{count} baris tanpa nomor nota tidak dihitung sebagai transaksi.",
+      "manage": "Kelola impor",
+      "notInCatalogue": "riwayat, tidak di katalog",
+      "tag": "riwayat",
+      "unknownCashier": "Kasir tidak tercatat"
+    },
+    "workbook": {
+      "summarySheet": "Ringkasan",
+      "figure": "Angka",
+      "thisPeriod": "Periode ini",
+      "previousPeriod": "Periode sebelumnya",
+      "change": "Perubahan",
+      "comparedWith": "Dibandingkan dengan periode:",
+      "notes": "Catatan",
+      "generatedBy": "Dibuat oleh {name}, {when}"
     }
   },
   "users": {
@@ -1077,7 +1175,8 @@
       "batch_override": "Memilih batch selain yang paling cepat kedaluwarsa",
       "return": "Memproses retur",
       "void": "Membatalkan penjualan",
-      "view_all": "Melihat penjualan semua orang, bukan hanya miliknya"
+      "view_all": "Melihat penjualan semua orang, bukan hanya miliknya",
+      "import_history": "Mengimpor riwayat penjualan lama"
     },
     "alerts": {
       "view": "Melihat peringatan",
@@ -1386,7 +1485,7 @@
         "reports": {
           "range": {
             "title": "Pilih periode",
-            "body": "Tentukan rentang tanggal: hari ini, 7 atau 30 hari terakhir, bulan ini, atau tanggal sendiri."
+            "body": "Tentukan rentang tanggal: hari ini, 7, 30 atau 90 hari terakhir, bulan ini, bulan lalu, atau tanggal sendiri. Setiap angka dibandingkan dengan periode sebelumnya."
           },
           "pick": {
             "title": "Buka laporan",
@@ -1401,8 +1500,8 @@
             "body": "Angka untuk periode yang dipilih. Laporan Kartu stok bisa dipakai untuk mencocokkan barang yang keluar dengan yang dijual."
           },
           "export": {
-            "title": "Unduh CSV",
-            "body": "Unduh laporan ini untuk dibuka di Excel atau dikirim ke akuntan."
+            "title": "Cetak dan unduh",
+            "body": "Cetak laporan di kertas A4, atau unduh sebagai Excel (satu lembar per tabel) atau CSV untuk dikirim ke akuntan."
           }
         },
         "users": {
@@ -2072,22 +2171,24 @@
       },
       "reports": {
         "title": "Laporan",
-        "summary": "Membaca penjualan, pergerakan stok, dan keuntungan untuk periode mana pun, dan mengirimkannya ke akuntan.",
+        "summary": "Membaca penjualan, laba, stok dan kerugian untuk periode mana pun, membandingkannya dengan periode sebelumnya, dan mengirimkannya ke akuntan.",
         "sections": {
           "period": {
             "title": "Memilih periode",
             "steps": {
               "1": "Buka Laporan dan pilih periodenya: hari ini, 7, 30, atau 90 hari terakhir, bulan ini, bulan lalu, atau tanggal pilihan sendiri.",
-              "2": "Klik laporan untuk membukanya. Tab di atas berpindah laporan tanpa mengubah periode.",
-              "3": "Satu hari dihitung menurut zona waktu apotek, jadi penjualan dini hari masuk ke tanggal yang benar."
+              "2": "Halaman Ringkasan menampilkan angka utama periode itu. Setiap angka dibandingkan dengan periode sebelumnya: panah ▲ atau ▼ dan persentasenya.",
+              "3": "Bulan ini dibandingkan dengan tanggal yang sama bulan lalu; bulan lalu dengan bulan sebelumnya; periode lain dengan jumlah hari yang sama tepat sebelumnya.",
+              "4": "Tab di atas berpindah laporan tanpa mengubah periode. Satu hari dihitung menurut zona waktu apotek."
             }
           },
           "sales": {
             "title": "Penjualan",
             "steps": {
-              "1": "Omzet, uang kembali retur, dan pendapatan bersih, jumlah penjualan, serta rata-rata per penjualan.",
-              "2": "Dirinci per hari, per barang, per kategori, per kasir, dan per cara bayar.",
-              "3": "Penjualan yang dibatalkan tidak dihitung di angka mana pun."
+              "1": "Ringkasan penjualan dimulai dari penjualan kotor, dikurangi diskon, retur, dan PPN yang ada di dalam harga, sampai ke penjualan bersih dan total uang yang diterima.",
+              "2": "Grafik harian menunjukkan periode ini beserta periode sebelumnya. Jam ramai menunjukkan jam berapa kasir paling sibuk.",
+              "3": "Tabel per barang bisa diurutkan dengan mengklik judul kolom, dan dicari dengan nama atau kode. Kelas ABC menandai barang yang menghasilkan 80% penjualan (A): barang ini jangan sampai kosong.",
+              "4": "Per cara bayar: uang masuk dikurangi uang retur. Cocokkan dengan kas dan mutasi rekening. Penjualan yang dibatalkan tidak dihitung di angka mana pun."
             }
           },
           "movements": {
@@ -2099,21 +2200,32 @@
             "tip": "Inilah laporan untuk memeriksa bahwa yang keluar dari rak sama dengan yang tercatat di kasir."
           },
           "money": {
-            "title": "Keuntungan dan nilai stok",
+            "title": "Laba dan nilai stok",
             "steps": {
-              "1": "Margin: penjualan dibandingkan harga pokoknya. Harga pokok adalah yang dicatat saat setiap bets diterima, jadi harga baru tidak mengubah margin bulan lalu.",
-              "2": "Nilai stok: nilai isi rak saat ini menurut harga beli, dan berapa lama lagi waktu untuk menjualnya.",
-              "3": "Kerugian kedaluwarsa: apa yang dimusnahkan dan mengapa.",
-              "4": "Pemasok: apa yang dikirim setiap pemasok dan berapa yang akhirnya dimusnahkan."
+              "1": "Laba kotor: penjualan bersih dikurangi harga pokok (HPP). Harga pokok adalah yang dicatat saat setiap bets diterima, jadi harga baru tidak mengubah laba bulan lalu.",
+              "2": "Penjualan bersih sudah dikurangi diskon dan tidak termasuk PPN, jadi laba tidak terlihat lebih besar daripada yang sebenarnya.",
+              "3": "Nilai stok: nilai isi rak saat ini menurut harga beli, dan berapa lama lagi waktu untuk menjualnya.",
+              "4": "Kerugian kedaluwarsa: apa yang dimusnahkan dan mengapa. Pemasok: apa yang dikirim setiap pemasok dan berapa yang akhirnya dimusnahkan."
             }
           },
           "export": {
-            "title": "Mengunduh",
+            "title": "Mencetak dan mengunduh",
             "steps": {
-              "1": "Tekan Unduh CSV pada laporan mana pun untuk membukanya di Excel atau Google Sheets.",
-              "2": "Angka rupiah berupa angka biasa, jadi bisa dijumlahkan di spreadsheet."
+              "1": "Cetak: laporan dicetak di kertas A4 dengan nama apotek, periode, dan siapa yang mencetak. Semua baris ikut tercetak, bukan hanya yang tampil di layar.",
+              "2": "Excel: satu buku kerja dengan lembar Ringkasan dan satu lembar untuk setiap tabel. Angkanya berupa angka sungguhan, jadi bisa langsung dijumlahkan.",
+              "3": "CSV: tabel utama saja, untuk Google Sheets atau program lain."
             },
-            "tip": "Ini cara termudah mengirim angka bulanan ke akuntan."
+            "tip": "Excel adalah cara termudah mengirim angka bulanan ke akuntan."
+          },
+          "history": {
+            "title": "Riwayat penjualan lama",
+            "steps": {
+              "1": "Di Laporan, tekan Impor riwayat penjualan dan unduh templatnya.",
+              "2": "Isi lembar Data: satu baris untuk satu barang yang terjual, dengan tanggal, jumlah, dan harga atau totalnya. Lembar Panduan menjelaskan setiap kolom.",
+              "3": "Unggah berkasnya. Anda melihat total, periode, dan setiap baris yang bermasalah sebelum konfirmasi. Hari yang sudah punya penjualan di kasir diberi peringatan.",
+              "4": "Riwayat masuk ke laporan Penjualan dan Laba kotor, tetapi tidak mengubah stok. Impor yang salah bisa ditarik kembali dengan alasan."
+            },
+            "warn": "Hanya untuk hari sebelum sistem ini dipakai. Penjualan yang sudah tercatat di kasir jangan diimpor lagi, karena akan terhitung dua kali."
           }
         }
       },
@@ -2226,6 +2338,175 @@
             },
             "warn": "Menghapus data demo mengosongkan seluruh katalog. Lakukan sebelum memasukkan barang sungguhan, jangan sesudahnya."
           }
+        }
+      }
+    }
+  },
+  "historyImport": {
+    "title": "Impor riwayat penjualan",
+    "subtitle": "Penjualan dari sebelum sistem ini dipakai, dari buku atau program lama",
+    "backToReports": "Kembali ke Laporan",
+    "rules": {
+      "counts": {
+        "title": "Ikut dihitung di laporan",
+        "body": "Setiap baris masuk ke laporan Penjualan dan Laba kotor pada tanggalnya, lengkap dengan per barang, kategori, kasir dan cara bayar."
+      },
+      "stock": {
+        "title": "Tidak mengubah stok",
+        "body": "Stok di rak dicatat lewat stok awal. Riwayat hanya catatan penjualan, jadi tidak mengurangi batch mana pun dan tidak muncul di Kartu stok."
+      },
+      "today": {
+        "title": "Hanya hari yang sudah lewat",
+        "body": "Penjualan hari ini dan seterusnya dicatat lewat kasir. Kalau berkas yang salah terlanjur diimpor, impornya bisa ditarik kembali."
+      }
+    },
+    "templateTitle": "Templat Excel",
+    "templateHint": "Isi lembar Data, satu baris untuk satu barang yang terjual. Lembar Panduan menjelaskan setiap kolom dan berisi contoh.",
+    "downloadTemplate": "Unduh templat",
+    "chooseFile": "Berkas riwayat",
+    "fileHint": "Excel (.xlsx) atau CSV. Hanya lembar pertama yang dibaca.",
+    "upload": "Periksa berkas",
+    "checking": "Memeriksa…",
+    "previewSummary": "{valid} dari {total} baris siap diimpor. {errors} baris bermasalah dan akan dilewati.",
+    "figure": {
+      "period": "Periode",
+      "total": "Total penjualan",
+      "units": "Unit",
+      "receipts": "Nota",
+      "withoutReceipt": "{count} baris tanpa nomor nota",
+      "linked": "Cocok dengan katalog",
+      "unlinked": "{count} baris disimpan dengan nama dari berkas",
+      "costed": "Punya harga pokok",
+      "uncosted": "Baris tanpa harga pokok tidak ikut di laporan Laba kotor"
+    },
+    "duplicate": "Berkas ini sama persis dengan impor {number} yang masih dihitung. Mengimpornya lagi akan menggandakan angkanya, jadi tidak bisa dilanjutkan.",
+    "overlapTill": "{count} hari di berkas ini sudah punya penjualan di kasir. Kalau berkas ini berisi penjualan yang sama, angkanya akan terhitung dua kali.",
+    "overlapImported": "{count} hari di berkas ini sudah ada di impor sebelumnya. Pastikan berkas ini bukan salinan dari yang lama.",
+    "andMore": "dan {count} lainnya",
+    "errorsTitle": "{count} baris bermasalah",
+    "errorsCapped": "Menampilkan {shown} dari {total}. Perbaiki yang ini dulu lalu periksa lagi.",
+    "sheetRow": "Baris",
+    "sampleTitle": "Contoh baris yang akan diimpor",
+    "notInCatalogue": "(tidak di katalog)",
+    "col": {
+      "date": "Tanggal",
+      "receipt": "Nota",
+      "item": "Barang",
+      "qty": "Jumlah",
+      "total": "Total",
+      "cost": "Harga pokok",
+      "number": "Nomor",
+      "period": "Periode",
+      "lines": "Baris",
+      "importedBy": "Diimpor oleh",
+      "status": "Status"
+    },
+    "confirm": "Impor {count} baris",
+    "importing": "Mengimpor…",
+    "startOver": "Mulai lagi",
+    "done": "Impor {number} selesai: {lines} baris, total {total}, {from} sampai {to}.",
+    "seeReport": "Lihat di laporan Penjualan",
+    "another": "Impor berkas lain",
+    "pastTitle": "Impor sebelumnya",
+    "pastEmpty": "Belum ada riwayat yang diimpor.",
+    "pastEmptyHint": "Setelah impor pertama, daftarnya muncul di sini dan bisa ditarik kembali kalau salah.",
+    "status": {
+      "active": "Dihitung",
+      "withdrawn": "Ditarik"
+    },
+    "withdraw": "Tarik impor",
+    "withdrawHint": "Semua baris {number} dikeluarkan dari setiap laporan. Barisnya tetap tersimpan sebagai catatan, bersama nama Anda dan alasannya.",
+    "withdrawReason": "Alasan, misalnya: terimpor dua kali",
+    "withdrawConfirm": "Tarik dari laporan",
+    "withdrawing": "Menarik…",
+    "error": {
+      "required": "Wajib diisi.",
+      "invalid_date": "Tanggal tidak terbaca. Tulis tahun dulu: 2026-08-31.",
+      "date_too_old": "Tanggal sebelum tahun 2000. Periksa tahunnya.",
+      "date_not_past": "Hari ini dan tanggal yang akan datang dicatat lewat kasir, bukan lewat impor.",
+      "unknown_item_code": "Tidak ada barang dengan kode ini. Periksa kodenya, atau kosongkan dan isi item_name saja.",
+      "item_required": "Isi item_code atau item_name.",
+      "invalid_qty": "Jumlah harus angka bulat lebih dari nol.",
+      "invalid_money": "Jumlah uang tidak terbaca. Contoh: 15000",
+      "price_required": "Isi unit_price atau line_total.",
+      "invalid_payment_method": "Cara bayar tidak dikenali. Lihat daftar di lembar Panduan.",
+      "too_long": "Isinya terlalu panjang."
+    },
+    "guide": {
+      "sheetData": "Data",
+      "sheetGuide": "Panduan",
+      "title": "Cara mengisi templat impor riwayat penjualan",
+      "intro": "Isi lembar \"Data\" (lembar pertama), satu baris untuk satu barang dalam satu penjualan. Lembar \"Panduan\" ini hanya untuk dibaca dan tidak ikut diimpor.",
+      "howTitle": "Sebelum mulai",
+      "how": {
+        "1": "Satu baris adalah satu barang yang terjual pada satu hari. Satu nota berisi tiga barang menjadi tiga baris dengan nomor nota yang sama.",
+        "2": "Riwayat hanya dicatat untuk laporan. Stok tidak berubah, jadi jangan impor penjualan yang barangnya masih harus dikurangi dari rak.",
+        "3": "Hanya tanggal yang sudah lewat. Penjualan hari ini dan seterusnya dicatat lewat kasir.",
+        "4": "Jangan mengganti, menghapus atau menerjemahkan nama kolom di baris 1. Sistem membaca nama-nama itu.",
+        "5": "Setiap baris wajib punya date, qty, dan salah satu dari unit_price atau line_total, serta item_code atau item_name.",
+        "6": "Tanggal ditulis tahun dulu: 2026-08-31. Uang ditulis sebagai angka rupiah biasa: 15000. Sel tanggal dan angka dari Excel juga terbaca.",
+        "7": "Paling banyak {max} baris per berkas. Kalau lebih, pisahkan per tahun atau per bulan.",
+        "8": "Baris yang bermasalah ditampilkan beserta nomor barisnya sebelum Anda konfirmasi, dan dilewati. Berkas yang sama tidak bisa diimpor dua kali."
+      },
+      "columnsTitle": "Isi setiap kolom",
+      "examplesTitle": "Contoh",
+      "examplesIntro": "Dua nota dari 1 Agustus dan satu baris tanpa nota dari 2 Agustus. Jangan salin contoh ini ke lembar Data.",
+      "paymentTitle": "Mengisi kolom payment_method",
+      "paymentIntro": "Tulis kode dari kolom pertama, atau namanya. Boleh dikosongkan kalau tidak tercatat.",
+      "head": {
+        "column": "Kolom",
+        "required": "Wajib?",
+        "meaning": "Arti",
+        "accepted": "Yang diisi",
+        "example": "Contoh",
+        "code": "Kode",
+        "name": "Nama"
+      },
+      "requirement": {
+        "required": "Wajib",
+        "optional": "Boleh kosong",
+        "oneOf": "Wajib salah satu (lihat baris sebelah)"
+      },
+      "columns": {
+        "date": {
+          "meaning": "Tanggal penjualan.",
+          "accepted": "Tahun-bulan-tanggal, misalnya 2026-08-31. Harus sebelum hari ini."
+        },
+        "receipt_number": {
+          "meaning": "Nomor nota atau struk lama.",
+          "accepted": "Teks apa saja. Baris dengan nomor dan tanggal yang sama dihitung sebagai satu transaksi. Kosongkan kalau tidak ada; barisnya tetap masuk penjualan, tetapi tidak dihitung sebagai transaksi."
+        },
+        "item_code": {
+          "meaning": "Kode barang di katalog sistem ini.",
+          "accepted": "Kode yang sudah ada, misalnya PARA001. Kalau diisi, harus cocok. Isi ini atau item_name."
+        },
+        "item_name": {
+          "meaning": "Nama barang seperti di catatan lama.",
+          "accepted": "Teks. Kalau namanya persis sama dengan satu barang di katalog, baris itu dihubungkan ke barang tersebut; kalau tidak, disimpan dengan nama ini."
+        },
+        "qty": {
+          "meaning": "Jumlah yang terjual.",
+          "accepted": "Angka bulat lebih dari nol, dalam satuan terkecil (tablet, botol)."
+        },
+        "unit_price": {
+          "meaning": "Harga jual per satuan.",
+          "accepted": "Angka rupiah, misalnya 1000. Isi ini atau line_total."
+        },
+        "line_total": {
+          "meaning": "Total yang dibayar untuk baris ini.",
+          "accepted": "Angka rupiah. Kalau diisi, angka inilah yang dihitung (termasuk diskon baris). Kalau kosong: qty × unit_price."
+        },
+        "unit_cost": {
+          "meaning": "Harga pokok per satuan.",
+          "accepted": "Angka rupiah. Kosongkan kalau tidak tahu; barisnya tetap masuk laporan Penjualan, tetapi tidak masuk Laba kotor."
+        },
+        "payment_method": {
+          "meaning": "Cara bayar.",
+          "accepted": "Salah satu kode di tabel bawah, atau namanya. Boleh kosong."
+        },
+        "cashier": {
+          "meaning": "Nama kasir di catatan lama.",
+          "accepted": "Teks apa saja. Tidak perlu punya akun di sistem ini."
         }
       }
     }

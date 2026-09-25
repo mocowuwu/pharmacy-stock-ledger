@@ -140,6 +140,27 @@ relax one without saying so explicitly.
   `src/app/fonts/` and loaded with `next/font/local`. `next/font/google`
   fetched them during `next build`, which runs on the clinic's machine at
   every update, and failed the build whenever Google was unreachable.
+- **Imported sales history is not a sale.** `history_imports` and
+  `history_sale_lines` (`src/db/schema/history.ts`) hold sales from before the
+  till, for the Sales and Gross profit reports only. Nothing in
+  `src/lib/history/` touches a batch or the ledger, and nothing about stock --
+  the movement report, valuation, alerts, FEFO -- reads history. Only past days
+  are accepted (today belongs to the till), an identical file is refused while
+  its first copy is active, and a wrong import is *withdrawn* with a reason,
+  never deleted. `sales.import_history` is the control; the Settings "import"
+  switch is the catalogue's button and does not hide it.
+- **Net sales are after discounts, returns and PPN**, and every table adds up to
+  the statement above it. `itemSales` in `src/lib/reports/queries.ts` spreads
+  each sale's discount and inclusive PPN over its lines as exact fractions and
+  hands out the whole rupiah by largest remainder (`apportion`); rounding each
+  product on its own left the product table a few rupiah off the statement.
+  History lines without a `unit_cost` count as sales and are left out of gross
+  profit -- a cost of zero would report them as pure profit.
+- **A decimal point is never a thousands mark.** `parseMoney` accepts only true
+  groupings (`15.000`, `1,500,000`) and refuses `9090.91`, which it used to read
+  as 909.091. The spreadsheet importers use `parseSheetMoney`, which rounds a
+  one- or two-digit decimal to the rupiah, and the workbook reader turns a
+  number cell into plain digits (`9999.9899999` -> `9999.99`).
 - **CSV writes money as a plain integer**, never a formatted amount: `15000`,
   not `Rp 15.000`. A formatted amount is text to a spreadsheet, so a column of
   them sums to zero -- `parseFloat("15.000")` arriving from the other direction.
@@ -173,6 +194,15 @@ depending on the reader, and a misread expiry is a safety problem.
 **Enum values live in `src/lib/catalogue/enums.ts`**, not in the schema. The
 schema builds its `pgEnum`s from that module, so forms can render options
 without pulling drizzle's pg-core into the browser bundle.
+
+**Every report downloads as CSV and as Excel from one description**:
+`src/app/(app)/reports/[report]/export/model.ts` lists each report's tables as
+plain values (rupiah as integers, percentages as basis points) and `route.ts`
+writes the first table as CSV or all of them as a workbook -- a summary sheet,
+then a sheet per table, each with the letterhead, number cells and a totals
+row. A report is also printable on A4 (the report page sets its own `@page`;
+the global print rule is the 80mm receipt), and a table prints every row even
+when the screen shows the first 25.
 
 **Reports aggregate in SQL**, in `src/lib/reports/queries.ts`, which takes an
 executor and no session -- the same split as `src/lib/stock/*`, and what makes
@@ -211,6 +241,12 @@ just its own screens. The words are in `guides.items.*` in both catalogues, with
 steps as numbered keys (`"1"`, `"2"`...) because the catalogues are trees of
 strings. When a screen's behaviour changes, change its guide too -- a guide
 that describes the old till is worse than none.
+
+**Every literal message key exists.** `tests/message-keys.test.ts` scans `src`
+for `t("a.b.c")` and fails on any key that is not text in both catalogues; a
+missing key renders as its own name on screen. It cannot see keys built at run
+time, so a key that is both a label and a group of labels (`reports.export` once
+was) still needs care.
 
 **Add a dependency by editing `package-lock.json`, not by `npm install` on a
 Mac.** npm on macOS prunes the optional platform packages from the lock (esbuild

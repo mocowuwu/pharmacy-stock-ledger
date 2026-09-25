@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { isUuid } from "@/lib/format/ids";
 import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/lib/dal/session";
 import { can } from "@/lib/auth/permissions";
@@ -17,6 +18,7 @@ export default async function ItemDetailPage({ params, searchParams }: PageProps
   const session = await requirePermission("items.view");
   const t = await getTranslations();
   const { id } = await params;
+  if (!isUuid(id)) notFound();
   const query = await searchParams;
 
   const item = await getItem(id);

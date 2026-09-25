@@ -1,5 +1,5 @@
 import type { Permission } from "@/lib/auth/permissions";
-import { addDays, today } from "@/lib/format/date";
+import { addDays, daysBetween, endOfMonth, today } from "@/lib/format/date";
 import type { DateRange } from "./queries";
 
 /**
@@ -38,11 +38,46 @@ export const REPORT_PERMISSION = {
   suppliers: "reports.financial",
 } as const satisfies Record<ReportSlug, Permission>;
 
+/** Each report's glyph, from the sidebar's icon set. */
+export const REPORT_ICON: Record<ReportSlug, string> = {
+  sales: "sales",
+  movements: "movements",
+  margin: "margin",
+  valuation: "valuation",
+  expiry: "expiry",
+  suppliers: "suppliers",
+};
+
+/** Which half of the hub a report is listed under. */
+export const REPORT_GROUP: Record<ReportSlug, "selling" | "money"> = {
+  sales: "selling",
+  movements: "selling",
+  margin: "money",
+  valuation: "money",
+  expiry: "money",
+  suppliers: "money",
+};
+
 export function isReportSlug(value: string): value is ReportSlug {
   return (REPORTS as readonly string[]).includes(value);
 }
 
 export const PRESETS = ["today", "7d", "30d", "month", "lastMonth", "90d"] as const;
+
+/** The longest window a report covers: three years and a day. */
+export const MAX_RANGE_DAYS = 1_096;
+
+/**
+ * A day a report can start or end on: a real calendar date, written
+ * YYYY-MM-DD, from 2000 on. "2026-02-30" passes a pattern check and then fails
+ * in the database as a server error, so it is checked here and treated like
+ * any other unreadable date -- the report falls back to its default period.
+ */
+export function isReportDay(value?: string): boolean {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/u.test(value) || value < "2000-01-01") return false;
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day)).toISOString().slice(0, 10) === value;
+}
 export type Preset = (typeof PRESETS)[number];
 
 /**
@@ -60,12 +95,14 @@ export function resolveRange(input: {
   /** Overridable so the behaviour can be tested on a fixed day. */
   on?: string;
 }): DateRange & { preset: Preset | "custom" } {
-  const isDate = (value?: string) => !!value && /^\d{4}-\d{2}-\d{2}$/u.test(value);
-
-  if (isDate(input.from) && isDate(input.to)) {
+  if (isReportDay(input.from) && isReportDay(input.to)) {
     const [from, to] =
       input.from! <= input.to! ? [input.from!, input.to!] : [input.to!, input.from!];
-    return { from, to, preset: "custom" };
+    // A window of decades would draw a chart of ten thousand days; three years
+    // is more than any comparison an owner makes, and the subtitle shows the
+    // period actually reported.
+    const earliest = addDays(to, -(MAX_RANGE_DAYS - 1));
+    return { from: from < earliest ? earliest : from, to, preset: "custom" };
   }
 
   const now = input.on ?? today();
@@ -93,4 +130,33 @@ export function resolveRange(input: {
     default:
       return { from: addDays(now, -29), to: now, preset: "30d" };
   }
+}
+
+/**
+ * The window a report is compared against: the one just before it.
+ *
+ * For most periods that is the same number of days immediately earlier --
+ * the last 30 days against the 30 before them. Calendar months are compared
+ * as calendar months instead, because that is how an owner thinks about
+ * them: last month against the month before, and this month so far against
+ * the same days of last month (the 1st to the 25th against the 1st to the
+ * 25th), clamped where last month was shorter.
+ */
+export function previousRange(range: DateRange & { preset?: Preset | "custom" }): DateRange {
+  const [year, month] = range.from.split("-").map(Number);
+  const prior = month === 1 ? { y: year - 1, m: 12 } : { y: year, m: month - 1 };
+  const priorFirst = `${prior.y}-${String(prior.m).padStart(2, "0")}-01`;
+  const priorLast = endOfMonth(prior.y, prior.m);
+
+  if (range.preset === "lastMonth") {
+    return { from: priorFirst, to: priorLast };
+  }
+  if (range.preset === "month") {
+    const day = Number(range.to.slice(8, 10));
+    const candidate = `${priorFirst.slice(0, 8)}${String(day).padStart(2, "0")}`;
+    return { from: priorFirst, to: candidate > priorLast ? priorLast : candidate };
+  }
+
+  const length = daysBetween(range.from, range.to) + 1;
+  return { from: addDays(range.from, -length), to: addDays(range.from, -1) };
 }

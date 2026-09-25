@@ -82,6 +82,14 @@ export const ALERT_TYPES = [
 export const ALERT_SEVERITIES = ["critical", "warning", "notice"] as const;
 
 /**
+ * An imported block of past sales is either counted in the reports or has been
+ * withdrawn. Withdrawn, not deleted: the rows stay, so the record shows what
+ * was imported, by whom, and why it was taken back out.
+ */
+export const HISTORY_IMPORT_STATUSES = ["active", "withdrawn"] as const;
+export type HistoryImportStatus = (typeof HISTORY_IMPORT_STATUSES)[number];
+
+/**
  * Classes that may never be restocked from a return, and that require a
  * responsible pharmacist on every movement. Enforced in code rather than left
  * to a settings toggle.

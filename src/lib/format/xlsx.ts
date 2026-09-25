@@ -16,14 +16,26 @@
 
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 
+/**
+ * A cell: text, or -- in a report export -- a number, written as a number so
+ * a column of rupiah sums in the spreadsheet. The templates only ever write
+ * text.
+ */
+export type XlsxCell = string | number | null;
+
+/** How a number column is displayed. The stored value is always the plain figure. */
+export type XlsxNumberFormat = "int" | "money" | "percent";
+
 export type XlsxRow = {
-  cells: string[];
+  cells: XlsxCell[];
   /** Style of every cell in the row. */
-  style?: "header" | "title" | "section" | "wrap" | "note";
+  style?: "header" | "title" | "section" | "wrap" | "note" | "total";
   /** Points. Needed for merged rows, which Excel will not auto-fit. */
   height?: number;
   /** Merge the row's first cell across this many columns. */
   span?: number;
+  /** Number formats for this row only, where one sheet mixes rupiah, counts and percentages. */
+  formats?: Array<XlsxNumberFormat | undefined>;
 };
 
 export type XlsxSheet = {
@@ -34,6 +46,14 @@ export type XlsxSheet = {
   textColumns?: boolean;
   /** Freeze the first row. */
   freezeHeader?: boolean;
+  /** Freeze this many rows instead -- a report's letterhead and its column headings. */
+  freezeRows?: number;
+  /**
+   * Display format for number cells, by column. A percentage is stored as a
+   * fraction (0.253) and shown as 25,3%; rupiah and counts with thousands
+   * grouping, in whatever separators the reader's Excel uses.
+   */
+  formats?: Array<XlsxNumberFormat | undefined>;
   /** Print landscape, one page wide -- for a sheet people read rather than fill in. */
   printFit?: boolean;
   rows: XlsxRow[];
@@ -66,16 +86,31 @@ function columnName(index: number): string {
 }
 
 // Cell formats, by index into `cellXfs` in STYLES below.
-const STYLE_INDEX = { plain: 0, text: 1, header: 2, title: 3, section: 4, wrap: 5, note: 6 } as const;
+const STYLE_INDEX = {
+  plain: 0,
+  text: 1,
+  header: 2,
+  title: 3,
+  section: 4,
+  wrap: 5,
+  note: 6,
+  number: 7,
+  percent: 8,
+  total: 9,
+  totalNumber: 10,
+  totalPercent: 11,
+} as const;
 
 const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-<fonts count="5">
+<numFmts count="2"><numFmt numFmtId="164" formatCode="#,##0"/><numFmt numFmtId="165" formatCode="0.0%"/></numFmts>
+<fonts count="6">
 <font><sz val="11"/><name val="Calibri"/></font>
 <font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>
 <font><b/><sz val="16"/><color rgb="FF5B3FA6"/><name val="Calibri"/></font>
 <font><b/><sz val="12"/><color rgb="FF5B3FA6"/><name val="Calibri"/></font>
 <font><i/><sz val="11"/><color rgb="FF555555"/><name val="Calibri"/></font>
+<font><b/><sz val="11"/><name val="Calibri"/></font>
 </fonts>
 <fills count="4">
 <fill><patternFill patternType="none"/></fill>
@@ -83,12 +118,13 @@ const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <fill><patternFill patternType="solid"><fgColor rgb="FF5B3FA6"/><bgColor indexed="64"/></patternFill></fill>
 <fill><patternFill patternType="solid"><fgColor rgb="FFEFEAF8"/><bgColor indexed="64"/></patternFill></fill>
 </fills>
-<borders count="2">
+<borders count="3">
 <border><left/><right/><top/><bottom/><diagonal/></border>
 <border><left style="thin"><color rgb="FFD4CCE6"/></left><right style="thin"><color rgb="FFD4CCE6"/></right><top style="thin"><color rgb="FFD4CCE6"/></top><bottom style="thin"><color rgb="FFD4CCE6"/></bottom><diagonal/></border>
+<border><left/><right/><top style="medium"><color rgb="FF5B3FA6"/></top><bottom/><diagonal/></border>
 </borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="7">
+<cellXfs count="12">
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
 <xf numFmtId="49" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
 <xf numFmtId="49" fontId="1" fillId="2" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>
@@ -96,6 +132,11 @@ const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <xf numFmtId="0" fontId="3" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
 <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>
 <xf numFmtId="0" fontId="4" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>
+<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+<xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+<xf numFmtId="0" fontId="5" fillId="3" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>
+<xf numFmtId="164" fontId="5" fillId="3" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>
+<xf numFmtId="165" fontId="5" fillId="3" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>
 </cellXfs>
 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 </styleSheet>`;
@@ -109,8 +150,24 @@ function sheetXml(sheet: XlsxSheet): string {
       const s = row.style ? STYLE_INDEX[row.style] : sheet.textColumns ? STYLE_INDEX.text : 0;
       const cells = row.cells
         .map((value, c) => {
-          if (value === "") return "";
+          if (value === "" || value === null) return "";
           const ref = `${columnName(c)}${rowNumber}`;
+          if (typeof value === "number") {
+            if (!Number.isFinite(value)) return "";
+            const format = row.formats ? row.formats[c] : sheet.formats?.[c];
+            const total = row.style === "total";
+            const style =
+              format === "percent"
+                ? total
+                  ? STYLE_INDEX.totalPercent
+                  : STYLE_INDEX.percent
+                : format
+                  ? total
+                    ? STYLE_INDEX.totalNumber
+                    : STYLE_INDEX.number
+                  : s;
+            return `<c r="${ref}" s="${style}"><v>${value}</v></c>`;
+          }
           return `<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${esc(value)}</t></is></c>`;
         })
         .join("");
@@ -129,9 +186,11 @@ function sheetXml(sheet: XlsxSheet): string {
     })
     .join("");
 
-  const pane = sheet.freezeHeader
-    ? `<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>`
-    : `<sheetViews><sheetView workbookViewId="0"/></sheetViews>`;
+  const frozen = sheet.freezeRows ?? (sheet.freezeHeader ? 1 : 0);
+  const pane =
+    frozen > 0
+      ? `<sheetViews><sheetView workbookViewId="0"><pane ySplit="${frozen}" topLeftCell="A${frozen + 1}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>`
+      : `<sheetViews><sheetView workbookViewId="0"/></sheetViews>`;
 
   return (
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
@@ -150,8 +209,27 @@ function sheetXml(sheet: XlsxSheet): string {
   );
 }
 
+/**
+ * A sheet name Excel will open: at most 31 characters, none of : \ / ? * [ ],
+ * and unique in the workbook. A workbook that breaks any of these is refused
+ * whole with a repair prompt, which reads to the owner as a corrupt download.
+ */
+function sheetNames(sheets: XlsxSheet[]): string[] {
+  const used = new Set<string>();
+  return sheets.map((sheet, i) => {
+    const base = sheet.name.replace(/[:\\/?*[\]]/gu, " ").trim().slice(0, 31) || `Sheet${i + 1}`;
+    let name = base;
+    for (let n = 2; used.has(name.toLowerCase()); n += 1) {
+      name = `${base.slice(0, 31 - String(n).length - 1)} ${n}`;
+    }
+    used.add(name.toLowerCase());
+    return name;
+  });
+}
+
 /** Builds a workbook. The first sheet is the one Excel opens on. */
 export function buildXlsx(sheets: XlsxSheet[]): Uint8Array {
+  const names = sheetNames(sheets);
   const files: Record<string, Uint8Array> = {
     "[Content_Types].xml": strToU8(
       `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
@@ -179,7 +257,7 @@ export function buildXlsx(sheets: XlsxSheet[]): Uint8Array {
         `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">` +
         `<bookViews><workbookView activeTab="0"/></bookViews><sheets>` +
         sheets
-          .map((s, i) => `<sheet name="${esc(s.name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`)
+          .map((_, i) => `<sheet name="${esc(names[i])}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`)
           .join("") +
         `</sheets></workbook>`,
     ),
@@ -253,6 +331,24 @@ function serialToIso(serial: number): string | null {
   const days = whole > 60 ? whole - 1 : whole;
   const date = new Date(Date.UTC(1899, 11, 31) + days * 86_400_000);
   return date.toISOString().slice(0, 10);
+}
+
+/**
+ * A number cell as the text a person would have typed.
+ *
+ * Excel stores what a formula produced, not what it shows: 3 × 3333.33 is
+ * kept as 9999.9899999999998 and 15000 may arrive as 1.5E4. A whole number
+ * comes back whole. Anything else comes back with two decimals and a point,
+ * which the importers' money parser rounds to the rupiah and their quantity
+ * fields refuse -- never as a string of digits that could be mistaken for an
+ * Indonesian thousands grouping.
+ */
+function plainNumber(text: string): string {
+  const n = Number(text);
+  if (text === "" || !Number.isFinite(n)) return text;
+  const whole = Math.round(n);
+  if (Math.abs(n - whole) < 1e-6 && Number.isSafeInteger(whole)) return String(whole);
+  return n.toFixed(2);
 }
 
 /** Refuses to inflate anything that could be a decompression bomb. */
@@ -348,7 +444,7 @@ export function readFirstSheet(bytes: Uint8Array): string[][] | null {
       else if (type === "b") value = raw === "1" ? "TRUE" : "FALSE";
       else if (raw !== undefined) {
         value = unesc(raw).trim();
-        if (dateStyle[style]) value = serialToIso(Number(value)) ?? value;
+        value = dateStyle[style] ? (serialToIso(Number(value)) ?? value) : plainNumber(value);
       }
 
       while (cells.length < col) cells.push("");

@@ -24,6 +24,7 @@ import {
   auditLog,
   batches,
   categories,
+  historyImports,
   items,
   saleLines,
   sales,
@@ -237,9 +238,10 @@ async function main() {
         sales: sql<number>`(select count(*)::int from ${sales})`,
         suppliers: sql<number>`(select count(*)::int from ${suppliers} where ${suppliers.isSystem} = false)`,
         cleared: sql<number>`(select count(*)::int from ${auditLog} where ${auditLog.action} = 'settings.demo_data_cleared')`,
+        history: sql<number>`(select count(*)::int from ${historyImports})`,
       })
       .from(sql`(select 1) as one`);
-    if (state.items + state.sales + state.suppliers + state.cleared > 0) {
+    if (state.items + state.sales + state.suppliers + state.cleared + state.history > 0) {
       console.log("Database already in use; no sample data added.");
       await close();
       return;

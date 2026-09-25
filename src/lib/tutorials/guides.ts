@@ -198,6 +198,7 @@ export const GUIDES: readonly Guide[] = [
       { id: "movements", permissions: ["reports.sales"], tip: true },
       { id: "money", permissions: ["reports.financial"] },
       { id: "export", tip: true },
+      { id: "history", permissions: ["sales.import_history"], warn: true },
     ],
   },
   {

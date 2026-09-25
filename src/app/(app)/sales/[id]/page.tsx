@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { isUuid } from "@/lib/format/ids";
 import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/lib/dal/session";
 import { can } from "@/lib/auth/permissions";
@@ -18,6 +19,7 @@ export default async function SaleDetailPage({
   const session = await requirePermission("sales.create");
   const t = await getTranslations();
   const { id } = await params;
+  if (!isUuid(id)) notFound();
   const query = await searchParams;
 
   const sale = await getSale(id);

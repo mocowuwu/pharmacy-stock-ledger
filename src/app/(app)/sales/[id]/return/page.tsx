@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { isUuid } from "@/lib/format/ids";
 import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/lib/dal/session";
 import { returnableLines } from "@/lib/dal/sales";
@@ -11,6 +12,7 @@ export default async function ReturnPage({ params }: PageProps<"/sales/[id]/retu
   const session = await requirePermission("sales.return");
   const t = await getTranslations();
   const { id } = await params;
+  if (!isUuid(id)) notFound();
 
   const data = await returnableLines(id);
   if (!data) notFound();

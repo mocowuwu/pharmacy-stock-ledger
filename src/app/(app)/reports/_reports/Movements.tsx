@@ -1,7 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { movementsReport, type DateRange } from "@/lib/dal/reports";
-import { Alert, Card, Chip, SectionHeading, Stat, buttonSecondarySmall, inputBase } from "@/components/ui";
+import { Alert, Card, Chip, SectionHeading, buttonSecondarySmall, inputBase } from "@/components/ui";
+import { KpiTile } from "../_ui/Figures";
 import { formatDateTime, formatExpiry } from "@/lib/format/date";
 import type { Locale } from "@/i18n/config";
 
@@ -49,17 +50,27 @@ export async function MovementsReport({
 
   return (
     <>
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat value={data.qtyIn} label={t("reports.movements.unitsIn")} />
-        <Stat value={data.qtyOut} label={t("reports.movements.unitsOut")} />
-        <Stat
-          value={data.byItem.length}
-          label={t("reports.movements.products")}
-          tone={data.byItem.length === 0 ? "quiet" : "default"}
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiTile
+          label={t("reports.movements.unitsIn")}
+          value={data.qtyIn.toLocaleString("id-ID")}
+          locale={locale}
         />
-        <Stat
-          value={data.byItem.reduce((sum, row) => sum + row.events, 0)}
+        <KpiTile
+          label={t("reports.movements.unitsOut")}
+          value={data.qtyOut.toLocaleString("id-ID")}
+          locale={locale}
+        />
+        <KpiTile
+          label={t("reports.movements.products")}
+          value={data.byItem.length.toLocaleString("id-ID")}
+          tone={data.byItem.length === 0 ? "quiet" : "default"}
+          locale={locale}
+        />
+        <KpiTile
           label={t("reports.movements.events")}
+          value={data.byItem.reduce((sum, row) => sum + row.events, 0).toLocaleString("id-ID")}
+          locale={locale}
         />
       </div>
 
@@ -68,7 +79,7 @@ export async function MovementsReport({
       <form
         method="get"
         action="/reports/movements"
-        className="mb-6 flex flex-wrap items-end gap-2"
+        className="mb-6 flex flex-wrap items-end gap-2 print:hidden"
       >
         {query.preset && <input type="hidden" name="preset" value={query.preset} />}
         {query.from && <input type="hidden" name="from" value={query.from} />}

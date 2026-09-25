@@ -5,6 +5,7 @@ import {
   BATCH_STATUSES,
   DOSAGE_FORMS,
   DRUG_CLASSES,
+  HISTORY_IMPORT_STATUSES,
   MOVEMENT_TYPES,
   PAYMENT_METHODS,
 } from "@/lib/catalogue/enums";
@@ -67,6 +68,9 @@ export const alertStatus = pgEnum("alert_status", [
 
 /** Whether the stored sale price already contains PPN. */
 export const taxMode = pgEnum("tax_mode", ["inclusive", "exclusive"]);
+
+/** Whether an imported block of past sales still counts in the reports. */
+export const historyImportStatus = pgEnum("history_import_status", HISTORY_IMPORT_STATUSES);
 
 export const countStatus = pgEnum("count_status", [
   "draft",

@@ -93,6 +93,28 @@ describe("xlsx round trip", () => {
       ["Paracetamol", "", "2027-12-31", "15000"],
     ]);
   });
+
+  it("reads a formula's number as what it shows, never as a thousands grouping", () => {
+    const bytes = zipSync({
+      "xl/workbook.xml": strToU8(
+        `<workbook xmlns:r="x"><sheets><sheet name="S" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+      ),
+      "xl/_rels/workbook.xml.rels": strToU8(
+        `<Relationships><Relationship Id="rId1" Type="t" Target="worksheets/sheet1.xml"/></Relationships>`,
+      ),
+      "xl/worksheets/sheet1.xml": strToU8(
+        `<worksheet><sheetData><row r="1">` +
+          // 3 × 3333.33 as Excel keeps it, 15000 in exponent form, a cost worked
+          // out by dividing, and a fraction of a unit.
+          `<c r="A1"><v>9999.9899999999998</v></c>` +
+          `<c r="B1"><v>1.5E4</v></c>` +
+          `<c r="C1"><v>9090.9090909</v></c>` +
+          `<c r="D1"><v>2.5</v></c>` +
+          `</row></sheetData></worksheet>`,
+      ),
+    });
+    expect(readFirstSheet(bytes)).toEqual([["9999.99", "15000", "9090.91", "2.50"]]);
+  });
 });
 
 describe("the import template", () => {
