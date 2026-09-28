@@ -37,6 +37,7 @@
     "reports": "Reports",
     "users": "Accounts",
     "settings": "Settings",
+    "app": "Android app",
     "signOut": "Sign out",
     "suppliers": "Suppliers",
     "categories": "Categories",
@@ -66,7 +67,8 @@
       "suppliers": "Who you buy from",
       "categories": "Groups of medicines",
       "users": "Staff accounts and access",
-      "settings": "Pharmacy name, tax, features"
+      "settings": "Pharmacy name, tax, features",
+      "app": "Put the pharmacy on your phone"
     },
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
@@ -1243,7 +1245,8 @@
       "categories": "Groups of medicines, such as Antibiotics or Vitamins, to keep lists and reports tidy.",
       "reports": "Sales, stock and profit for a period you choose.",
       "users": "An account for each member of staff, and what each may do.",
-      "settings": "The pharmacy's name, tax, receipts and which features are in use."
+      "settings": "The pharmacy's name, tax, receipts and which features are in use.",
+      "app": "The pharmacy on a phone, including a backup till that keeps selling when the server is down."
     },
     "outro": {
       "title": "That's everything",
@@ -2351,7 +2354,7 @@
             "title": "Setting up a phone",
             "steps": {
               "1": "Install Tailscale on the phone and sign in to the pharmacy's network. Without it the app cannot reach the server at all.",
-              "2": "Install the pharmacy app and open it. Enter the server address the owner gave you (it ends in .ts.net).",
+              "2": "Open Android app in the menu (under Settings) on the phone, tap Download the app, and install it. Enter the server address that page shows.",
               "3": "Give the phone a name, such as \"HP Kasir\", and choose what it is for: Till for the phone at the counter, Management for everyone else."
             },
             "tip": "Only one phone should be the Till. It is the only one that keeps a copy for selling offline."
@@ -2631,5 +2634,33 @@
     "unreachable": "The pharmacy server is not answering.",
     "openOfflineTill": "Open the offline till",
     "openApp": "Back to the app"
+  },
+  "androidApp": {
+    "title": "Android app",
+    "subtitle": "Put the pharmacy on a phone or tablet",
+    "appName": "Apotek for Android",
+    "version": "Version {version}, for Android 7 and newer",
+    "download": "Download the app",
+    "what": "The whole pharmacy system on a phone. On the phone set up as the till it keeps selling when the server cannot be reached, and sends those sales as soon as it is back.",
+    "stepsTitle": "Installing",
+    "steps": {
+      "1": "Install Tailscale on the phone and sign in to the pharmacy's network. Without it the app cannot reach this server.",
+      "2": "Open this page on the phone and tap Download the app. When Android asks, allow installing apps from your browser, then open the downloaded file.",
+      "3": "Open the app. When it asks for the server address, enter:",
+      "4": "Name the phone, choose Till for the phone at the counter or Management for anyone else, and sign in with your own username and password.",
+      "5": "From then on the app opens straight into the pharmacy. Always sign in on the app's own screen, never in a browser."
+    },
+    "rolesTitle": "Till or management?",
+    "roles": "Only one phone should be the till. It keeps a copy of the medicines, prices and stock so it can sell while the server is down; every other phone or tablet is set up as management and keeps nothing on the device.",
+    "offline": "The till must reach the server at least once every 24 hours, and a restart locks it until it does. Offline it can only sell; everything else waits for the server.",
+    "guide": "Read the guide",
+    "devices": "Phones in use",
+    "updates": "After the pharmacy system is updated, download the app again from this page to update it. Phones keep their unsent sales through an update.",
+    "inApp": "You are using the app, version {version}: it is up to date.",
+    "inAppOlder": "You are using the app, version {version}. Version {latest} is available: download it below to update.",
+    "errors": {
+      "not_published": "The app for version {version} has not been published yet. It is attached to each release once the owner has set up app signing; see mobile/README.md.",
+      "unreachable": "This server could not fetch the app from the release. Check that it is connected to the internet, and try again."
+    }
   }
 }

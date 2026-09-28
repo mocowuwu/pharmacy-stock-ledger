@@ -1,6 +1,12 @@
 /**
  * `npm run apk`: web bundle -> Capacitor sync -> Gradle -> one APK file.
  *
+ * With APOTEK_KEYSTORE (and its passwords) in the environment it builds the
+ * signed release APK the website hands out -- `release/apotek-android.apk`,
+ * the name the release workflow attaches and the server fetches. Without it,
+ * a debug build for trying things out: installable by hand, but not an
+ * update to a release-signed app, which is signed with a different key.
+ *
  * Gradle 8 cannot run on the newest JDKs (a class-file version error with no
  * mention of Java in it), so this picks a JDK 17-21 on its own: JAVA_HOME if
  * it is one, else Android Studio's bundled runtime, else any installed one.
@@ -13,7 +19,9 @@ import { join, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const android = join(root, "android");
-const { version } = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+// Versioned with the pharmacy release it ships in.
+const { version } = JSON.parse(readFileSync(join(root, "..", "package.json"), "utf8"));
+const signed = Boolean(process.env.APOTEK_KEYSTORE);
 
 function run(cmd, args, opts = {}) {
   const result = spawnSync(cmd, args, { stdio: "inherit", cwd: root, shell: platform() === "win32", ...opts });
@@ -70,10 +78,13 @@ writeFileSync(join(android, "local.properties"), `sdk.dir=${sdk.replaceAll("\\",
 run("npm", ["run", "build"]);
 run("npx", ["cap", "sync", "android"]);
 const env = { ...process.env, JAVA_HOME: jdk, ANDROID_HOME: sdk };
-run(platform() === "win32" ? "gradlew.bat" : "./gradlew", ["assembleDebug", "--console=plain"], { cwd: android, env });
+run(platform() === "win32" ? "gradlew.bat" : "./gradlew", [signed ? "assembleRelease" : "assembleDebug", "--console=plain"], {
+  cwd: android,
+  env,
+});
 
-const apk = join(android, "app/build/outputs/apk/debug/app-debug.apk");
+const apk = join(android, signed ? "app/build/outputs/apk/release/app-release.apk" : "app/build/outputs/apk/debug/app-debug.apk");
 mkdirSync(join(root, "release"), { recursive: true });
-const out = join(root, "release", `apotek-${version}-debug.apk`);
+const out = join(root, "release", signed ? "apotek-android.apk" : `apotek-${version}-debug.apk`);
 copyFileSync(apk, out);
-console.log(`\nAPK: ${out}`);
+console.log(`\nAPK${signed ? " (signed release)" : " (debug)"}: ${out}`);

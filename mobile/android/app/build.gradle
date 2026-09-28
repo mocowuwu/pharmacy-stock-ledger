@@ -1,5 +1,15 @@
 apply plugin: 'com.android.application'
 
+import groovy.json.JsonSlurper
+
+// The app is versioned with the pharmacy release it ships in: the APK
+// attached to v0.1.8 is 0.1.8, and the devices screen can tell which phones
+// run an older build. Android refuses an update whose versionCode is not
+// higher, so it is derived from the same number: 0.1.8 -> 108.
+def releaseVersion = new JsonSlurper().parse(file('../../../package.json')).version
+def (major, minor, patch) = releaseVersion.tokenize('.').collect { it.replaceAll(/\D.*/, '') as int }
+def releaseCode = major * 10000 + minor * 100 + patch
+
 android {
     namespace = "id.cuanison.pharmacyledger"
     // NativeBridge.appVersion() reads BuildConfig.VERSION_NAME.
@@ -11,8 +21,8 @@ android {
         applicationId "id.cuanison.pharmacyledger"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "0.1.0"
+        versionCode releaseCode
+        versionName releaseVersion
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -20,10 +30,27 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Release builds are signed with the pharmacy's own key, handed in by the
+    // environment (the release workflow decodes it from repository secrets;
+    // it is never in the repository). Every release must use the same key:
+    // Android installs an update only over an app signed by the same one,
+    // and uninstalling to get round it would delete unsent offline sales.
+    signingConfigs {
+        release {
+            def keystore = System.getenv("APOTEK_KEYSTORE")
+            if (keystore) {
+                storeFile file(keystore)
+                storePassword System.getenv("APOTEK_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("APOTEK_KEY_ALIAS")
+                keyPassword System.getenv("APOTEK_KEY_PASSWORD")
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (System.getenv("APOTEK_KEYSTORE")) signingConfig signingConfigs.release
         }
     }
 }

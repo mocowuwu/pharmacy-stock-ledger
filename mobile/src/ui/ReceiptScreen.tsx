@@ -3,7 +3,8 @@ import type { MessageKey } from "../i18n";
 import { native } from "../native";
 import { readHistory, readQueue, readSnapshot } from "../lib/store";
 import type { Receipt } from "../storage-format";
-import { Alert, Bar, StatusLine } from "./components";
+import { Alert, Bar, Empty } from "./components";
+import { Icon } from "./icons";
 import { useApp } from "./context";
 import { formatExpiry, formatMoney, formatMoment, formatRate } from "./format";
 
@@ -24,20 +25,18 @@ export function ReceiptScreen({ clientId }: { clientId: string }) {
   const receipt: Receipt | undefined = queued?.receipt ?? synced?.receipt;
   const snapshot = readSnapshot();
 
-  const back = (
-    <button className="small" onClick={() => go(session ? "/till" : "/queue")}>
-      {t("common.back")}
-    </button>
-  );
+  const back = () => go(session ? "/till" : "/queue", { replace: true });
 
   if (!receipt || !snapshot) {
     return (
-      <>
-        <Bar title={t("receipt.number")}>{back}</Bar>
+      <div className="screen">
+        <Bar title={t("receipt.title")} onBack={back} />
         <main>
-          <Alert tone="warning">{t("receipt.notFound")}</Alert>
+          <div className="card">
+            <Empty icon="receipt">{t("receipt.notFound")}</Empty>
+          </div>
         </main>
-      </>
+      </div>
     );
   }
 
@@ -46,16 +45,25 @@ export function ReceiptScreen({ clientId }: { clientId: string }) {
   const loc = s.receiptLocale;
 
   return (
-    <>
-      <Bar title={receipt.offlineNumber}>{back}</Bar>
-      <StatusLine />
-      <main>
+    <div className="screen">
+      <Bar title={receipt.offlineNumber} sub={t("receipt.title")} onBack={back} />
+      <main className="with-dock">
         <div className="no-print">
-          {queued ? <Alert tone="notice">{t("receipt.queued")}</Alert> : null}
+          {queued && session ? (
+            <div className="hero" style={{ paddingTop: 8 }}>
+              <div className="hero-icon ok">
+                <Icon name="check" size={36} strokeWidth={2.5} />
+              </div>
+              <h2>{t("receipt.saved")}</h2>
+              <p>{t("receipt.queued")}</p>
+            </div>
+          ) : queued ? (
+            <Alert tone="notice">{t("receipt.queued")}</Alert>
+          ) : null}
           {synced ? (
             <Alert tone={synced.status === "review" ? "warning" : "ok"}>
-              {synced.saleNumber ? t("receipt.synced", { number: synced.saleNumber }) : null}{" "}
-              {t(`queue.status.${synced.status}` as MessageKey)}
+              <strong>{synced.saleNumber ? t("receipt.synced", { number: synced.saleNumber }) : t("queue.status.review")}</strong>
+              {synced.status === "review" ? t("receipt.reviewHelp") : t(`queue.status.${synced.status}` as MessageKey)}
             </Alert>
           ) : null}
         </div>
@@ -132,7 +140,7 @@ export function ReceiptScreen({ clientId }: { clientId: string }) {
               <span>{formatMoney(receipt.taxAmount)}</span>
             </div>
           ) : null}
-          <div className="line" style={{ fontWeight: 700, fontSize: 15 }}>
+          <div className="line grand">
             <span>{r("receipt.total")}</span>
             <span>{formatMoney(receipt.total)}</span>
           </div>
@@ -157,17 +165,19 @@ export function ReceiptScreen({ clientId }: { clientId: string }) {
           {s.receiptFooter ? <p style={{ textAlign: "center", margin: "6px 0 0" }}>{s.receiptFooter}</p> : null}
         </div>
 
-        <div className="no-print">
-          <button className="block" onClick={() => native().print(receipt.offlineNumber)}>
-            {t("receipt.print")}
+      </main>
+      <div className="dock no-print">
+        <div className="inner">
+          <button className="big" onClick={() => native().print(receipt.offlineNumber)} style={{ minWidth: 0, flex: session ? "0 0 auto" : 1 }}>
+            <Icon name="printer" /> {t("receipt.print")}
           </button>
           {session ? (
-            <button className="primary block" onClick={() => go("/till")}>
-              {t("receipt.newSale")}
+            <button className="primary big" style={{ flex: 1 }} onClick={() => go("/till", { replace: true })}>
+              <Icon name="plus" /> {t("receipt.newSale")}
             </button>
           ) : null}
         </div>
-      </main>
-    </>
+      </div>
+    </div>
   );
 }

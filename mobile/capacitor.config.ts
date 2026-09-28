@@ -1,5 +1,6 @@
 import type { CapacitorConfig } from "@capacitor/cli";
-import pkg from "./package.json";
+// Versioned with the pharmacy release it ships in (see android/app/build.gradle).
+import pkg from "../package.json";
 
 /**
  * The shell is served from https://localhost -- the origin the server's CORS
@@ -22,6 +23,14 @@ const config: CapacitorConfig = {
     androidScheme: "https",
     // A plain http:// LAN address must work as well as the Tailscale https one.
     cleartext: true,
+  },
+  plugins: {
+    // MainActivity pads the page clear of the bars itself, the same on every
+    // WebView version; Capacitor only sets light icons on the dark chrome.
+    SystemBars: {
+      insetsHandling: "disable",
+      style: "DARK",
+    },
   },
   android: {
     allowMixedContent: true,

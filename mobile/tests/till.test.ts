@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { saleTotals } from "@/lib/stock/totals";
-import { buildSale, cartTotals, findByCode, offlineNumber, usedByBatch, type SaleInput } from "../src/lib/till";
+import { buildSale, cartTotals, findByCode, itemIndex, offlineNumber, quickCash, usedByBatch, type SaleInput } from "../src/lib/till";
 import { cashier, HOUR, ISSUED, snapshot, state } from "./fixtures";
 
 function input(over: Partial<SaleInput> = {}): SaleInput {
@@ -109,5 +109,28 @@ describe("the offline till", () => {
     expect(findByCode(items, "8991234567890")?.id).toBe("item-para");
     expect(findByCode(items, "0108991234567890")?.id).toBe("item-para");
     expect(findByCode(items, "PARA500")?.id).toBe("item-para");
+  });
+});
+
+describe("the payment sheet's quick amounts", () => {
+  it("offers the exact sum, then the next round note in each size", () => {
+    expect(quickCash(19_000)).toEqual([19_000, 20_000, 50_000, 100_000]);
+    expect(quickCash(2_500)).toEqual([2_500, 5_000, 10_000, 20_000, 50_000]);
+    expect(quickCash(41_000)).toEqual([41_000, 45_000, 50_000, 100_000]);
+  });
+
+  it("offers nothing nobody pays with, and does not repeat a round amount", () => {
+    expect(quickCash(50_000)).toEqual([50_000, 100_000]);
+    expect(quickCash(100_000)).toEqual([100_000]);
+  });
+});
+
+describe("the item index", () => {
+  it("is built once per snapshot and finds every item", () => {
+    const snap = snapshot();
+    const index = itemIndex(snap);
+    expect(itemIndex(snap)).toBe(index);
+    expect(index.get("item-amox")?.code).toBe("AMOX");
+    expect(itemIndex(snapshot())).not.toBe(index);
   });
 });

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { APP_SHELL } from "@/lib/offline/contract";
 
 /**
  * The website's half of the Android app.
@@ -36,7 +37,7 @@ type Native = {
 
 type DeviceFile = { role?: string; deviceToken?: string };
 
-const SHELL = "https://localhost";
+const SHELL = APP_SHELL;
 const PING_MS = 20_000;
 const REFRESH_MS = 15 * 60_000;
 
@@ -71,6 +72,16 @@ function offlineUserIds(bridge: Native): string[] {
 async function refreshSnapshot(bridge: Native): Promise<void> {
   const device = readJson<DeviceFile>(bridge, "device.json");
   if (device?.role !== "till" || !device.deviceToken) return;
+  // A full page load mounts this again; a copy taken minutes ago is still
+  // good, and the catalogue is the heaviest thing the phone downloads.
+  const current = readJson<{ receivedElapsed?: number; bootCount?: number }>(bridge, "snapshot.json");
+  if (
+    current?.bootCount === bridge.bootCount() &&
+    typeof current.receivedElapsed === "number" &&
+    bridge.elapsedRealtime() - current.receivedElapsed < REFRESH_MS - 60_000
+  ) {
+    return;
+  }
   const response = await fetch("/api/device/snapshot", {
     method: "POST",
     headers: {

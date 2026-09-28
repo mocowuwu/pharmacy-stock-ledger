@@ -14,6 +14,9 @@
 
 export const APP_ORIGINS = ["https://localhost", "http://localhost", "capacitor://localhost"] as const;
 
+/** Where the app serves its own screens, inside the phone. */
+export const APP_SHELL = "https://localhost";
+
 /** Appended to the WebView's user agent, so the website knows it is inside the app. */
 export const APP_USER_AGENT_MARK = "PharmacyLedgerApp/";
 

@@ -18,7 +18,8 @@ export type AppContextValue = {
   bump: () => void;
   /** Set once the server came back during an offline session and the queue was sent. */
   serverBack: boolean;
-  go: (route: string) => void;
+  /** `replace` for steps Back should not return to (a finished sale, a sign-in). */
+  go: (route: string, opts?: { replace?: boolean }) => void;
   /** Leaves the shell for the website. */
   leaveFor: (url: string) => void;
 };

@@ -13,7 +13,44 @@ Tailscale is the network security: only devices on the pharmacy's tailnet can
 reach the server. The app adds no login of its own beyond the normal staff
 username and password.
 
-## Build and install
+## Getting it onto a phone
+
+Staff download it from the website: **Aplikasi Android** in the menu (under
+Pengaturan), open to everyone who signs in. That page shows the server
+address the app asks for and walks through the install. Opened inside the
+app, the same page updates it: the download goes straight to Android's
+installer.
+
+The APK comes from the GitHub release matching the server's version. The
+release workflow builds it, signs it and attaches it as `apotek-android.apk`,
+and the server fetches it once and serves it to phones over the tailnet
+(`src/lib/app-download.ts`). A server that cannot reach GitHub can be given a
+file instead: `APP_APK_PATH=/path/to/apotek-android.apk` in `.env.local`.
+
+## Signing
+
+Every release must be signed with the same key: Android installs an update
+only over an app signed by the one before, and uninstalling to get round that
+deletes unsent offline sales. Make the key once, on the owner's computer:
+
+```bash
+cd mobile
+npm run signing-key
+```
+
+It is written to `~/.apotek-signing/`, outside the repository. **Back that
+folder up**; a lost key cannot be recreated. Then give it to the release
+workflow as repository secrets (needs the `gh` CLI, signed in):
+
+```bash
+npm run signing-key -- --upload
+```
+
+From the next tagged release on, the release carries `apotek-android.apk`.
+Without the secrets the workflow skips the app with a warning rather than
+signing it with a throwaway key.
+
+## Building it yourself
 
 Needs Android Studio (for the Android SDK and its bundled JDK 21) and Node.
 
@@ -23,13 +60,20 @@ npm ci
 npm run apk
 ```
 
-The APK lands in `mobile/release/apotek-<version>-debug.apk`. Install it by
-copying it to the phone and opening it (allow "install unknown apps" for the
-file manager), or with a cable:
+Without a signing key this makes `release/apotek-<version>-debug.apk`, for
+trying things out: install it with `adb install -r` or by opening it on the
+phone. It is signed with a development key, so it cannot update a
+release-signed app (or be updated by one) without uninstalling first. With
+the key (`source ~/.apotek-signing/signing.env` first) it makes the signed
+`release/apotek-android.apk`.
 
-```bash
-adb install -r release/apotek-0.1.0-debug.apk
-```
+The app is versioned with the pharmacy release it ships in (`../package.json`);
+the Android version code is derived from it (0.1.8 -> 108), so every release
+installs as an update.
+
+The launcher icon is drawn as vectors in `android/app/src/main/res/drawable/`;
+`resources/` holds the same capsule as SVG and renders the PNGs Android 7
+needs (`resources/render-icons.sh`).
 
 `npm run apk` finds a JDK 17–21 by itself, because Gradle 8 fails on newer Java
 with an error that never mentions Java ("Unsupported class file major version").
@@ -87,11 +131,17 @@ and both can use `window.PharmacyNative`, which the app installs
 | `writeFile(name, content): boolean` | temp file, fsync, rename |
 | `deleteFile(name): boolean` | |
 | `print(jobName)` | Android print dialog for the current page |
+| `ready()` | the first screen has drawn; the launch screen gives way |
 | `appVersion(): string` | |
 | `setServerOrigin(origin): boolean` | only from `https://localhost` |
 
 The file methods refuse any page that is not `https://localhost` or the saved
-server origin. `LedgerWebViewClient` keeps that one server in the WebView,
+server origin. Downloads a page starts (a report's CSV or Excel file, the app
+update) go to Android's download manager with the session cookie and open
+when finished (`AppDownloads.java`). The Back button first closes whatever is
+open on top -- the payment sheet, the camera -- by asking the page
+(`window.__pharmacyBack`), and never steps from the website back into the
+app's sign-in screen. `LedgerWebViewClient` keeps that one server in the WebView,
 opens every other link in the phone's browser, and sends a server page that
 fails to load (or a Tailscale Serve 502/503/504) to the offline screen.
 

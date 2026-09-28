@@ -37,6 +37,7 @@
     "reports": "Laporan",
     "users": "Akun",
     "settings": "Pengaturan",
+    "app": "Aplikasi Android",
     "signOut": "Keluar",
     "suppliers": "Pemasok",
     "categories": "Kategori",
@@ -66,7 +67,8 @@
       "suppliers": "Daftar pemasok obat",
       "categories": "Kelompok obat",
       "users": "Akun staf dan hak akses",
-      "settings": "Nama apotek, pajak, fitur"
+      "settings": "Nama apotek, pajak, fitur",
+      "app": "Pasang aplikasi apotek di HP"
     },
     "openMenu": "Buka menu",
     "closeMenu": "Tutup menu",
@@ -1243,7 +1245,8 @@
       "categories": "Kelompok obat, misalnya Antibiotik atau Vitamin, agar daftar dan laporan rapi.",
       "reports": "Ringkasan penjualan, stok dan keuntungan untuk periode yang Anda pilih.",
       "users": "Akun untuk setiap staf, dan apa saja yang boleh mereka lakukan.",
-      "settings": "Nama apotek, pajak, struk, dan fitur mana saja yang dipakai."
+      "settings": "Nama apotek, pajak, struk, dan fitur mana saja yang dipakai.",
+      "app": "Apotek di HP, termasuk kasir cadangan yang tetap bisa menjual saat server mati."
     },
     "outro": {
       "title": "Sekian semuanya",
@@ -2351,7 +2354,7 @@
             "title": "Menyiapkan HP",
             "steps": {
               "1": "Pasang Tailscale di HP dan masuk ke jaringan apotek. Tanpa itu aplikasi sama sekali tidak bisa menjangkau server.",
-              "2": "Pasang aplikasi apotek lalu buka. Masukkan alamat server dari pemilik (berakhiran .ts.net).",
+              "2": "Di HP, buka Aplikasi Android di menu (di bawah Pengaturan), ketuk Unduh aplikasi, lalu pasang. Masukkan alamat server yang tertera di halaman itu.",
               "3": "Beri nama HP, misalnya \"HP Kasir\", dan pilih kegunaannya: Kasir untuk HP di meja kasir, Manajemen untuk yang lain."
             },
             "tip": "Hanya satu HP yang boleh menjadi Kasir. Hanya HP itu yang menyimpan salinan untuk menjual offline."
@@ -2631,5 +2634,33 @@
     "unreachable": "Server apotek tidak menjawab.",
     "openOfflineTill": "Buka kasir offline",
     "openApp": "Kembali ke aplikasi"
+  },
+  "androidApp": {
+    "title": "Aplikasi Android",
+    "subtitle": "Pasang aplikasi apotek di HP atau tablet",
+    "appName": "Apotek untuk Android",
+    "version": "Versi {version}, untuk Android 7 ke atas",
+    "download": "Unduh aplikasi",
+    "what": "Seluruh sistem apotek di HP. Di HP yang disiapkan sebagai kasir, penjualan tetap bisa jalan saat server tidak terjangkau, dan dikirim begitu server kembali.",
+    "stepsTitle": "Cara memasang",
+    "steps": {
+      "1": "Pasang Tailscale di HP dan masuk ke jaringan apotek. Tanpa itu aplikasi tidak bisa menjangkau server ini.",
+      "2": "Buka halaman ini di HP lalu ketuk Unduh aplikasi. Saat Android bertanya, izinkan memasang aplikasi dari browser, lalu buka file yang diunduh.",
+      "3": "Buka aplikasinya. Saat diminta alamat server, masukkan:",
+      "4": "Beri nama HP, pilih Kasir untuk HP di meja kasir atau Manajemen untuk yang lain, lalu masuk dengan nama pengguna dan kata sandi Anda sendiri.",
+      "5": "Setelah itu aplikasi langsung membuka sistem apotek. Selalu masuk di layar aplikasi, bukan lewat browser."
+    },
+    "rolesTitle": "Kasir atau manajemen?",
+    "roles": "Hanya satu HP yang sebaiknya menjadi kasir. HP itu menyimpan salinan obat, harga, dan stok agar tetap bisa menjual saat server mati; HP dan tablet lain disiapkan sebagai manajemen dan tidak menyimpan apa pun.",
+    "offline": "Kasir harus terhubung ke server paling tidak sekali setiap 24 jam, dan setelah HP dinyalakan ulang kasir terkunci sampai terhubung lagi. Saat offline hanya bisa menjual; yang lain menunggu server.",
+    "guide": "Baca panduan",
+    "devices": "HP yang terpakai",
+    "updates": "Setelah sistem apotek diperbarui, unduh aplikasi lagi dari halaman ini untuk memperbaruinya. Penjualan yang belum terkirim tetap aman saat aplikasi diperbarui.",
+    "inApp": "Anda sedang memakai aplikasi versi {version}: sudah yang terbaru.",
+    "inAppOlder": "Anda sedang memakai aplikasi versi {version}. Versi {latest} sudah tersedia: unduh di bawah untuk memperbarui.",
+    "errors": {
+      "not_published": "Aplikasi untuk versi {version} belum diterbitkan. Aplikasi dilampirkan di setiap rilis setelah pemilik menyiapkan kunci penandatanganan; lihat mobile/README.md.",
+      "unreachable": "Server ini tidak bisa mengambil aplikasi dari rilis. Pastikan server tersambung ke internet, lalu coba lagi."
+    }
   }
 }

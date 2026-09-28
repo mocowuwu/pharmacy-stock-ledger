@@ -96,6 +96,12 @@ public class NativeBridge {
         }
     }
 
+    /** The app's first screen has drawn: the launch screen can give way. */
+    @JavascriptInterface
+    public void ready() {
+        MainActivity.markFirstPageShown();
+    }
+
     @JavascriptInterface
     public String appVersion() {
         return BuildConfig.VERSION_NAME;

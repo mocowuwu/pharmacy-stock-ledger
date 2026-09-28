@@ -42,4 +42,8 @@
     <!-- The website's barcode scanner uses the camera through the WebView. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- Updating the app from Settings -> Aplikasi Android: the downloaded APK
+         is handed straight to the installer. Android still asks the person to
+         allow it once. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 </manifest>

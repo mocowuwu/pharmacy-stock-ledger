@@ -43,6 +43,8 @@ export type DeviceFile = {
   deviceToken: string | null;
   /** LoginResponse.device.code; used in offline numbers (`OFF-<code>-0001`). */
   deviceCode: string | null;
+  /** The pharmacy's name as the server last gave it, for the sign-in screen. */
+  businessName?: string | null;
 };
 
 /**

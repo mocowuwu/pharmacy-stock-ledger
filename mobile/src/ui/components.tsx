@@ -1,8 +1,9 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { hasKey } from "../i18n";
 import { currentPass } from "../lib/services";
 import { readQueue } from "../lib/store";
 import { useApp } from "./context";
+import { Icon, type IconName } from "./icons";
 
 /**
  * Indonesian drug classification with the colour printed on the box: green
@@ -39,59 +40,130 @@ export function DrugMark({ drugClass, withLabel = true }: { drugClass: string; w
   );
 }
 
-export function Bar({ title, sub, children }: { title: string; sub?: string; children?: ReactNode }) {
+/**
+ * Online, offline with the number of sales waiting, or locked -- in the
+ * header of every screen, because "are my sales safe?" is the question a
+ * cashier has during an outage.
+ */
+export function StatusPill() {
+  const { t, reachable, device, revision } = useApp();
+  void revision;
+  const pending = readQueue().sales.length;
+  let tone: "checking" | "online" | "offline" | "locked";
+  let text: string;
+  if (reachable === null) {
+    tone = "checking";
+    text = t("status.checkingShort");
+  } else if (reachable) {
+    tone = "online";
+    text = t("status.online");
+  } else if (device?.role === "till" && !currentPass().check.ok) {
+    tone = "locked";
+    text = t("status.locked");
+  } else {
+    tone = "offline";
+    text = t("status.offline");
+  }
+  return (
+    <span className="pill" role="status" aria-live="polite">
+      <span className={`dot ${tone}`} />
+      {text}
+      {pending > 0 ? <span className="faint">· {pending}</span> : null}
+    </span>
+  );
+}
+
+export function Bar({
+  title,
+  sub,
+  onBack,
+  status = true,
+  children,
+}: {
+  title: string;
+  sub?: string;
+  onBack?: () => void;
+  status?: boolean;
+  children?: ReactNode;
+}) {
+  const { t } = useApp();
   return (
     <header className="bar">
-      <div style={{ flex: 1, minWidth: 0 }}>
+      {onBack ? (
+        <button className="icon-btn" onClick={onBack} aria-label={t("common.back")} style={{ marginLeft: -8 }}>
+          <Icon name="back" size={22} />
+        </button>
+      ) : null}
+      <div className="titles">
         <h1>{title}</h1>
         {sub ? <div className="sub">{sub}</div> : null}
       </div>
+      {status ? <StatusPill /> : null}
       {children}
     </header>
   );
 }
 
-/**
- * Online / offline with the number of sales waiting / locked -- on every
- * screen, because "are my sales safe?" is the question a cashier has during an
- * outage.
- */
-export function StatusLine() {
-  const { t, reachable, device, revision } = useApp();
-  void revision;
-  const pending = readQueue().sales.length;
-  const waiting = pending > 0 ? ` · ${t("status.waiting", { n: pending })}` : "";
-
-  if (reachable === null) {
-    return (
-      <div className="status no-print" role="status">
-        <span className="dot checking" /> {t("status.checking")}
-        {waiting}
-      </div>
-    );
-  }
-  if (reachable) {
-    return (
-      <div className="status no-print" role="status">
-        <span className="dot online" /> {t("status.online")}
-        {waiting}
-      </div>
-    );
-  }
-  const locked = device?.role === "till" && !currentPass().check.ok;
-  return (
-    <div className="status no-print" role="status">
-      <span className={`dot ${locked ? "locked" : "offline"}`} />{" "}
-      {locked ? t("status.locked") : t("status.offline")}
-      {waiting}
-    </div>
-  );
-}
+const ALERT_ICONS: Record<string, IconName> = {
+  critical: "alert",
+  warning: "alert",
+  notice: "info",
+  ok: "checkCircle",
+};
 
 export function Alert({ tone, children }: { tone: "critical" | "warning" | "notice" | "ok"; children: ReactNode }) {
   return (
     <div className={`alert ${tone}`} role={tone === "critical" ? "alert" : "status"}>
-      {children}
+      <Icon name={ALERT_ICONS[tone]} size={18} />
+      <div>{children}</div>
     </div>
   );
+}
+
+export function Spinner() {
+  return <span className="spinner" aria-hidden="true" />;
+}
+
+/** A short confirmation at the bottom of the screen; gone after a few seconds. */
+export function Toast({
+  message,
+  onDone,
+  icon = "checkCircle",
+  aboveDock = false,
+}: {
+  message: string | null;
+  onDone: () => void;
+  icon?: IconName;
+  aboveDock?: boolean;
+}) {
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(onDone, 3200);
+    return () => clearTimeout(timer);
+  }, [message, onDone]);
+  if (!message) return null;
+  return (
+    <div className={`toast${aboveDock ? " above-dock" : ""}`} role="status">
+      <Icon name={icon} size={20} />
+      <span>{message}</span>
+    </div>
+  );
+}
+
+export function Empty({ icon, children }: { icon: IconName; children: ReactNode }) {
+  return (
+    <div className="empty">
+      <Icon name={icon} size={36} strokeWidth={1.6} />
+      <div>{children}</div>
+    </div>
+  );
+}
+
+/** A short buzz on a scan or a finished sale: the cashier's eyes are on the customer. */
+export function buzz(ms = 12): void {
+  try {
+    navigator.vibrate?.(ms);
+  } catch {
+    // Not every WebView allows it; the feedback is a nicety.
+  }
 }

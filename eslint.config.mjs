@@ -12,8 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // The Android app has its own package, config and checks.
-    "mobile/**",
+    // The Android app's screens are linted with the website's rules; its
+    // native project, build output and dependencies are not source.
+    "mobile/android/**",
+    "mobile/dist/**",
+    "mobile/node_modules/**",
+    "mobile/release/**",
   ]),
 ]);
 

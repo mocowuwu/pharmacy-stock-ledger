@@ -2,11 +2,12 @@ import { useState } from "react";
 import type { DeviceRole } from "@/lib/offline/contract";
 import { normaliseServerUrl, ping } from "../lib/api";
 import { readDevice, readQueue } from "../lib/store";
-import { Alert, Bar } from "./components";
+import { Alert, Bar, Spinner } from "./components";
 import { useApp } from "./context";
+import { Icon } from "./icons";
 
 /**
- * First run, and later from Settings: which server, what this phone is called,
+ * First run, and later from the menu: which server, what this phone is called,
  * and whether it is the till.
  *
  * Changing the server or the role is refused while offline sales are still
@@ -17,8 +18,8 @@ export function SetupScreen() {
   const { t, setDevice, go } = useApp();
   const existing = readDevice();
   const [server, setServer] = useState(existing?.serverUrl ?? "");
-  const [checked, setChecked] = useState<{ url: string; name: string } | null>(
-    existing ? { url: existing.serverUrl, name: "" } : null,
+  const [checked, setChecked] = useState<{ url: string; name: string; businessName: string } | null>(
+    existing ? { url: existing.serverUrl, name: "", businessName: existing.businessName ?? "" } : null,
   );
   const [checking, setChecking] = useState(false);
   const [name, setName] = useState(existing?.deviceName ?? "");
@@ -45,7 +46,7 @@ export function SetupScreen() {
     setServer(url);
     // A pharmacy that has not named itself in Settings yet still gets a
     // confirmation -- silence here reads as "nothing happened".
-    setChecked({ url, name: answer.businessName.trim() || new URL(url).host });
+    setChecked({ url, name: answer.businessName.trim() || new URL(url).host, businessName: answer.businessName.trim() });
   }
 
   function save() {
@@ -73,21 +74,19 @@ export function SetupScreen() {
       // A token and code belong to one server.
       deviceToken: serverChanged ? null : (existing?.deviceToken ?? null),
       deviceCode: serverChanged ? null : (existing?.deviceCode ?? null),
+      businessName: checked.businessName || null,
     });
-    go("/login");
+    go("/login", { replace: true });
   }
 
+  const verified = checked !== null && checked.url === normaliseServerUrl(server);
+
   return (
-    <>
-      <Bar title={t("setup.title")}>
-        {existing ? (
-          <button className="small" onClick={() => go("/home")}>
-            {t("common.back")}
-          </button>
-        ) : null}
-      </Bar>
+    <div className="screen">
+      <Bar title={t("setup.title")} status={false} onBack={existing ? () => go("/home") : undefined} />
       <main>
-        <p className="muted">{t("setup.intro")}</p>
+        <p className="lead">{t("setup.intro")}</p>
+
         <div className="card">
           <label htmlFor="server">{t("setup.server")}</label>
           <div className="row">
@@ -97,19 +96,25 @@ export function SetupScreen() {
               inputMode="url"
               autoCapitalize="off"
               autoCorrect="off"
+              spellCheck={false}
               value={server}
               onChange={(e) => {
                 setServer(e.target.value);
                 setChecked(null);
               }}
+              onKeyDown={(e) => e.key === "Enter" && void check()}
               placeholder="https://…ts.net"
             />
-            <button onClick={() => void check()} disabled={checking}>
-              {checking ? t("setup.checking") : t("setup.check")}
+            <button className={verified ? "soft" : ""} onClick={() => void check()} disabled={checking} style={{ minHeight: 52 }}>
+              {checking ? <Spinner /> : verified ? <Icon name="check" /> : null}
+              {checking ? t("setup.checking") : verified ? t("setup.checked") : t("setup.check")}
             </button>
           </div>
-          <p className="hint">{t("setup.serverHint")}</p>
-          {checked?.name ? <Alert tone="ok">{t("setup.found", { name: checked.name })}</Alert> : null}
+          {checked?.name && verified ? (
+            <Alert tone="ok">{t("setup.found", { name: checked.name })}</Alert>
+          ) : (
+            <p className="hint">{t("setup.serverHint")}</p>
+          )}
 
           <label htmlFor="name">{t("setup.deviceName")}</label>
           <input
@@ -119,30 +124,30 @@ export function SetupScreen() {
             onChange={(e) => setName(e.target.value)}
             placeholder={t("setup.deviceNameHint")}
           />
+        </div>
 
-          <label>{t("setup.role")}</label>
-          <div className="choices">
-            <button className="role-choice" aria-pressed={role === "till"} onClick={() => setRole("till")}>
-              <strong>{t("setup.roleTill")}</strong>
-              <span className="small-text">{t("setup.roleTillHelp")}</span>
-            </button>
-            <button
-              className="role-choice"
-              aria-pressed={role === "management"}
-              onClick={() => setRole("management")}
-            >
-              <strong>{t("setup.roleManagement")}</strong>
-              <span className="small-text">{t("setup.roleManagementHelp")}</span>
-            </button>
-          </div>
-
-          {error ? <Alert tone="critical">{error}</Alert> : null}
-          <button className="primary block" onClick={save}>
-            {t("setup.save")}
+        <div className="section-title">{t("setup.role")}</div>
+        <div className="choices" style={{ marginBottom: 14 }}>
+          <button className="choice" aria-pressed={role === "till"} onClick={() => setRole("till")}>
+            <strong>
+              <Icon name="store" /> {t("setup.roleTill")}
+            </strong>
+            <span>{t("setup.roleTillHelp")}</span>
+          </button>
+          <button className="choice" aria-pressed={role === "management"} onClick={() => setRole("management")}>
+            <strong>
+              <Icon name="phone" /> {t("setup.roleManagement")}
+            </strong>
+            <span>{t("setup.roleManagementHelp")}</span>
           </button>
         </div>
-        {existing ? <p className="hint">{t("setup.deviceId", { id: existing.deviceId })}</p> : null}
+
+        {error ? <Alert tone="critical">{error}</Alert> : null}
+        <button className="primary block big" onClick={save}>
+          {t("setup.save")}
+        </button>
+        {existing ? <p className="hint center mono">{t("setup.deviceId", { id: existing.deviceId })}</p> : null}
       </main>
-    </>
+    </div>
   );
 }

@@ -130,6 +130,18 @@ export function allocateItem(
 
 /* ------------------------------------------------------------------ search */
 
+const indexes = new WeakMap<SnapshotFile, Map<string, SnapshotItem>>();
+
+/** Items by id, built once per snapshot rather than on every keystroke. */
+export function itemIndex(snapshot: SnapshotFile): Map<string, SnapshotItem> {
+  let index = indexes.get(snapshot);
+  if (!index) {
+    index = new Map(snapshot.data.items.map((i) => [i.id, i]));
+    indexes.set(snapshot, index);
+  }
+  return index;
+}
+
 function normal(s: string | null | undefined): string {
   return (s ?? "").toLowerCase().normalize("NFKD");
 }
@@ -190,7 +202,7 @@ export function cartTotals(
   cart: readonly CartLine[],
   discount: number,
 ): SaleTotals {
-  const byId = new Map(snapshot.data.items.map((i) => [i.id, i]));
+  const byId = itemIndex(snapshot);
   return saleTotals(
     cart.flatMap((l) => {
       const item = byId.get(l.itemId);
@@ -244,7 +256,7 @@ export function buildSale(input: SaleInput): SaleOutcome {
   const data = snapshot.data;
   const tz = data.settings.timezone;
   const today = offlineToday(now, tz);
-  const byId = new Map(data.items.map((i) => [i.id, i]));
+  const byId = itemIndex(snapshot);
 
   if (cart.length === 0) return { ok: false, refusal: { code: "empty" } };
   if (input.discount > 0 && !hasPermission(cashier, "sales.discount")) {
@@ -353,4 +365,21 @@ export function buildSale(input: SaleInput): SaleOutcome {
   };
 
   return { ok: true, entry: { sale, allocations, receipt }, state: nextState };
+}
+
+/**
+ * Amounts a customer is likely to hand over for `total`: the exact sum, then
+ * the total rounded up to what notes make naturally -- the next 5.000,
+ * 10.000, 50.000 and 100.000, and a single 20.000 note for a small sale.
+ * Rounding to multiples of 20.000 would offer 60.000 for a 50.000 sale, which
+ * nobody hands over. Five at most, smallest first.
+ */
+export function quickCash(total: number): number[] {
+  const out = new Set<number>([total]);
+  for (const step of [5_000, 10_000, 50_000, 100_000]) {
+    const next = Math.ceil(total / step) * step;
+    if (next > total) out.add(next);
+  }
+  if (total < 20_000) out.add(20_000);
+  return [...out].sort((a, b) => a - b).slice(0, 5);
 }

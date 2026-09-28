@@ -195,6 +195,17 @@ relax one without saying so explicitly.
   `src/lib/stock/totals.ts` is what `commitSale` charges and what the app
   bundles; `src/lib/offline/contract.ts` is the API both compile against.
   Neither may grow a second copy.
+- **Every release of the app is signed with the same key, or not published.**
+  Android installs an update only over an app signed by the one before, and
+  uninstalling to get round it deletes unsent offline sales. The key lives
+  outside the repository (`npm run signing-key` in `mobile/`) and reaches the
+  release workflow as secrets; without them the workflow skips the APK rather
+  than signing it with a throwaway key. The app's version code is derived
+  from the release version, so each release installs as an update.
+- **Anyone signed in may download the app** (`/settings/app`). It grants
+  nothing their account does not already have; `/settings` itself stays
+  `settings.manage`. The server fetches the APK of its own version from the
+  release once and serves it over the tailnet (`src/lib/app-download.ts`).
 - **Signing in on the app goes through `authenticate`**
   (`src/lib/auth/sign-in.ts`), the same rate limits and locks as the website's
   form -- the app is not a second door with weaker locks.

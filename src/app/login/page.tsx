@@ -1,4 +1,7 @@
 import { getTranslations } from "next-intl/server";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { APP_SHELL, APP_USER_AGENT_MARK } from "@/lib/offline/contract";
 import { publicBranding } from "@/lib/dal/settings";
 import { Card } from "@/components/ui";
 import { MAKER } from "@/lib/brand";
@@ -7,6 +10,13 @@ import { isSafeNextPath } from "@/lib/auth/redirect";
 import { LoginForm } from "./LoginForm";
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
+  // Inside the Android app, people sign in on the app's own screen -- it is
+  // what lets them sign in again while the server is down. Sent there before
+  // anything renders, so this form never flashes up on the phone.
+  if (((await headers()).get("user-agent") ?? "").includes(APP_USER_AGENT_MARK)) {
+    redirect(`${APP_SHELL}/#/login`);
+  }
+
   const t = await getTranslations();
   const branding = await publicBranding();
   const params = await searchParams;

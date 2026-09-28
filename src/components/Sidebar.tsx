@@ -95,6 +95,12 @@ const ICONS: Record<string, ReactNode> = {
       <path d="M16.5 5.4a3.2 3.2 0 0 1 0 5.2M18 14.4a6 6 0 0 1 3 5.6" />
     </>
   ),
+  app: (
+    <>
+      <rect x="6.5" y="2.5" width="11" height="19" rx="2.5" />
+      <path d="M12 7.5v6M9.5 11l2.5 2.5 2.5-2.5M10.5 18h3" />
+    </>
+  ),
   settings: (
     <>
       <circle cx="12" cy="12" r="3" />

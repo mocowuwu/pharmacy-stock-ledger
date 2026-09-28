@@ -24,6 +24,8 @@ export interface PharmacyNative {
   /** Prints the WebView's current page through Android's print dialog. */
   print(jobName: string): void;
   appVersion(): string;
+  /** The first screen has drawn; the launch screen may give way. */
+  ready(): void;
   /** Tells the native side which origin may stay in the WebView. Only from https://localhost. */
   setServerOrigin(origin: string): boolean;
 }
@@ -59,6 +61,7 @@ function browserStandIn(): PharmacyNative {
     },
     print: () => window.print(),
     appVersion: () => "dev",
+    ready: () => undefined,
     setServerOrigin: () => true,
   };
 }

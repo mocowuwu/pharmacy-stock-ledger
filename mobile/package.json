@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "sync": "cap sync android",
-    "apk": "node scripts/build-apk.mjs"
+    "apk": "node scripts/build-apk.mjs",
+    "signing-key": "node scripts/signing-key.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",

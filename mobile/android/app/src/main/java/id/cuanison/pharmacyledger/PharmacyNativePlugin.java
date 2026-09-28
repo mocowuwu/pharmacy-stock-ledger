@@ -17,5 +17,6 @@ public class PharmacyNativePlugin extends Plugin {
         LedgerWebViewClient client = new LedgerWebViewClient(getBridge(), nativeBridge);
         getBridge().setWebViewClient(client);
         getBridge().getWebView().addJavascriptInterface(nativeBridge, "PharmacyNative");
+        getBridge().getWebView().setDownloadListener(new AppDownloads(getActivity()));
     }
 }

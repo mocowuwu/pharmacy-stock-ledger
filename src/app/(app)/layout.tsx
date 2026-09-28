@@ -38,6 +38,9 @@ const NAV: Array<{ key: string; href: string; group: NavGroup; permissions: Perm
   { key: "categories", href: "/categories", group: "records", permissions: ["items.view"] },
   { key: "users", href: "/users", group: "admin", permissions: ["users.manage"] },
   { key: "settings", href: "/settings", group: "admin", permissions: ["settings.manage"] },
+  // Everyone who signs in may put the app on their phone: it gives nobody any
+  // access their account does not already have.
+  { key: "app", href: "/settings/app", group: "admin", permissions: [] },
 ];
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
@@ -57,7 +60,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   );
 
   const entries: NavEntry[] = NAV.filter(
-    (entry) => canAny(session.grant, entry.permissions) && !hidden.has(entry.key),
+    (entry) =>
+      (entry.permissions.length === 0 || canAny(session.grant, entry.permissions)) &&
+      !hidden.has(entry.key),
   ).map((entry) => ({
     key: entry.key,
     href: entry.href,
