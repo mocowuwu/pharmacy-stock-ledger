@@ -322,7 +322,8 @@
     "nothing_to_import": "No row passed the checks.",
     "import_not_found": "That import could not be found.",
     "already_withdrawn": "That import has already been withdrawn.",
-    "too_many_history_rows": "That file has more than 20,000 rows. Split it by year or by month."
+    "too_many_history_rows": "That file has more than 20,000 rows. Split it by year or by month.",
+    "review_not_open": "This review has already been closed."
   },
   "itemsImport": {
     "title": "Import Catalogue",
@@ -618,7 +619,9 @@
     "voidedNotice": "This sale was voided: {reason}",
     "print": "Print",
     "backToList": "Back to history",
-    "soldBy": "Served by"
+    "soldBy": "Served by",
+    "offlineHint": "Temporary number printed on the customer's receipt while the till was offline",
+    "offlineNotice": "Rung up on the offline till. The customer's receipt shows the temporary number {number}."
   },
   "alerts": {
     "title": "Alerts",
@@ -2339,6 +2342,65 @@
             "warn": "Clearing empties the whole catalogue. Do it before entering your real items, never after."
           }
         }
+      },
+      "phoneApp": {
+        "title": "The Android app",
+        "summary": "Using the pharmacy system on a phone, and the backup till that keeps selling when the server is down.",
+        "sections": {
+          "setup": {
+            "title": "Setting up a phone",
+            "steps": {
+              "1": "Install Tailscale on the phone and sign in to the pharmacy's network. Without it the app cannot reach the server at all.",
+              "2": "Install the pharmacy app and open it. Enter the server address the owner gave you (it ends in .ts.net).",
+              "3": "Give the phone a name, such as \"HP Kasir\", and choose what it is for: Till for the phone at the counter, Management for everyone else."
+            },
+            "tip": "Only one phone should be the Till. It is the only one that keeps a copy for selling offline."
+          },
+          "signIn": {
+            "title": "Signing in",
+            "steps": {
+              "1": "Always sign in on the app's own screen, with your normal username and password.",
+              "2": "The app then opens the pharmacy website, and you use it exactly as on a computer.",
+              "3": "Signing out of the website brings you back to the app's sign-in screen."
+            },
+            "warn": "You can only sign in offline on the Till if you signed in on it online within the last 24 hours."
+          },
+          "offline": {
+            "title": "When the server is down",
+            "steps": {
+              "1": "If the server stops answering, a yellow bar appears. On the Till, press Open the offline till.",
+              "2": "Sign in, find the medicine by name or barcode, and sell as usual. Expired stock is refused.",
+              "3": "The receipt shows a temporary number starting with OFF-. Give it to the customer as usual.",
+              "4": "Offline you can only sell. Deliveries, returns, voids and stock counts wait until the server is back."
+            },
+            "warn": "The Till must reach the server at least once every 24 hours. After that, or after the phone restarts, it locks until it can connect again."
+          },
+          "back": {
+            "title": "When the server is back",
+            "steps": {
+              "1": "The app notices by itself and sends every offline sale to the server.",
+              "2": "Each one gets its real receipt number. The temporary OFF- number stays on the sale, so a customer's receipt can still be found.",
+              "3": "Sign in again to return to the website."
+            }
+          },
+          "review": {
+            "title": "Offline sales to review",
+            "steps": {
+              "1": "Sales history shows a yellow notice when an offline sale needs a decision. Open it.",
+              "2": "Not booked: the stock it names was gone by the time the phone synced. The medicine has already left, so fix the stock (receive the delivery, or correct it with an adjustment or count), then press Book it now.",
+              "3": "Booked, check: the sale is in the books but something about it is worth checking, such as a price that has changed since. Check it and press Mark as checked.",
+              "4": "Every decision needs a note saying what you checked or did."
+            }
+          },
+          "devices": {
+            "title": "Devices",
+            "steps": {
+              "1": "Users → Devices lists every phone and tablet that has signed in on the app.",
+              "2": "If a phone is lost or retired, press Revoke. It can no longer sign in or send anything."
+            },
+            "tip": "Before revoking the Till, let it connect once if you can, so its offline sales reach the server."
+          }
+        }
       }
     }
   },
@@ -2510,5 +2572,64 @@
         }
       }
     }
+  },
+  "offlineReview": {
+    "title": "Offline sales to review",
+    "subtitle": "Sales rung up on the Android till while the server was unreachable, which need a decision",
+    "waiting": "{count, plural, one {# offline sale needs review} other {# offline sales need review}}",
+    "showClosed": "Show closed",
+    "showOpen": "Show open",
+    "empty": "Nothing to review. Every offline sale has been booked.",
+    "emptyClosed": "No closed reviews yet.",
+    "soldBy": "{cashier} on {device}, {when}",
+    "lines": "{count, plural, one {# line} other {# lines}}",
+    "kind": {
+      "not_posted": "Not booked",
+      "flagged": "Booked, check"
+    },
+    "reason": {
+      "insufficient_stock": "The stock it names was no longer there when the phone synced (sold, adjusted, disposed or expired since).",
+      "unknown_pass": "The phone named a pass this server never issued to it.",
+      "outside_pass": "Rung after the phone's daily pass had run out.",
+      "over_pass_limit": "Over the number of sales or the amount one pass allows.",
+      "cashier_inactive": "The cashier's account has been suspended since.",
+      "cashier_cannot_sell": "The cashier no longer has permission to sell.",
+      "discount_without_permission": "A discount was given by someone without the discount permission.",
+      "price_differs": "Sold at a price different from the current one.",
+      "total_differs": "The phone charged a different total from what the server booked."
+    },
+    "note": "Note",
+    "notePlaceholder": "What was checked or done, e.g. \"delivery received, booked\"",
+    "post": "Book it now",
+    "closeWithoutPosting": "Close without booking",
+    "accept": "Mark as checked",
+    "notPostedHint": "The medicine has already left the shop. Book it once the stock is right, or close it after correcting stock with an adjustment or count, and say so in the note.",
+    "posted": "Booked as sale {number}.",
+    "closed": "Review closed.",
+    "resolvedBy": "Closed by {name}, {when}"
+  },
+  "devices": {
+    "title": "Devices",
+    "subtitle": "Phones and tablets running the Android app",
+    "empty": "No devices yet.",
+    "emptyHint": "A phone appears here the first time someone signs in on the app.",
+    "name": "Device",
+    "role": "Used as",
+    "roles": {
+      "till": "Till (works offline)",
+      "management": "Management"
+    },
+    "lastSeen": "Last seen",
+    "lastSync": "Last offline copy",
+    "offlineSales": "Offline sales",
+    "revoke": "Revoke",
+    "revokedChip": "Revoked",
+    "revoked": "Device revoked. It can no longer sign in or sync.",
+    "revokeHint": "Revoke a phone that is lost or retired. Its offline sales stay on record. Sales still waiting on a revoked phone cannot be sent, so sync it first if you can."
+  },
+  "appBridge": {
+    "unreachable": "The pharmacy server is not answering.",
+    "openOfflineTill": "Open the offline till",
+    "openApp": "Back to the app"
   }
 }

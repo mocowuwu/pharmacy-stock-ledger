@@ -50,6 +50,13 @@
       "when": 1790345994241,
       "tag": "0006_history_import",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790584281451,
+      "tag": "0007_android_devices",
+      "breakpoints": true
     }
   ]
 }

@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { headers } from "next/headers";
+import { AppBridge } from "@/components/AppBridge";
+import { APP_USER_AGENT_MARK } from "@/lib/offline/contract";
 import "./globals.css";
 
 // Bundled in ./fonts, not fetched from Google at build time: the build runs on
@@ -50,15 +53,22 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // see src/i18n/config.ts for why the two are kept apart.
   const locale = await getLocale();
   const messages = await getMessages();
+  // Inside the Android app the website gains a small bridge back to the app;
+  // in any other browser nothing changes.
+  const inApp = ((await headers()).get("user-agent") ?? "").includes(APP_USER_AGENT_MARK);
 
   return (
+    // The Android app's WebView writes safe-area variables onto <html> before
+    // React loads; that one element is allowed to differ from the server's.
     <html
+      suppressHydrationWarning
       lang={locale}
       className={`${sans.variable} ${mono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}
+          {inApp && <AppBridge />}
         </NextIntlClientProvider>
       </body>
     </html>

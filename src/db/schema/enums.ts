@@ -3,10 +3,12 @@ import {
   ALERT_SEVERITIES,
   ALERT_TYPES,
   BATCH_STATUSES,
+  DEVICE_ROLES,
   DOSAGE_FORMS,
   DRUG_CLASSES,
   HISTORY_IMPORT_STATUSES,
   MOVEMENT_TYPES,
+  OFFLINE_REVIEW_KINDS,
   PAYMENT_METHODS,
 } from "@/lib/catalogue/enums";
 
@@ -79,3 +81,7 @@ export const countStatus = pgEnum("count_status", [
   "posted",
   "cancelled",
 ]);
+
+export const deviceRole = pgEnum("device_role", DEVICE_ROLES);
+
+export const offlineReviewKind = pgEnum("offline_review_kind", OFFLINE_REVIEW_KINDS);

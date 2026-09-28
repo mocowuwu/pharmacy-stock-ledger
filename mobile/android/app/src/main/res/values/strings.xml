@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Apotek</string>
+    <string name="title_activity_main">Apotek</string>
+    <string name="package_name">id.cuanison.pharmacyledger</string>
+    <string name="custom_url_scheme">id.cuanison.pharmacyledger</string>
+</resources>

@@ -59,6 +59,11 @@ export default async function SaleDetailPage({
           {typeof query.error === "string" && (
             <Alert>{t(`errors.${query.error}`)}</Alert>
           )}
+          {sale.offlineNumber && (
+            <Alert tone="notice">
+              {t("sales.offlineNotice", { number: sale.offlineNumber })}
+            </Alert>
+          )}
           {sale.status === "voided" && (
             <Alert tone="warning">
               {t("sales.voidedNotice", { reason: sale.voidReason ?? "" })}
@@ -78,6 +83,9 @@ export default async function SaleDetailPage({
             {settings.businessName || t("app.name")}
           </div>
           <div className="tabular mt-1 text-xs text-muted">{sale.saleNumber}</div>
+          {sale.offlineNumber && (
+            <div className="tabular text-xs text-faint">{sale.offlineNumber}</div>
+          )}
           <div className="tabular text-xs text-muted">
             {formatDateTime(sale.soldAt, locale)}
           </div>

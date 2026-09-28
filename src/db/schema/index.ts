@@ -4,6 +4,7 @@ export * from "./users";
 export * from "./catalog";
 export * from "./stock";
 export * from "./sales";
+export * from "./devices";
 export * from "./history";
 export * from "./alerts";
 export * from "./audit";

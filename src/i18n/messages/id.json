@@ -322,7 +322,8 @@
     "nothing_to_import": "Tidak ada baris yang lolos pemeriksaan.",
     "import_not_found": "Impor itu tidak ditemukan.",
     "already_withdrawn": "Impor itu sudah ditarik.",
-    "too_many_history_rows": "Berkas ini lebih dari 20.000 baris. Pisahkan per tahun atau per bulan."
+    "too_many_history_rows": "Berkas ini lebih dari 20.000 baris. Pisahkan per tahun atau per bulan.",
+    "review_not_open": "Tinjauan ini sudah ditutup."
   },
   "itemsImport": {
     "title": "Impor Katalog",
@@ -618,7 +619,9 @@
     "voidedNotice": "Penjualan ini dibatalkan: {reason}",
     "print": "Cetak",
     "backToList": "Kembali ke riwayat",
-    "soldBy": "Dilayani oleh"
+    "soldBy": "Dilayani oleh",
+    "offlineHint": "Nomor sementara di struk pelanggan saat kasir offline",
+    "offlineNotice": "Dicatat di kasir offline. Struk pelanggan memakai nomor sementara {number}."
   },
   "alerts": {
     "title": "Peringatan",
@@ -2339,6 +2342,65 @@
             "warn": "Menghapus data demo mengosongkan seluruh katalog. Lakukan sebelum memasukkan barang sungguhan, jangan sesudahnya."
           }
         }
+      },
+      "phoneApp": {
+        "title": "Aplikasi Android",
+        "summary": "Memakai sistem apotek di HP, dan kasir cadangan yang tetap bisa menjual saat server mati.",
+        "sections": {
+          "setup": {
+            "title": "Menyiapkan HP",
+            "steps": {
+              "1": "Pasang Tailscale di HP dan masuk ke jaringan apotek. Tanpa itu aplikasi sama sekali tidak bisa menjangkau server.",
+              "2": "Pasang aplikasi apotek lalu buka. Masukkan alamat server dari pemilik (berakhiran .ts.net).",
+              "3": "Beri nama HP, misalnya \"HP Kasir\", dan pilih kegunaannya: Kasir untuk HP di meja kasir, Manajemen untuk yang lain."
+            },
+            "tip": "Hanya satu HP yang boleh menjadi Kasir. Hanya HP itu yang menyimpan salinan untuk menjual offline."
+          },
+          "signIn": {
+            "title": "Masuk",
+            "steps": {
+              "1": "Selalu masuk di layar aplikasi sendiri, dengan nama pengguna dan kata sandi biasa.",
+              "2": "Aplikasi lalu membuka situs apotek, dan Anda memakainya persis seperti di komputer.",
+              "3": "Keluar dari situs membawa Anda kembali ke layar masuk aplikasi."
+            },
+            "warn": "Anda hanya bisa masuk offline di Kasir jika sudah masuk online di HP itu dalam 24 jam terakhir."
+          },
+          "offline": {
+            "title": "Saat server mati",
+            "steps": {
+              "1": "Jika server berhenti menjawab, muncul bilah kuning. Di Kasir, tekan Buka kasir offline.",
+              "2": "Masuk, cari obat dengan nama atau barcode, dan jual seperti biasa. Stok kedaluwarsa ditolak.",
+              "3": "Struk memakai nomor sementara yang diawali OFF-. Berikan ke pelanggan seperti biasa.",
+              "4": "Saat offline hanya bisa menjual. Penerimaan barang, retur, pembatalan, dan stok opname menunggu server kembali."
+            },
+            "warn": "Kasir harus terhubung ke server paling tidak sekali setiap 24 jam. Setelah itu, atau setelah HP dinyalakan ulang, kasir terkunci sampai bisa terhubung lagi."
+          },
+          "back": {
+            "title": "Saat server kembali",
+            "steps": {
+              "1": "Aplikasi mengetahuinya sendiri dan mengirim semua penjualan offline ke server.",
+              "2": "Setiap penjualan mendapat nomor struk aslinya. Nomor sementara OFF- tetap tersimpan, jadi struk pelanggan tetap bisa dicari.",
+              "3": "Masuk lagi untuk kembali ke situs."
+            }
+          },
+          "review": {
+            "title": "Penjualan offline untuk ditinjau",
+            "steps": {
+              "1": "Riwayat penjualan menampilkan pemberitahuan kuning bila ada penjualan offline yang perlu keputusan. Buka pemberitahuan itu.",
+              "2": "Belum dibukukan: stok yang dimaksud sudah tidak ada saat HP sinkron. Obatnya sudah keluar, jadi perbaiki stoknya (terima barang, atau koreksi lewat penyesuaian atau stok opname), lalu tekan Bukukan sekarang.",
+              "3": "Dibukukan, periksa: penjualan sudah tercatat tetapi ada yang perlu dicek, misalnya harga yang sudah berubah. Periksa lalu tekan Tandai sudah diperiksa.",
+              "4": "Setiap keputusan perlu catatan tentang apa yang diperiksa atau dilakukan."
+            }
+          },
+          "devices": {
+            "title": "Perangkat",
+            "steps": {
+              "1": "Pengguna → Perangkat menampilkan semua HP dan tablet yang pernah masuk di aplikasi.",
+              "2": "Jika HP hilang atau tidak dipakai lagi, tekan Cabut. HP itu tidak bisa lagi masuk atau mengirim apa pun."
+            },
+            "tip": "Sebelum mencabut Kasir, biarkan terhubung sekali bila bisa, agar penjualan offline-nya sampai ke server."
+          }
+        }
       }
     }
   },
@@ -2510,5 +2572,64 @@
         }
       }
     }
+  },
+  "offlineReview": {
+    "title": "Penjualan offline untuk ditinjau",
+    "subtitle": "Penjualan dari kasir Android saat server tidak terjangkau yang perlu keputusan",
+    "waiting": "{count, plural, other {# penjualan offline perlu ditinjau}}",
+    "showClosed": "Tampilkan yang selesai",
+    "showOpen": "Tampilkan yang terbuka",
+    "empty": "Tidak ada yang perlu ditinjau. Semua penjualan offline sudah dibukukan.",
+    "emptyClosed": "Belum ada tinjauan yang selesai.",
+    "soldBy": "{cashier} di {device}, {when}",
+    "lines": "{count, plural, other {# baris}}",
+    "kind": {
+      "not_posted": "Belum dibukukan",
+      "flagged": "Dibukukan, periksa"
+    },
+    "reason": {
+      "insufficient_stock": "Stok yang dimaksud sudah tidak ada saat HP sinkron (terjual, disesuaikan, dimusnahkan, atau kedaluwarsa).",
+      "unknown_pass": "HP menyebut izin harian yang tidak pernah diberikan server ini.",
+      "outside_pass": "Dicatat setelah izin harian HP habis.",
+      "over_pass_limit": "Melebihi jumlah penjualan atau nilai yang diizinkan satu izin harian.",
+      "cashier_inactive": "Akun kasir sudah dinonaktifkan sejak itu.",
+      "cashier_cannot_sell": "Kasir tidak lagi punya izin menjual.",
+      "discount_without_permission": "Diskon diberikan oleh orang tanpa izin diskon.",
+      "price_differs": "Dijual dengan harga yang berbeda dari harga sekarang.",
+      "total_differs": "Total di HP berbeda dengan yang dibukukan server."
+    },
+    "note": "Catatan",
+    "notePlaceholder": "Apa yang diperiksa atau dilakukan, mis. \"barang datang, dibukukan\"",
+    "post": "Bukukan sekarang",
+    "closeWithoutPosting": "Tutup tanpa membukukan",
+    "accept": "Tandai sudah diperiksa",
+    "notPostedHint": "Obatnya sudah keluar dari apotek. Bukukan setelah stoknya benar, atau tutup setelah memperbaiki stok lewat penyesuaian atau stok opname, dan tulis di catatan.",
+    "posted": "Dibukukan sebagai penjualan {number}.",
+    "closed": "Tinjauan ditutup.",
+    "resolvedBy": "Ditutup oleh {name}, {when}"
+  },
+  "devices": {
+    "title": "Perangkat",
+    "subtitle": "HP dan tablet yang memakai aplikasi Android",
+    "empty": "Belum ada perangkat.",
+    "emptyHint": "HP muncul di sini saat pertama kali seseorang masuk di aplikasi.",
+    "name": "Perangkat",
+    "role": "Dipakai sebagai",
+    "roles": {
+      "till": "Kasir (bisa offline)",
+      "management": "Manajemen"
+    },
+    "lastSeen": "Terakhir terlihat",
+    "lastSync": "Salinan offline terakhir",
+    "offlineSales": "Penjualan offline",
+    "revoke": "Cabut",
+    "revokedChip": "Dicabut",
+    "revoked": "Perangkat dicabut. Tidak bisa lagi masuk atau sinkron.",
+    "revokeHint": "Cabut HP yang hilang atau tidak dipakai lagi. Penjualan offline-nya tetap tercatat. Penjualan yang masih tertahan di HP yang dicabut tidak bisa dikirim, jadi sinkronkan dulu bila bisa."
+  },
+  "appBridge": {
+    "unreachable": "Server apotek tidak menjawab.",
+    "openOfflineTill": "Buka kasir offline",
+    "openApp": "Kembali ke aplikasi"
   }
 }

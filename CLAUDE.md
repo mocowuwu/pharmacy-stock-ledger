@@ -171,6 +171,34 @@ relax one without saying so explicitly.
   clinic install. Its nightly alerts come from `/api/cron/alerts`, which
   refuses every request when `CRON_SECRET` is unset, as it is on a clinic PC.
 
+- **The Android till's offline sales are replayed, never trusted.** The app
+  (`mobile/`) sells offline from a copy, but each sale reaches the ledger only
+  through `replayOfflineSale` in `src/lib/offline/replay.ts`, which runs it
+  through `commitSale` against the stock as it is now. What cannot be booked
+  is never dropped -- the medicine has already left -- it waits in
+  `offline_sale_reviews` until a manager books it or closes it with a note.
+- **Offline receipts are the one exception to server-allocated numbers.** The
+  phone prints `OFF-<device code>-<seq>`; on sync the real number is allocated
+  under `lockNumberSeries` as usual, in the series of the day the sale
+  happened, and `sales.offline_number` keeps the temporary one so a paper
+  receipt stays findable. This was decided with the owner, not drifted into.
+- **An offline sale is dated by the server's clock.** Its pass was issued at a
+  time the server recorded; the phone reports milliseconds since then on
+  Android's monotonic clock, which the date setting cannot move. The phone's
+  wall clock is informational only.
+- **The till must reach the server once a day.** Each snapshot carries a
+  24-hour pass (`device_passes`); the app refuses to sell once it runs out,
+  after a reboot, or with a clock turned back, and the server flags any sale
+  outside its pass. Only a `till` device gets a snapshot, and a snapshot never
+  holds cost prices.
+- **The app and the website share one set of totals.** `saleTotals` in
+  `src/lib/stock/totals.ts` is what `commitSale` charges and what the app
+  bundles; `src/lib/offline/contract.ts` is the API both compile against.
+  Neither may grow a second copy.
+- **Signing in on the app goes through `authenticate`**
+  (`src/lib/auth/sign-in.ts`), the same rate limits and locks as the website's
+  form -- the app is not a second door with weaker locks.
+
 ## Conventions
 
 **Authorization lives in the DAL** (`src/lib/dal/`), next to the data. Hiding a
@@ -284,6 +312,17 @@ Two colour rules do not bend to the accent:
   and red are adjacent hues and the first pass failed the normal-vision
   separation floor. Re-run `scripts/validate_palette.js` from the dataviz skill
   before changing any of them.
+
+## The Android app
+
+`mobile/` is its own package (Vite + React + Capacitor), excluded from the root
+tsconfig, eslint and vitest. It imports the server's pure modules through `@/`
+-- `totals`, `fefo`, `gs1`, `money`, `date`, `contract` -- so anything those
+modules import must stay free of `server-only`, drizzle and Node built-ins, or
+the app's bundle breaks. `cd mobile && npm test` covers the offline rules;
+`npm run apk` builds the APK. `mobile/README.md` documents the native bridge
+and the files the website's `AppBridge` reads and writes -- a change to either
+side's file formats is a change to both.
 
 ## Testing
 

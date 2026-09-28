@@ -94,6 +94,22 @@ export type HistoryImportStatus = (typeof HISTORY_IMPORT_STATUSES)[number];
  * responsible pharmacist on every movement. Enforced in code rather than left
  * to a settings toggle.
  */
+/**
+ * What a device running the Android app is for. Only a `till` keeps an offline
+ * copy of the catalogue and may sell while the server is unreachable.
+ */
+export const DEVICE_ROLES = ["till", "management"] as const;
+
+/**
+ * Why an offline sale landed on the review list.
+ *
+ * `not_posted`: the server could not book it as it stands -- the stock it
+ * names is gone or has expired since -- so it waits for a manager, holding
+ * everything the phone sent. `flagged`: it was booked, but something about it
+ * should be looked at (a price that had changed, a cashier suspended since).
+ */
+export const OFFLINE_REVIEW_KINDS = ["not_posted", "flagged"] as const;
+
 export const RESTRICTED_DRUG_CLASSES = [
   "keras",
   "owa",

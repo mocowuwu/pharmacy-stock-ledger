@@ -12,8 +12,8 @@ import {
 import { applyMovement } from "./ledger";
 import { lockNumberSeries } from "./numbering";
 import { allocateFefo, isOverride } from "./fefo";
-import { applyRateBps, splitInclusiveTax } from "@/lib/format/money";
-import { today } from "@/lib/format/date";
+import { dayOf, today } from "@/lib/format/date";
+import { saleTotals } from "./totals";
 import { RESTRICTED_DRUG_CLASSES } from "@/lib/catalogue/enums";
 
 /**
@@ -40,6 +40,17 @@ export type CommitSaleRequest = {
   discount?: number;
   tendered?: number | null;
   notes?: string | null;
+  /**
+   * Set only when an offline sale from the Android till is replayed. The sale
+   * is booked on the day it happened and numbered in that day's series, and
+   * keeps the temporary number printed on the customer's receipt.
+   */
+  offline?: {
+    clientId: string;
+    number: string;
+    deviceId: string;
+    soldAt: Date;
+  };
 };
 
 export class SaleError extends Error {
@@ -52,7 +63,7 @@ export class SaleError extends Error {
   }
 }
 
-async function activeTax(tx: Database, on: string) {
+export async function activeTax(tx: Database, on: string) {
   const [config] = await tx.select().from(settings).where(eq(settings.id, 1));
   if (!config?.taxEnabled) return null;
 
@@ -103,7 +114,7 @@ export async function nextSaleNumber(tx: Database, on: string): Promise<string> 
 export async function commitSale(tx: Database, request: CommitSaleRequest) {
   if (request.lines.length === 0) throw new SaleError("empty_sale");
 
-  const saleDate = today();
+  const saleDate = request.offline ? dayOf(request.offline.soldAt) : today();
   const tax = await activeTax(tx, saleDate);
   let needsPharmacist = false;
 
@@ -179,29 +190,15 @@ export async function commitSale(tx: Database, request: CommitSaleRequest) {
     });
   }
 
-  const subtotal = planned.reduce((sum, p) => sum + p.line.qty * p.line.unitPrice, 0);
-  const discount = Math.min(Math.max(request.discount ?? 0, 0), subtotal);
-  const net = subtotal - discount;
-
-  let taxAmount = 0;
-  let total = net;
-  if (tax) {
-    const taxable = planned
-      .filter((p) => !p.item.isTaxExempt)
-      .reduce((sum, p) => sum + p.line.qty * p.line.unitPrice, 0);
-    // A discount reduces the taxable portion in the same proportion it reduces
-    // the sale, so the two never drift apart.
-    const taxableAfterDiscount =
-      subtotal === 0 ? 0 : Math.round((taxable * net) / subtotal);
-
-    if (tax.mode === "inclusive") {
-      taxAmount = splitInclusiveTax(taxableAfterDiscount, tax.rate.rateBps).tax;
-      total = net;
-    } else {
-      taxAmount = applyRateBps(taxableAfterDiscount, tax.rate.rateBps);
-      total = net + taxAmount;
-    }
-  }
+  const { subtotal, discount, taxAmount, total } = saleTotals(
+    planned.map((p) => ({
+      qty: p.line.qty,
+      unitPrice: p.line.unitPrice,
+      taxExempt: p.item.isTaxExempt,
+    })),
+    request.discount ?? 0,
+    tax ? { mode: tax.mode, rateBps: tax.rate.rateBps } : null,
+  );
 
   // Numbered here rather than at the top: everything above can run
   // concurrently, and only this moment needs to be single-file.
@@ -226,6 +223,14 @@ export async function commitSale(tx: Database, request: CommitSaleRequest) {
       changeGiven:
         request.tendered != null ? Math.max(request.tendered - total, 0) : null,
       notes: request.notes ?? null,
+      ...(request.offline
+        ? {
+            soldAt: request.offline.soldAt,
+            offlineClientId: request.offline.clientId,
+            offlineNumber: request.offline.number,
+            deviceId: request.offline.deviceId,
+          }
+        : {}),
     })
     .returning();
 
