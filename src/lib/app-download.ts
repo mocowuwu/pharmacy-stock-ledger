@@ -19,7 +19,8 @@ import pkg from "../../package.json";
  * pharmacy's network.
  *
  * `APP_APK_PATH` overrides all of that with a file on disk, for a machine
- * that cannot reach GitHub.
+ * that cannot reach GitHub. `APP_RELEASE_URL` points the fetch at a mirror
+ * of the releases instead (and at a stand-in server in the tests).
  */
 
 /** Same repository as installer/update.mjs. */
@@ -32,10 +33,17 @@ export type ApkSource =
   | { ok: true; path: string; size: number }
   | { ok: false; reason: "not_published" | "unreachable" };
 
+function releaseBase(): string {
+  return (process.env.APP_RELEASE_URL ?? `https://github.com/${RELEASE_REPO}/releases/download`).replace(/\/+$/u, "");
+}
+
 function cacheDir(): string {
   // The data folder where there is one; the system temp folder where the
   // filesystem is read-only (the hosted demo).
-  for (const dir of [join(process.cwd(), ".data", "app"), join(tmpdir(), "pharmacy-app")]) {
+  const candidates = process.env.APP_CACHE_DIR
+    ? [process.env.APP_CACHE_DIR]
+    : [join(process.cwd(), ".data", "app"), join(tmpdir(), "pharmacy-app")];
+  for (const dir of candidates) {
     try {
       mkdirSync(dir, { recursive: true });
       return dir;
@@ -82,7 +90,7 @@ export async function findApk(): Promise<ApkSource> {
   if (hit) return { ok: true, ...hit };
 
   try {
-    const url = `https://github.com/${RELEASE_REPO}/releases/download/v${APP_VERSION}/${ASSET}`;
+    const url = `${releaseBase()}/v${APP_VERSION}/${ASSET}`;
     if ((await fetchFrom(url, cached)) === "missing") return { ok: false, reason: "not_published" };
   } catch {
     return { ok: false, reason: "unreachable" };
