@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { saleTotals } from "@/lib/stock/totals";
 import { buildSale, cartTotals, findByCode, itemIndex, offlineNumber, quickCash, usedByBatch, type SaleInput } from "../src/lib/till";
 import { cashier, HOUR, ISSUED, snapshot, state } from "./fixtures";
@@ -133,4 +133,30 @@ describe("the item index", () => {
     expect(index.get("item-amox")?.code).toBe("AMOX");
     expect(itemIndex(snapshot())).not.toBe(index);
   });
+});
+
+describe("the phone's own clock", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // Offline-now (the pass's time) is 28 Sep. The batch expiring on the 28th is
+  // good all that day; the one that expired on the 27th is not. Whatever the
+  // phone's calendar says must not change either answer.
+  for (const [label, phoneDate] of [
+    ["a year ahead", "2027-09-28T12:00:00Z"],
+    ["a week behind", "2026-09-21T12:00:00Z"],
+  ] as const) {
+    it(`does not move expiry when it is ${label}`, () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date(phoneDate));
+      const refused = buildSale(input({ cart: [{ itemId: "item-amox", qty: 4 }] }));
+      expect(refused).toEqual({
+        ok: false,
+        refusal: { code: "short", itemId: "item-amox", available: 3, expired: 10 },
+      });
+      const sold = buildSale(input({ cart: [{ itemId: "item-amox", qty: 3 }] }));
+      expect(sold.ok && sold.entry.allocations).toEqual([{ itemId: "item-amox", batchId: "b-today", qty: 3 }]);
+    });
+  }
 });

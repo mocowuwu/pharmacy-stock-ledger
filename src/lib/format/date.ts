@@ -97,8 +97,14 @@ export function daysUntilExpiry(
 export function isExpired(
   expiryDate: string,
   timezone: string = pharmacyTimezone(),
+  /**
+   * The day to judge by, `YYYY-MM-DD`, when it is not today on this machine's
+   * clock -- the Android till judges by its pass's day, because a phone's own
+   * date is whatever someone set it to.
+   */
+  asOf?: string,
 ): boolean {
-  return expiryDate < today(timezone);
+  return expiryDate < (asOf ?? today(timezone));
 }
 
 export function addDays(isoDate: string, days: number): string {
