@@ -75,10 +75,10 @@ export function usedByBatch(
 }
 
 /**
- * The item's batches as FEFO sees them. A batch expired at offline-now is
- * marked `expired`, so `allocateFefo` never takes from it whatever the phone's
- * calendar says. (`allocateFefo` also checks expiry against the phone's own
- * date; that can only refuse more, never less.)
+ * The item's batches as FEFO sees them. Expiry is judged on offline-now's day
+ * -- the pass's clock -- and never on the phone's own date, which is whatever
+ * someone set it to: a phone a day fast would refuse good stock, one a day
+ * slow would sell expired stock. Every check below passes that day as `asOf`.
  */
 export function batchesFor(
   item: SnapshotItem,
@@ -110,7 +110,7 @@ export function stockOf(
 ): ItemStock {
   const batches = batchesFor(item, used, today);
   const sellable = batches
-    .filter((b) => isSellable(b, timezone))
+    .filter((b) => isSellable(b, timezone, today))
     .reduce((sum, b) => sum + b.qtyRemaining, 0);
   const expired = batches
     .filter((b) => b.status === "expired")
@@ -125,7 +125,7 @@ export function allocateItem(
   today: string,
   timezone: string,
 ): AllocationResult {
-  return allocateFefo(batchesFor(item, used, today), qty, { timezone });
+  return allocateFefo(batchesFor(item, used, today), qty, { timezone, asOf: today });
 }
 
 /* ------------------------------------------------------------------ search */

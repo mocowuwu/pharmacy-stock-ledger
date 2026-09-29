@@ -127,3 +127,26 @@ describe("isOverride", () => {
     ).toBe(true);
   });
 });
+
+describe("judging expiry on a given day", () => {
+  const stock: AvailableBatch[] = [
+    { id: "a", lotNumber: "A", expiryDate: "2026-09-28", qtyRemaining: 5, unitCost: 1, status: "active" },
+    { id: "b", lotNumber: "B", expiryDate: "2026-12-31", qtyRemaining: 5, unitCost: 1, status: "active" },
+  ];
+
+  it("takes a batch through the whole of its expiry day, and not after", () => {
+    const onTheDay = allocateFefo(stock, 6, { timezone: "Asia/Jakarta", asOf: "2026-09-28" });
+    expect(onTheDay.allocations.map((a) => [a.batchId, a.qty])).toEqual([["a", 5], ["b", 1]]);
+
+    const dayAfter = allocateFefo(stock, 6, { timezone: "Asia/Jakarta", asOf: "2026-09-29" });
+    expect(dayAfter.allocations.map((a) => [a.batchId, a.qty])).toEqual([["b", 5]]);
+    expect(dayAfter).toMatchObject({ shortfall: 1, blockedByExpiry: 5 });
+  });
+
+  it("judges an override against the same day", () => {
+    const allocations = allocateFefo(stock, 1, { preferBatchId: "b", timezone: "Asia/Jakarta", asOf: "2026-09-28" }).allocations;
+    expect(isOverride(stock, allocations, "Asia/Jakarta", "2026-09-28")).toBe(true);
+    // A day later "a" has expired, so "b" is simply the first sellable batch.
+    expect(isOverride(stock, allocations, "Asia/Jakarta", "2026-09-29")).toBe(false);
+  });
+});

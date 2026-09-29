@@ -50,11 +50,12 @@ export function fefoOrder(batches: readonly AvailableBatch[]): AvailableBatch[] 
   });
 }
 
-export function isSellable(batch: AvailableBatch, timezone?: string): boolean {
+/** `asOf` is the day expiry is judged on; today on this machine when omitted. */
+export function isSellable(batch: AvailableBatch, timezone?: string, asOf?: string): boolean {
   return (
     batch.status === "active" &&
     batch.qtyRemaining > 0 &&
-    !isExpired(batch.expiryDate, timezone)
+    !isExpired(batch.expiryDate, timezone, asOf)
   );
 }
 
@@ -69,7 +70,7 @@ export function isSellable(batch: AvailableBatch, timezone?: string): boolean {
 export function allocateFefo(
   batches: readonly AvailableBatch[],
   requested: number,
-  options: { preferBatchId?: string; timezone?: string } = {},
+  options: { preferBatchId?: string; timezone?: string; asOf?: string } = {},
 ): AllocationResult {
   if (requested <= 0) {
     return { allocations: [], shortfall: 0, blockedByExpiry: 0 };
@@ -77,10 +78,10 @@ export function allocateFefo(
 
   const blockedByExpiry = batches
     .filter((b) => b.status === "active" && b.qtyRemaining > 0)
-    .filter((b) => isExpired(b.expiryDate, options.timezone))
+    .filter((b) => isExpired(b.expiryDate, options.timezone, options.asOf))
     .reduce((sum, b) => sum + b.qtyRemaining, 0);
 
-  const sellable = fefoOrder(batches).filter((b) => isSellable(b, options.timezone));
+  const sellable = fefoOrder(batches).filter((b) => isSellable(b, options.timezone, options.asOf));
 
   // An override moves one batch to the front; the rest still follow FEFO, so a
   // sale larger than that batch falls back to the correct order.
@@ -116,8 +117,9 @@ export function isOverride(
   batches: readonly AvailableBatch[],
   allocations: readonly Allocation[],
   timezone?: string,
+  asOf?: string,
 ): boolean {
   if (allocations.length === 0) return false;
-  const natural = fefoOrder(batches).filter((b) => isSellable(b, timezone));
+  const natural = fefoOrder(batches).filter((b) => isSellable(b, timezone, asOf));
   return natural.length > 0 && natural[0].id !== allocations[0].batchId;
 }
