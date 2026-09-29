@@ -345,3 +345,20 @@ tbody tr:hover {
     padding: 0 !important;
   }
 }
+
+/*
+ * Reports on paper. The page size is set by the report page itself (A4, where
+ * receipts use the roll above); these rules only keep a table readable across
+ * a page break. A repeated table header came out as an empty grey band in
+ * Chrome, so the header prints once, and no row or panel is split in half.
+ */
+@media print {
+  .report-table thead {
+    display: table-row-group;
+  }
+
+  .report-table tr,
+  .report-panel {
+    break-inside: avoid;
+  }
+}

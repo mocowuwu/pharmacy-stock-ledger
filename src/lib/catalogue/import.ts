@@ -5,7 +5,7 @@ import { receiveStock } from "@/lib/stock/ledger";
 import { categories, itemBarcodes, items, suppliers } from "@/db/schema";
 import { DOSAGE_FORMS, DRUG_CLASSES, type DosageForm, type DrugClass } from "./enums";
 import { codePrefix, nextCode, normaliseCode } from "./code";
-import { parseMoney } from "@/lib/format/money";
+import { parseSheetMoney } from "@/lib/format/money";
 import { isExpired, today } from "@/lib/format/date";
 import { looksLikeZip, readFirstSheet } from "@/lib/format/xlsx";
 
@@ -221,7 +221,7 @@ export async function validateImportRows(
     let defaultPrice = 0;
     const rawPrice = (raw.default_price ?? "").trim();
     if (rawPrice) {
-      const parsed = parseMoney(rawPrice);
+      const parsed = parseSheetMoney(rawPrice);
       if (parsed === null || parsed < 0) fail("default_price", "invalid_money");
       else defaultPrice = parsed;
     }
@@ -261,7 +261,7 @@ export async function validateImportRows(
 
       let unitCost = 0;
       const rawCost = (raw.unit_cost ?? "").trim();
-      const parsedCost = rawCost ? parseMoney(rawCost) : 0;
+      const parsedCost = rawCost ? parseSheetMoney(rawCost) : 0;
       if (parsedCost === null || parsedCost < 0) fail("unit_cost", "invalid_money");
       else unitCost = parsedCost;
 

@@ -1,9 +1,11 @@
-import { and, eq, sql, type SQL } from "drizzle-orm";
+import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import type { Database } from "@/db/client";
 import {
   batches,
   categories,
   disposals,
+  historyImports,
+  historySaleLines,
   items,
   returns,
   returnLines,
@@ -23,7 +25,7 @@ import { addDays, DEFAULT_TIMEZONE, today } from "@/lib/format/date";
  * arithmetic can be tested directly against a real database rather than
  * inspected by eye. `src/lib/dal/reports.ts` adds the permission checks.
  *
- * Three rules run through all of it:
+ * Four rules run through all of it:
  *
  * 1. **Aggregate in SQL.** Fetching rows and summing them in a page would be
  *    slower and would quietly change as soon as a limit was hit.
@@ -33,6 +35,13 @@ import { addDays, DEFAULT_TIMEZONE, today } from "@/lib/format/date";
  * 3. **A day is a day in the pharmacy's timezone.** `soldAt` is an instant;
  *    casting it to a date in UTC would file a sale made at 06:00 in Jakarta
  *    under the previous day. Every date bucket goes through `localDate`.
+ * 4. **Net sales are net of discounts, returns and PPN.** A line's price is
+ *    what was asked; what the pharmacy earned from it is that price less its
+ *    share of the sale's discount, less the PPN inside it when prices include
+ *    tax, less whatever came back. PPN collected is the tax office's money,
+ *    and it is reported beside net sales rather than inside them. Imported
+ *    history (`history_sale_lines`) adds to sales and margin only -- never to
+ *    anything about stock -- and a withdrawn import adds nothing.
  */
 
 export type DateRange = { from: string; to: string };
@@ -60,21 +69,77 @@ function returnedWithin({ from, to, timezone = DEFAULT_TIMEZONE }: ReportOptions
   return sql`${localDate(sql`${returns.returnedAt}`, timezone)} between ${from} and ${to}`;
 }
 
+/** Imported lines that still count: their import has not been withdrawn. */
+function historyWithin({ from, to }: ReportOptions) {
+  return and(
+    eq(historyImports.status, "active"),
+    sql`${historySaleLines.soldOn} between ${from} and ${to}`,
+  );
+}
+
+/** Postgres hands `numeric` back as text; sums of shares are rounded here, once. */
+const num = (value: unknown) => Number(value ?? 0);
+
 /* ------------------------------------------------------------------ sales */
 
+export type SalesSummary = {
+  /** Every line at the price asked, plus imported history. */
+  gross: number;
+  discount: number;
+  /** PPN inside the prices of sales rung up with tax-inclusive pricing. */
+  taxIncluded: number;
+  /** Money handed back for returns, as paid -- PPN and all. */
+  refunds: number;
+  /** The part of `refunds` that was PPN. */
+  refundTax: number;
+  /** `refunds` without their PPN: what came off net sales. */
+  refundsExTax: number;
+  /** Gross, less discounts, returns and the PPN inside prices. */
+  net: number;
+  /** PPN on every sale in the window, before returns. */
+  tax: number;
+  /** PPN kept: `tax` less what went back out with refunds. */
+  taxNet: number;
+  /** What the till took plus imported history, before refunds. */
+  revenue: number;
+  /** What the drawer and the bank actually kept: `revenue` less refunds. */
+  collected: number;
+  transactions: number;
+  returns: number;
+  voided: number;
+  units: number;
+  /** Rounded, because an average basket in fractional rupiah is noise. */
+  averageSale: number;
+  history: {
+    lines: number;
+    revenue: number;
+    units: number;
+    /** Distinct old receipts, which count as transactions. */
+    receipts: number;
+    /** Lines with no receipt number: in the revenue, not in the transaction count. */
+    withoutReceipt: number;
+    withoutReceiptRevenue: number;
+  };
+};
+
 /**
- * The headline figures.
+ * The headline figures, laid out as a sales statement.
  *
  * Refunds are subtracted but reported separately rather than folded in
- * silently: "Rp 4.1 juta, of which Rp 90.000 went back out" is a different
- * story from "Rp 4.01 juta", and the owner should see which one they are in.
+ * silently: "Rp 4,1 juta, of which Rp 90.000 went back out" is a different
+ * story from "Rp 4,01 juta", and the owner should see which one they are in.
+ *
+ * Every figure is exact at the level of the sale, so the statement adds up to
+ * the rupiah: `net + taxNet = collected`.
  */
-export async function salesSummary(tx: Database, options: ReportOptions) {
+export async function salesSummary(tx: Database, options: ReportOptions): Promise<SalesSummary> {
   const [sold] = await tx
     .select({
-      revenue: sql<number>`coalesce(sum(${sales.total}), 0)::bigint`,
+      subtotal: sql<number>`coalesce(sum(${sales.subtotal}), 0)::bigint`,
       discount: sql<number>`coalesce(sum(${sales.discount}), 0)::bigint`,
       tax: sql<number>`coalesce(sum(${sales.taxAmount}), 0)::bigint`,
+      taxIncluded: sql<number>`coalesce(sum(case when ${sales.taxMode} = 'inclusive' then ${sales.taxAmount} else 0 end), 0)::bigint`,
+      total: sql<number>`coalesce(sum(${sales.total}), 0)::bigint`,
       transactions: sql<number>`count(*)::int`,
     })
     .from(sales)
@@ -83,9 +148,14 @@ export async function salesSummary(tx: Database, options: ReportOptions) {
   const [refunded] = await tx
     .select({
       refunds: sql<number>`coalesce(sum(${returns.refundTotal}), 0)::bigint`,
+      // Each refund gives back tax at its own sale's rate. Summed exactly and
+      // rounded once, so the per-product table can be apportioned to this
+      // same figure to the rupiah.
+      refundTax: sql<number>`coalesce(round(sum(${returns.refundTotal}::numeric * ${sales.taxAmount} / nullif(${sales.total}, 0))), 0)::bigint`,
       count: sql<number>`count(*)::int`,
     })
     .from(returns)
+    .innerJoin(sales, eq(sales.id, returns.saleId))
     .where(returnedWithin(options));
 
   const [voided] = await tx
@@ -99,36 +169,78 @@ export async function salesSummary(tx: Database, options: ReportOptions) {
     );
 
   const [units] = await tx
-    .select({ total: sql<number>`coalesce(sum(${saleLines.qty}), 0)::int` })
+    .select({ total: sql<number>`coalesce(sum(${saleLines.qty}), 0)::bigint` })
     .from(saleLines)
     .innerJoin(sales, eq(sales.id, saleLines.saleId))
     .where(soldWithin(options));
 
-  const revenue = Number(sold?.revenue ?? 0);
-  const refunds = Number(refunded?.refunds ?? 0);
-  const transactions = sold?.transactions ?? 0;
+  const [history] = await tx
+    .select({
+      lines: sql<number>`count(*)::int`,
+      revenue: sql<number>`coalesce(sum(${historySaleLines.lineTotal}), 0)::bigint`,
+      units: sql<number>`coalesce(sum(${historySaleLines.qty}), 0)::bigint`,
+      receipts: sql<number>`count(distinct case when ${historySaleLines.receiptNumber} is not null then ${historySaleLines.soldOn}::text || '|' || ${historySaleLines.receiptNumber} end)::int`,
+      withoutReceipt: sql<number>`count(*) filter (where ${historySaleLines.receiptNumber} is null)::int`,
+      withoutReceiptRevenue: sql<number>`coalesce(sum(${historySaleLines.lineTotal}) filter (where ${historySaleLines.receiptNumber} is null), 0)::bigint`,
+    })
+    .from(historySaleLines)
+    .innerJoin(historyImports, eq(historyImports.id, historySaleLines.importId))
+    .where(historyWithin(options));
+
+  const hist = {
+    lines: history?.lines ?? 0,
+    revenue: num(history?.revenue),
+    units: num(history?.units),
+    receipts: history?.receipts ?? 0,
+    withoutReceipt: history?.withoutReceipt ?? 0,
+    withoutReceiptRevenue: num(history?.withoutReceiptRevenue),
+  };
+
+  const tillTotal = num(sold?.total);
+  const discount = num(sold?.discount);
+  const tax = num(sold?.tax);
+  const taxIncluded = num(sold?.taxIncluded);
+  const refunds = num(refunded?.refunds);
+  const refundTax = num(refunded?.refundTax);
+  const refundsExTax = refunds - refundTax;
+  const gross = num(sold?.subtotal) + hist.revenue;
+  const revenue = tillTotal + hist.revenue;
+  const transactions = (sold?.transactions ?? 0) + hist.receipts;
+  // The average basket counts only what was counted as a transaction: history
+  // lines without a receipt number are in the takings but belong to no basket.
+  const basketRevenue = revenue - hist.withoutReceiptRevenue;
 
   return {
-    revenue,
+    gross,
+    discount,
+    taxIncluded,
     refunds,
-    net: revenue - refunds,
-    discount: Number(sold?.discount ?? 0),
-    tax: Number(sold?.tax ?? 0),
+    refundTax,
+    refundsExTax,
+    net: gross - discount - taxIncluded - refundsExTax,
+    tax,
+    taxNet: tax - refundTax,
+    revenue,
+    collected: revenue - refunds,
     transactions,
     returns: refunded?.count ?? 0,
     voided: voided?.count ?? 0,
-    units: units?.total ?? 0,
-    /** Rounded, because an average basket in fractional rupiah is noise. */
-    averageSale: transactions > 0 ? Math.round(revenue / transactions) : 0,
+    units: num(units?.total) + hist.units,
+    averageSale: transactions > 0 ? Math.round(basketRevenue / transactions) : 0,
+    history: hist,
   };
 }
 
-/** Revenue per day, with quiet days present as zero so a line does not slope through them. */
+/**
+ * Takings per day, with quiet days present as zero so a line does not slope
+ * through them. A day's figure is what was rung up that day, before any
+ * refund -- a return is filed under the day it came back, not the day it sold.
+ */
 export async function dailyRevenue(tx: Database, options: ReportOptions) {
   const timezone = options.timezone ?? DEFAULT_TIMEZONE;
   const day = localDate(sql`${sales.soldAt}`, timezone);
 
-  const rows = await tx
+  const till = await tx
     .select({
       day: sql<string>`${day}::text`,
       total: sql<number>`coalesce(sum(${sales.total}), 0)::bigint`,
@@ -141,9 +253,22 @@ export async function dailyRevenue(tx: Database, options: ReportOptions) {
     // `$6` in the SELECT even though they carry the same value.
     .groupBy(sql`1`);
 
-  const byDay = new Map(
-    rows.map((r) => [r.day, { total: Number(r.total), count: r.count }]),
-  );
+  const history = await tx
+    .select({
+      day: sql<string>`${historySaleLines.soldOn}::text`,
+      total: sql<number>`coalesce(sum(${historySaleLines.lineTotal}), 0)::bigint`,
+      count: sql<number>`count(distinct ${historySaleLines.receiptNumber})::int`,
+    })
+    .from(historySaleLines)
+    .innerJoin(historyImports, eq(historyImports.id, historySaleLines.importId))
+    .where(historyWithin(options))
+    .groupBy(historySaleLines.soldOn);
+
+  const byDay = new Map<string, { total: number; count: number }>();
+  for (const row of [...till, ...history]) {
+    const hit = byDay.get(row.day) ?? { total: 0, count: 0 };
+    byDay.set(row.day, { total: hit.total + num(row.total), count: hit.count + row.count });
+  }
 
   const series: Array<{ day: string; total: number; count: number }> = [];
   for (let cursor = options.from; cursor <= options.to; cursor = addDays(cursor, 1)) {
@@ -151,6 +276,275 @@ export async function dailyRevenue(tx: Database, options: ReportOptions) {
     series.push({ day: cursor, total: hit?.total ?? 0, count: hit?.count ?? 0 });
   }
   return series;
+}
+
+/** Transactions and takings by hour of the day. Till sales only: history has no clock. */
+export async function salesByHour(tx: Database, options: ReportOptions) {
+  const timezone = options.timezone ?? DEFAULT_TIMEZONE;
+  const rows = await tx
+    .select({
+      hour: sql<number>`extract(hour from (${sales.soldAt} at time zone ${timezone}))::int`,
+      total: sql<number>`coalesce(sum(${sales.total}), 0)::bigint`,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(sales)
+    .where(soldWithin(options))
+    .groupBy(sql`1`);
+
+  const byHour = new Map(rows.map((row) => [row.hour, row]));
+  return Array.from({ length: 24 }, (_, hour) => ({
+    hour,
+    total: num(byHour.get(hour)?.total),
+    count: byHour.get(hour)?.count ?? 0,
+  }));
+}
+
+/**
+ * One product's sales in a window, with every deduction taken apart.
+ *
+ * `key` is the item id, or -- for an imported line that names something not
+ * in the catalogue -- the name as written, lowercased.
+ */
+export type ItemSalesRow = {
+  key: string;
+  itemId: string | null;
+  code: string;
+  name: string;
+  strength: string | null;
+  unit: string;
+  categoryId: string | null;
+  categoryName: string | null;
+  qtySold: number;
+  qtyReturned: number;
+  qtyNet: number;
+  /** At the price asked, lines and history together. */
+  revenue: number;
+  /** This item's share of the discounts given on the sales it was in. */
+  discount: number;
+  /** The PPN inside its price, on tax-inclusive sales. */
+  taxIncluded: number;
+  /** Refunds for it, without their PPN. */
+  refunded: number;
+  revenueNet: number;
+  /** Cost of goods, net of what came back, from the snapshot on the line. */
+  cost: number;
+  /** How much of `revenue` came from imported history. */
+  historyRevenue: number;
+  /** History revenue and units with no cost behind them: left out of margin. */
+  historyUncostedRevenue: number;
+  historyUncostedQty: number;
+};
+
+/**
+ * Sales per product: till lines, returns and imported history, merged.
+ *
+ * A till line's share of its sale's discount is its share of the subtotal;
+ * its share of the PPN on a tax-inclusive sale is its share of the taxable
+ * lines. Both are summed as exact fractions and rounded once per product, so
+ * a product's figures do not drift by a rupiah per line.
+ *
+ * A product returned in the window but sold before it still appears, with
+ * nothing sold and a negative net: the refund came out of this window's
+ * takings, and the per-product table has to add up to the statement above it.
+ */
+export async function itemSales(tx: Database, options: ReportOptions): Promise<ItemSalesRow[]> {
+  const taxableBase = sql`sum(case when ${saleLines.taxExempt} then 0 else ${saleLines.lineTotal} end) over (partition by ${saleLines.saleId})`;
+
+  const lines = tx
+    .select({
+      itemId: saleLines.itemId,
+      qty: saleLines.qty,
+      lineTotal: saleLines.lineTotal,
+      discountShare: sql<string>`(${saleLines.lineTotal}::numeric * ${sales.discount} / nullif(${sales.subtotal}, 0))`.as(
+        "discount_share",
+      ),
+      taxShare: sql<string>`(case when ${sales.taxMode} = 'inclusive' and not ${saleLines.taxExempt} then ${sales.taxAmount}::numeric * ${saleLines.lineTotal} / nullif(${taxableBase}, 0) else 0 end)`.as(
+        "tax_share",
+      ),
+      lineCost: sql<string>`(${saleLines.qty} * ${saleLines.unitCostSnapshot})`.as("line_cost"),
+    })
+    .from(saleLines)
+    .innerJoin(sales, eq(sales.id, saleLines.saleId))
+    .where(soldWithin(options))
+    .as("l");
+
+  const till = await tx
+    .select({
+      itemId: lines.itemId,
+      qty: sql<number>`coalesce(sum(${lines.qty}), 0)::bigint`,
+      gross: sql<number>`coalesce(sum(${lines.lineTotal}), 0)::bigint`,
+      discount: sql<string>`coalesce(sum(${lines.discountShare}), 0)`,
+      tax: sql<string>`coalesce(sum(${lines.taxShare}), 0)`,
+      cost: sql<number>`coalesce(sum(${lines.lineCost}), 0)::bigint`,
+    })
+    .from(lines)
+    .groupBy(lines.itemId);
+
+  const back = await tx
+    .select({
+      itemId: returnLines.itemId,
+      qty: sql<number>`coalesce(sum(${returnLines.qty}), 0)::bigint`,
+      refund: sql<number>`coalesce(sum(${returnLines.refundAmount}), 0)::bigint`,
+      refundTax: sql<string>`coalesce(sum(${returnLines.refundAmount}::numeric * ${sales.taxAmount} / nullif(${sales.total}, 0)), 0)`,
+      cost: sql<number>`coalesce(sum(${returnLines.qty} * ${saleLines.unitCostSnapshot}), 0)::bigint`,
+    })
+    .from(returnLines)
+    .innerJoin(returns, eq(returns.id, returnLines.returnId))
+    .innerJoin(sales, eq(sales.id, returns.saleId))
+    .innerJoin(saleLines, eq(saleLines.id, returnLines.saleLineId))
+    .where(returnedWithin(options))
+    .groupBy(returnLines.itemId);
+
+  // Unlinked lines are grouped by their name as written, ignoring case and
+  // spacing, so "Antasida DOEN" and "antasida  doen" are one row.
+  const nameKey = sql<string | null>`case when ${historySaleLines.itemId} is null then lower(regexp_replace(trim(${historySaleLines.itemName}), '\\s+', ' ', 'g')) end`;
+  const history = await tx
+    .select({
+      itemId: historySaleLines.itemId,
+      nameKey,
+      name: sql<string>`min(${historySaleLines.itemName})`,
+      qty: sql<number>`coalesce(sum(${historySaleLines.qty}), 0)::bigint`,
+      gross: sql<number>`coalesce(sum(${historySaleLines.lineTotal}), 0)::bigint`,
+      cost: sql<number>`coalesce(sum(${historySaleLines.qty} * ${historySaleLines.unitCost}), 0)::bigint`,
+      uncostedRevenue: sql<number>`coalesce(sum(${historySaleLines.lineTotal}) filter (where ${historySaleLines.unitCost} is null), 0)::bigint`,
+      uncostedQty: sql<number>`coalesce(sum(${historySaleLines.qty}) filter (where ${historySaleLines.unitCost} is null), 0)::bigint`,
+    })
+    .from(historySaleLines)
+    .innerJoin(historyImports, eq(historyImports.id, historySaleLines.importId))
+    .where(historyWithin(options))
+    .groupBy(historySaleLines.itemId, sql`2`);
+
+  const ids = [
+    ...new Set(
+      [...till.map((r) => r.itemId), ...back.map((r) => r.itemId), ...history.map((r) => r.itemId)].filter(
+        (id): id is string => id !== null,
+      ),
+    ),
+  ];
+  const catalogue =
+    ids.length === 0
+      ? []
+      : await tx
+          .select({
+            id: items.id,
+            code: items.code,
+            name: items.genericName,
+            strength: items.strength,
+            unit: items.unit,
+            categoryId: items.categoryId,
+            categoryName: categories.name,
+          })
+          .from(items)
+          .leftJoin(categories, eq(categories.id, items.categoryId))
+          .where(inArray(items.id, ids));
+  const info = new Map(catalogue.map((item) => [item.id, item]));
+
+  type Acc = {
+    base: Omit<ItemSalesRow, "qtyNet" | "revenueNet" | "discount" | "taxIncluded" | "refunded">;
+    /** Exact, fractional shares until they are apportioned below. */
+    discount: number;
+    taxIncluded: number;
+    refundTax: number;
+    /** Refunds as paid, PPN and all -- always whole rupiah. */
+    refundGross: number;
+  };
+  const rows = new Map<string, Acc>();
+  const entry = (itemId: string | null, key: string, fallbackName: string): Acc => {
+    const existing = rows.get(key);
+    if (existing) return existing;
+    const item = itemId ? info.get(itemId) : undefined;
+    const created: Acc = {
+      base: {
+        key,
+        itemId,
+        code: item?.code ?? "",
+        name: item?.name ?? fallbackName,
+        strength: item?.strength ?? null,
+        unit: item?.unit ?? "",
+        categoryId: item?.categoryId ?? null,
+        categoryName: item?.categoryName ?? null,
+        qtySold: 0,
+        qtyReturned: 0,
+        revenue: 0,
+        cost: 0,
+        historyRevenue: 0,
+        historyUncostedRevenue: 0,
+        historyUncostedQty: 0,
+      },
+      discount: 0,
+      taxIncluded: 0,
+      refundTax: 0,
+      refundGross: 0,
+    };
+    rows.set(key, created);
+    return created;
+  };
+
+  for (const row of till) {
+    const acc = entry(row.itemId, row.itemId, "");
+    acc.base.qtySold += num(row.qty);
+    acc.base.revenue += num(row.gross);
+    acc.base.cost += num(row.cost);
+    acc.discount += num(row.discount);
+    acc.taxIncluded += num(row.tax);
+  }
+  for (const row of back) {
+    const acc = entry(row.itemId, row.itemId, "");
+    acc.base.qtyReturned += num(row.qty);
+    acc.base.cost -= num(row.cost);
+    acc.refundGross += num(row.refund);
+    acc.refundTax += num(row.refundTax);
+  }
+  for (const row of history) {
+    const key = row.itemId ?? `name:${row.nameKey ?? ""}`;
+    const acc = entry(row.itemId, key, row.name);
+    acc.base.qtySold += num(row.qty);
+    acc.base.revenue += num(row.gross);
+    acc.base.cost += num(row.cost);
+    acc.base.historyRevenue += num(row.gross);
+    acc.base.historyUncostedRevenue += num(row.uncostedRevenue);
+    acc.base.historyUncostedQty += num(row.uncostedQty);
+  }
+
+  // Shares are fractions of a rupiah until here. Rounding each product on its
+  // own would leave the table a few rupiah off the statement, so the whole
+  // rupiah are handed out by largest remainder: every product within a rupiah
+  // of its exact share, and the column adding up to the statement exactly.
+  const list = [...rows.values()];
+  const discounts = apportion(list.map((row) => row.discount));
+  const taxes = apportion(list.map((row) => row.taxIncluded));
+  const refundTaxes = apportion(list.map((row) => row.refundTax));
+
+  return list
+    .map(({ base, refundGross }, index) => {
+      const refunded = refundGross - refundTaxes[index];
+      return {
+        ...base,
+        qtyNet: base.qtySold - base.qtyReturned,
+        discount: discounts[index],
+        taxIncluded: taxes[index],
+        refunded,
+        revenueNet: base.revenue - discounts[index] - taxes[index] - refunded,
+      };
+    })
+    .sort((a, b) => b.revenueNet - a.revenueNet || a.name.localeCompare(b.name));
+}
+
+/**
+ * Whole numbers for a set of exact shares, adding up to the rounded total of
+ * the shares: each share is rounded down, and the rupiah left over go to the
+ * shares that lost the most in rounding (the largest-remainder method).
+ */
+export function apportion(shares: number[]): number[] {
+  const target = Math.round(shares.reduce((sum, share) => sum + share, 0));
+  const floors = shares.map((share) => Math.floor(share + 1e-9));
+  let left = target - floors.reduce((sum, value) => sum + value, 0);
+  const order = shares
+    .map((share, index) => ({ index, remainder: share - floors[index] }))
+    .sort((a, b) => b.remainder - a.remainder || a.index - b.index);
+  const result = [...floors];
+  for (let i = 0; left > 0 && i < order.length; i += 1, left -= 1) result[order[i].index] += 1;
+  return result;
 }
 
 /**
@@ -161,76 +555,51 @@ export async function dailyRevenue(tx: Database, options: ReportOptions) {
  * owner cares about.
  */
 export async function salesByItem(tx: Database, options: ReportOptions) {
-  const returnedQty = sql<number>`coalesce((
-    select sum(${returnLines.qty})
-    from ${returnLines}
-    join ${returns} on ${returns.id} = ${returnLines.returnId}
-    where ${returnLines.itemId} = ${items.id}
-      and ${returnedWithin(options)}
-  ), 0)::int`;
+  return itemSales(tx, options);
+}
 
-  const returnedValue = sql<number>`coalesce((
-    select sum(${returnLines.refundAmount})
-    from ${returnLines}
-    join ${returns} on ${returns.id} = ${returnLines.returnId}
-    where ${returnLines.itemId} = ${items.id}
-      and ${returnedWithin(options)}
-  ), 0)::bigint`;
+export type CategorySalesRow = {
+  categoryId: string | null;
+  name: string;
+  qty: number;
+  revenue: number;
+  items: number;
+};
 
-  const rows = await tx
-    .select({
-      itemId: items.id,
-      code: items.code,
-      name: items.genericName,
-      strength: items.strength,
-      unit: items.unit,
-      drugClass: items.drugClass,
-      categoryName: categories.name,
-      qtySold: sql<number>`coalesce(sum(${saleLines.qty}), 0)::int`,
-      revenue: sql<number>`coalesce(sum(${saleLines.lineTotal}), 0)::bigint`,
-      qtyReturned: returnedQty,
-      refunded: returnedValue,
-    })
-    .from(saleLines)
-    .innerJoin(sales, eq(sales.id, saleLines.saleId))
-    .innerJoin(items, eq(items.id, saleLines.itemId))
-    .leftJoin(categories, eq(categories.id, items.categoryId))
-    .where(soldWithin(options))
-    .groupBy(items.id, categories.name);
-
-  return rows
-    .map((row) => ({
-      ...row,
-      revenue: Number(row.revenue),
-      refunded: Number(row.refunded),
-      qtyNet: row.qtySold - row.qtyReturned,
-      revenueNet: Number(row.revenue) - Number(row.refunded),
-    }))
-    .sort((a, b) => b.revenueNet - a.revenueNet);
+/**
+ * Per-product rows folded into categories. Arithmetic on a complete result,
+ * so the categories add up to exactly the products above them.
+ */
+export function groupByCategory(rows: ItemSalesRow[]): CategorySalesRow[] {
+  const byCategory = new Map<string, CategorySalesRow>();
+  for (const row of rows) {
+    const key = row.categoryId ?? "";
+    const existing =
+      byCategory.get(key) ??
+      ({ categoryId: row.categoryId, name: row.categoryName ?? "", qty: 0, revenue: 0, items: 0 } satisfies CategorySalesRow);
+    existing.qty += row.qtyNet;
+    existing.revenue += row.revenueNet;
+    existing.items += 1;
+    byCategory.set(key, existing);
+  }
+  return [...byCategory.values()].sort((a, b) => b.revenue - a.revenue);
 }
 
 export async function salesByCategory(tx: Database, options: ReportOptions) {
-  const rows = await tx
-    .select({
-      categoryId: categories.id,
-      name: sql<string>`coalesce(${categories.name}, '')`,
-      qty: sql<number>`coalesce(sum(${saleLines.qty}), 0)::int`,
-      revenue: sql<number>`coalesce(sum(${saleLines.lineTotal}), 0)::bigint`,
-    })
-    .from(saleLines)
-    .innerJoin(sales, eq(sales.id, saleLines.saleId))
-    .innerJoin(items, eq(items.id, saleLines.itemId))
-    .leftJoin(categories, eq(categories.id, items.categoryId))
-    .where(soldWithin(options))
-    .groupBy(categories.id, categories.name);
-
-  return rows
-    .map((r) => ({ ...r, revenue: Number(r.revenue) }))
-    .sort((a, b) => b.revenue - a.revenue);
+  return groupByCategory(await itemSales(tx, options));
 }
 
-export async function salesByCashier(tx: Database, options: ReportOptions) {
-  const rows = await tx
+export type CashierSalesRow = {
+  cashierId: string | null;
+  name: string;
+  transactions: number;
+  revenue: number;
+  /** An old till's cashier, named in imported history, not an account here. */
+  fromHistory: boolean;
+};
+
+export async function salesByCashier(tx: Database, options: ReportOptions): Promise<CashierSalesRow[]> {
+  const till = await tx
     .select({
       cashierId: users.id,
       name: users.fullName,
@@ -242,14 +611,50 @@ export async function salesByCashier(tx: Database, options: ReportOptions) {
     .where(soldWithin(options))
     .groupBy(users.id);
 
-  return rows
-    .map((r) => ({ ...r, revenue: Number(r.revenue) }))
-    .sort((a, b) => b.revenue - a.revenue);
+  const history = await tx
+    .select({
+      name: sql<string>`coalesce(${historySaleLines.cashierName}, '')`,
+      transactions: sql<number>`count(distinct case when ${historySaleLines.receiptNumber} is not null then ${historySaleLines.soldOn}::text || '|' || ${historySaleLines.receiptNumber} end)::int`,
+      revenue: sql<number>`coalesce(sum(${historySaleLines.lineTotal}), 0)::bigint`,
+    })
+    .from(historySaleLines)
+    .innerJoin(historyImports, eq(historyImports.id, historySaleLines.importId))
+    .where(historyWithin(options))
+    .groupBy(sql`1`);
+
+  return [
+    ...till.map((r) => ({ ...r, revenue: num(r.revenue), fromHistory: false })),
+    ...history.map((r) => ({
+      cashierId: null,
+      name: r.name,
+      transactions: r.transactions,
+      revenue: num(r.revenue),
+      fromHistory: true,
+    })),
+  ].sort((a, b) => b.revenue - a.revenue);
 }
 
-/** How the money came in. Recorded, not reconciled -- there is no gateway. */
-export async function salesByPaymentMethod(tx: Database, options: ReportOptions) {
-  const rows = await tx
+export type PaymentSalesRow = {
+  /** A payment method key, or `unrecorded` for history that never said. */
+  method: string;
+  transactions: number;
+  /** Taken in, before refunds. */
+  revenue: number;
+  /** Paid back out by this method. */
+  refunds: number;
+  net: number;
+};
+
+/**
+ * How the money came in, and how it went back out. Recorded, not reconciled --
+ * there is no gateway -- but this is the table the day's cash count is checked
+ * against, so a refund is taken off the method it was paid back by.
+ */
+export async function salesByPaymentMethod(
+  tx: Database,
+  options: ReportOptions,
+): Promise<PaymentSalesRow[]> {
+  const till = await tx
     .select({
       method: sales.paymentMethod,
       transactions: sql<number>`count(*)::int`,
@@ -259,99 +664,116 @@ export async function salesByPaymentMethod(tx: Database, options: ReportOptions)
     .where(soldWithin(options))
     .groupBy(sales.paymentMethod);
 
-  return rows
-    .map((r) => ({ ...r, revenue: Number(r.revenue) }))
+  const refunds = await tx
+    .select({
+      method: returns.refundMethod,
+      refunds: sql<number>`coalesce(sum(${returns.refundTotal}), 0)::bigint`,
+    })
+    .from(returns)
+    .where(returnedWithin(options))
+    .groupBy(returns.refundMethod);
+
+  const history = await tx
+    .select({
+      method: sql<string>`coalesce(${historySaleLines.paymentMethod}::text, 'unrecorded')`,
+      transactions: sql<number>`count(distinct case when ${historySaleLines.receiptNumber} is not null then ${historySaleLines.soldOn}::text || '|' || ${historySaleLines.receiptNumber} end)::int`,
+      revenue: sql<number>`coalesce(sum(${historySaleLines.lineTotal}), 0)::bigint`,
+    })
+    .from(historySaleLines)
+    .innerJoin(historyImports, eq(historyImports.id, historySaleLines.importId))
+    .where(historyWithin(options))
+    .groupBy(sql`1`);
+
+  const byMethod = new Map<string, PaymentSalesRow>();
+  const at = (method: string) => {
+    const existing =
+      byMethod.get(method) ?? { method, transactions: 0, revenue: 0, refunds: 0, net: 0 };
+    byMethod.set(method, existing);
+    return existing;
+  };
+  for (const row of [...till, ...history]) {
+    const hit = at(row.method);
+    hit.transactions += row.transactions;
+    hit.revenue += num(row.revenue);
+  }
+  for (const row of refunds) at(row.method).refunds += num(row.refunds);
+
+  return [...byMethod.values()]
+    .map((row) => ({ ...row, net: row.revenue - row.refunds }))
     .sort((a, b) => b.revenue - a.revenue);
 }
 
 /* ----------------------------------------------------------------- margin */
 
+export type MarginRow = ItemSalesRow & {
+  /** Net sales this margin is taken on: imported lines with no cost left out. */
+  marginRevenue: number;
+  marginQty: number;
+  margin: number;
+  /** Basis points, so no float ever reaches a stored or compared figure. */
+  marginBps: number;
+};
+
 /**
- * Revenue against cost of goods, per item.
+ * Net sales against cost of goods, per item.
  *
  * Cost is `unit_cost_snapshot`, copied onto the line at the moment of sale. A
  * returned unit takes back both its revenue and its cost, so the margin on
- * what actually stayed sold is what appears.
+ * what actually stayed sold is what appears. Imported lines that carry no
+ * cost are left out entirely -- counting their revenue against a cost of zero
+ * would report them as pure profit -- and `marginSummary` says how much was
+ * left out.
  */
-export async function marginByItem(tx: Database, options: ReportOptions) {
-  const returnedQty = sql<number>`coalesce((
-    select sum(${returnLines.qty})
-    from ${returnLines}
-    join ${returns} on ${returns.id} = ${returnLines.returnId}
-    where ${returnLines.itemId} = ${items.id}
-      and ${returnedWithin(options)}
-  ), 0)::int`;
-
-  const returnedValue = sql<number>`coalesce((
-    select sum(${returnLines.refundAmount})
-    from ${returnLines}
-    join ${returns} on ${returns.id} = ${returnLines.returnId}
-    where ${returnLines.itemId} = ${items.id}
-      and ${returnedWithin(options)}
-  ), 0)::bigint`;
-
-  /** Cost of the returned units, at the snapshot on the line they came from. */
-  const returnedCost = sql<number>`coalesce((
-    select sum(${returnLines.qty} * rl_line.unit_cost_snapshot)
-    from ${returnLines}
-    join ${returns} on ${returns.id} = ${returnLines.returnId}
-    join ${saleLines} as rl_line on rl_line.id = ${returnLines.saleLineId}
-    where ${returnLines.itemId} = ${items.id}
-      and ${returnedWithin(options)}
-  ), 0)::bigint`;
-
-  const rows = await tx
-    .select({
-      itemId: items.id,
-      code: items.code,
-      name: items.genericName,
-      strength: items.strength,
-      unit: items.unit,
-      categoryName: categories.name,
-      qtySold: sql<number>`coalesce(sum(${saleLines.qty}), 0)::int`,
-      revenue: sql<number>`coalesce(sum(${saleLines.lineTotal}), 0)::bigint`,
-      cost: sql<number>`coalesce(sum(${saleLines.qty} * ${saleLines.unitCostSnapshot}), 0)::bigint`,
-      qtyReturned: returnedQty,
-      refunded: returnedValue,
-      costReturned: returnedCost,
-    })
-    .from(saleLines)
-    .innerJoin(sales, eq(sales.id, saleLines.saleId))
-    .innerJoin(items, eq(items.id, saleLines.itemId))
-    .leftJoin(categories, eq(categories.id, items.categoryId))
-    .where(soldWithin(options))
-    .groupBy(items.id, categories.name);
-
+export function toMarginRows(rows: ItemSalesRow[]): MarginRow[] {
   return rows
     .map((row) => {
-      const revenue = Number(row.revenue) - Number(row.refunded);
-      const cost = Number(row.cost) - Number(row.costReturned);
-      const margin = revenue - cost;
+      const marginRevenue = row.revenueNet - row.historyUncostedRevenue;
+      const margin = marginRevenue - row.cost;
       return {
         ...row,
-        qtyNet: row.qtySold - row.qtyReturned,
-        revenue,
-        cost,
+        // Kept under the old names too: `revenue` here is net sales.
+        revenue: marginRevenue,
+        marginRevenue,
+        marginQty: row.qtyNet - row.historyUncostedQty,
         margin,
-        // Basis points, so no float ever reaches a stored or compared figure.
-        marginBps: revenue > 0 ? Math.round((margin / revenue) * 10_000) : 0,
+        marginBps: marginRevenue > 0 ? Math.round((margin / marginRevenue) * 10_000) : 0,
       };
     })
-    .sort((a, b) => b.margin - a.margin);
+    .filter((row) => row.marginQty !== 0 || row.marginRevenue !== 0 || row.cost !== 0)
+    .sort((a, b) => b.margin - a.margin || a.name.localeCompare(b.name));
 }
 
-export async function marginSummary(tx: Database, options: ReportOptions) {
-  const rows = await marginByItem(tx, options);
-  const revenue = rows.reduce((sum, r) => sum + r.revenue, 0);
-  const cost = rows.reduce((sum, r) => sum + r.cost, 0);
+export async function marginByItem(tx: Database, options: ReportOptions) {
+  return toMarginRows(await itemSales(tx, options));
+}
+
+export type MarginSummary = {
+  revenue: number;
+  cost: number;
+  margin: number;
+  marginBps: number;
+  items: number;
+  /** Imported history left out of the margin for want of a cost. */
+  uncostedRevenue: number;
+};
+
+export function summariseMargin(itemRows: ItemSalesRow[], marginRows: MarginRow[]): MarginSummary {
+  const revenue = marginRows.reduce((sum, r) => sum + r.marginRevenue, 0);
+  const cost = marginRows.reduce((sum, r) => sum + r.cost, 0);
   const margin = revenue - cost;
   return {
     revenue,
     cost,
     margin,
     marginBps: revenue > 0 ? Math.round((margin / revenue) * 10_000) : 0,
-    items: rows.length,
+    items: marginRows.length,
+    uncostedRevenue: itemRows.reduce((sum, r) => sum + r.historyUncostedRevenue, 0),
   };
+}
+
+export async function marginSummary(tx: Database, options: ReportOptions): Promise<MarginSummary> {
+  const rows = await itemSales(tx, options);
+  return summariseMargin(rows, toMarginRows(rows));
 }
 
 /* -------------------------------------------------------------- valuation */

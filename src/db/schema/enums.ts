@@ -3,9 +3,12 @@ import {
   ALERT_SEVERITIES,
   ALERT_TYPES,
   BATCH_STATUSES,
+  DEVICE_ROLES,
   DOSAGE_FORMS,
   DRUG_CLASSES,
+  HISTORY_IMPORT_STATUSES,
   MOVEMENT_TYPES,
+  OFFLINE_REVIEW_KINDS,
   PAYMENT_METHODS,
 } from "@/lib/catalogue/enums";
 
@@ -68,6 +71,9 @@ export const alertStatus = pgEnum("alert_status", [
 /** Whether the stored sale price already contains PPN. */
 export const taxMode = pgEnum("tax_mode", ["inclusive", "exclusive"]);
 
+/** Whether an imported block of past sales still counts in the reports. */
+export const historyImportStatus = pgEnum("history_import_status", HISTORY_IMPORT_STATUSES);
+
 export const countStatus = pgEnum("count_status", [
   "draft",
   "counting",
@@ -75,3 +81,7 @@ export const countStatus = pgEnum("count_status", [
   "posted",
   "cancelled",
 ]);
+
+export const deviceRole = pgEnum("device_role", DEVICE_ROLES);
+
+export const offlineReviewKind = pgEnum("offline_review_kind", OFFLINE_REVIEW_KINDS);

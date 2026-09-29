@@ -5,11 +5,15 @@ name: Release
 # installer/update.mjs reads GitHub's own `tarball_url` for the latest
 # release, which only exists once a release does.
 #
-# Nothing here builds anything. The tag's source is exactly what the
+# The website is not built here. The tag's source is exactly what the
 # installer already knows how to install: `npm ci` and `npm run build` happen
 # on the pharmacy's own machine, against its own PostgreSQL, the same as a
-# first install. This workflow's only job is turning a pushed tag into a
-# release GitHub will hand out a source archive for.
+# first install.
+#
+# The Android app is: the clinic's machine has no Android toolchain, so the
+# release carries a signed `apotek-android.apk`, and the pharmacy server
+# fetches the one matching its own version when staff download the app from
+# Settings -> Aplikasi Android.
 on:
   push:
     tags:
@@ -23,6 +27,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Create release
         env:
@@ -31,3 +37,60 @@ jobs:
           gh release create "${{ github.ref_name }}" \
             --title "${{ github.ref_name }}" \
             --generate-notes
+
+      # The hosted demo (Vercel) deploys the `demo` branch and nothing else, so
+      # it moves when a release ships -- the same moment clinics can update --
+      # and never runs unreleased work from main. Nobody commits to `demo`; it
+      # only points at the latest release, and rolling the demo back is
+      # pushing an older tag here.
+      - name: Point the demo at this release
+        run: git push --force origin "${{ github.sha }}:refs/heads/demo"
+
+  # Signed with the pharmacy's own key from the repository secrets. Without
+  # them the APK is skipped rather than signed with a throwaway key: Android
+  # only updates an app signed by the same key, and a phone would have to
+  # uninstall -- deleting any unsent offline sales -- to take the next one.
+  android:
+    needs: release
+    runs-on: ubuntu-latest
+    env:
+      HAS_KEY: ${{ secrets.APOTEK_KEYSTORE_BASE64 != '' }}
+    steps:
+      - name: Signing key missing
+        if: env.HAS_KEY != 'true'
+        run: echo "::warning::No APOTEK_KEYSTORE_BASE64 secret -- this release has no Android app. See mobile/README.md, 'Signing'."
+
+      - uses: actions/checkout@v4
+        if: env.HAS_KEY == 'true'
+
+      - uses: actions/setup-node@v4
+        if: env.HAS_KEY == 'true'
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        if: env.HAS_KEY == 'true'
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Build the signed APK
+        if: env.HAS_KEY == 'true'
+        env:
+          APOTEK_KEYSTORE_BASE64: ${{ secrets.APOTEK_KEYSTORE_BASE64 }}
+          APOTEK_KEYSTORE_PASSWORD: ${{ secrets.APOTEK_KEYSTORE_PASSWORD }}
+          APOTEK_KEY_ALIAS: ${{ secrets.APOTEK_KEY_ALIAS }}
+          APOTEK_KEY_PASSWORD: ${{ secrets.APOTEK_KEY_PASSWORD }}
+        run: |
+          export APOTEK_KEYSTORE="$RUNNER_TEMP/apotek.jks"
+          echo "$APOTEK_KEYSTORE_BASE64" | base64 --decode > "$APOTEK_KEYSTORE"
+          cd mobile
+          npm ci
+          npm test
+          npm run apk
+
+      - name: Attach it to the release
+        if: env.HAS_KEY == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.ref_name }}" mobile/release/apotek-android.apk --clobber

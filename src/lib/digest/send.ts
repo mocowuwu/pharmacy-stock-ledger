@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import nodemailer from "nodemailer";
+import { isDemo } from "@/lib/demo";
 
 /**
  * Sending the digest.
@@ -34,7 +35,8 @@ export type Mail = {
 
 export type SendResult =
   | { delivered: true; messageId: string }
-  | { delivered: false; previewPath: string; reason: "not_configured" };
+  | { delivered: false; previewPath: string; reason: "not_configured" }
+  | { delivered: false; reason: "demo" };
 
 /** Where a preview lands. Beside the development database, and gitignored. */
 export const PREVIEW_DIR = ".data/digest";
@@ -48,6 +50,11 @@ export async function sendMail(
   mail: Mail,
   options: { previewDir?: string } = {},
 ): Promise<SendResult> {
+  // The hosted demo sends nothing and writes nothing: its disk is read-only,
+  // and a demo that emails whoever typed an address into Settings is a spam
+  // relay with a pharmacy's name on it.
+  if (isDemo()) return { delivered: false, reason: "demo" };
+
   if (!isConfigured(config)) {
     const path = await writePreview(mail, options.previewDir ?? PREVIEW_DIR);
     return { delivered: false, previewPath: path, reason: "not_configured" };

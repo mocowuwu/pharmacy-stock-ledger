@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { isUuid } from "@/lib/format/ids";
 import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/lib/dal/session";
 import { batchForDisposal, witnessOptions } from "@/lib/dal/disposal";
@@ -23,6 +24,7 @@ export default async function DisposeBatchPage({
   const session = await requirePermission("stock.dispose");
   const t = await getTranslations();
   const { batchId } = await params;
+  if (!isUuid(batchId)) notFound();
   const query = await searchParams;
 
   const batch = await batchForDisposal(batchId);

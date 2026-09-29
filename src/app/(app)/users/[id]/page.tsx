@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { isUuid } from "@/lib/format/ids";
 import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/lib/dal/session";
 import { getUser } from "@/lib/dal/users";
@@ -14,6 +15,7 @@ export default async function UserPage({
   const session = await requirePermission("users.manage");
   const t = await getTranslations();
   const { id } = await params;
+  if (!isUuid(id)) notFound();
   const query = await searchParams;
 
   const user = await getUser(id);

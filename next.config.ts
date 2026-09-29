@@ -34,6 +34,16 @@ const nextConfig: NextConfig = {
    */
   allowedDevOrigins: PRIVATE_LAN,
 
+  experimental: {
+    serverActions: {
+      // The default is 1 MB. A year of sales history is several megabytes of
+      // CSV, and the import sends it twice -- up for the preview, back up for
+      // the commit -- so the catalogue and history imports need more room. The
+      // actions still check the session before they read a row.
+      bodySizeLimit: "16mb",
+    },
+  },
+
   // The database driver and argon2 bindings must stay on the server rather than
   // being traced into any client bundle.
   serverExternalPackages: ["pg", "@electric-sql/pglite", "@node-rs/argon2"],

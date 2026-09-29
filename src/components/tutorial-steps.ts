@@ -142,7 +142,7 @@ export const TOUR: Record<string, TourStop[]> = {
   ],
   reports: [
     { id: "range", selectors: ["main > :nth-child(2)"] },
-    { id: "pick", selectors: ['main a[href^="/reports/"]'], action: "click" },
+    { id: "pick", selectors: ['[data-tour="report-card"]'], action: "click" },
     { id: "tabs", selectors: ["main nav"], path: REPORT_PAGE },
     { id: "result", selectors: ["main table", "main .border-dashed"], path: REPORT_PAGE },
     { id: "export", selectors: ['[data-tour="page-actions"]'], path: REPORT_PAGE },

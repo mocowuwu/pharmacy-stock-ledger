@@ -41,6 +41,24 @@ async function main() {
     console.log("Using DATABASE_URL from the environment.");
   }
 
+  // Bring the database up to date before serving. The clinic's updater does
+  // this on every upgrade; without it here, a branch that adds a table serves
+  // pages that fail on "relation does not exist" until someone remembers to
+  // run `npm run db:migrate` by hand. Run to completion first: PGlite serves
+  // one connection, and the dev server is about to want it.
+  const migrated = await new Promise<number>((resolve) => {
+    const run = spawn("npx", ["tsx", "scripts/migrate.ts"], {
+      stdio: "inherit",
+      env: { ...process.env, DATABASE_URL: url },
+    });
+    run.on("exit", (code) => resolve(code ?? 1));
+  });
+  if (migrated !== 0) {
+    console.error("Migrations failed; not starting the dev server against a half-updated database.");
+    if (stop) await stop();
+    process.exit(migrated);
+  }
+
   const child = spawn("npx", ["next", "dev"], {
     stdio: "inherit",
     env: {

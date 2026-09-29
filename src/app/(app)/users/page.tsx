@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/lib/dal/session";
 import { listUsers } from "@/lib/dal/users";
 import { ALL_PERMISSIONS } from "@/lib/auth/permissions";
-import { Card, Chip, EmptyState, PageHeader, buttonPrimary, buttonSecondarySmall } from "@/components/ui";
+import { Card, Chip, EmptyState, PageHeader, buttonPrimary, buttonSecondary, buttonSecondarySmall } from "@/components/ui";
 import { formatDateTime } from "@/lib/format/date";
 
 export default async function UsersPage() {
@@ -19,12 +19,17 @@ export default async function UsersPage() {
         title={t("users.title")}
         subtitle={t("users.subtitle")}
         actions={
-          <Link
-            href="/users/new"
-            className={buttonPrimary}
-          >
-            {t("users.new")}
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/users/devices" className={buttonSecondary}>
+              {t("devices.title")}
+            </Link>
+            <Link
+              href="/users/new"
+              className={buttonPrimary}
+            >
+              {t("users.new")}
+            </Link>
+          </div>
         }
       />
 

@@ -26,6 +26,27 @@ import * as schema from "./schema";
  */
 export type Database = NodePgDatabase<typeof schema>;
 
+/**
+ * The connection string, or undefined for the in-memory test database.
+ *
+ * `POSTGRES_URL` is the name Supabase's Vercel integration writes for the
+ * hosted demo, so linking the two needs no password copied by hand.
+ *
+ * `sslmode=require` is given its libpq meaning -- encrypted, not verified --
+ * which is what a string that says it means. node-postgres reads it as
+ * verify-full, and Supabase's pooler certificate is signed by Supabase's own
+ * CA, so every connection would fail on the certificate chain. A string with
+ * no sslmode (every clinic install, on localhost) is left exactly as it is.
+ */
+export function databaseUrl(): string | undefined {
+  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  if (!url) return undefined;
+  if (/[?&]sslmode=require\b/.test(url) && !/[?&]uselibpqcompat=/.test(url)) {
+    return `${url}&uselibpqcompat=true`;
+  }
+  return url;
+}
+
 type Cached = { db: Database; close: () => Promise<void> };
 
 // Next.js re-evaluates modules on hot reload, which would otherwise open a new
@@ -33,7 +54,7 @@ type Cached = { db: Database; close: () => Promise<void> };
 const globalForDb = globalThis as unknown as { __pharmacyDb?: Promise<Cached> };
 
 async function connect(): Promise<Cached> {
-  const url = process.env.DATABASE_URL;
+  const url = databaseUrl();
 
   if (url) {
     const { Pool } = await import("pg");
@@ -92,7 +113,7 @@ export async function getDb(): Promise<Database> {
 
 /** True only for the in-memory test database. */
 export function isEphemeral(): boolean {
-  return !process.env.DATABASE_URL;
+  return !databaseUrl();
 }
 
 export { schema };

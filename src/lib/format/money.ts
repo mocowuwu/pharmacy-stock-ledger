@@ -72,6 +72,14 @@ export function parseMoney(input: string, opts: MoneyOptions = {}): number | nul
     // 1.500.000 -- a hundredfold error that still looks like a plausible price.
     // Rather than guess, refuse it and let the caller ask.
     if (/[.]/u.test(digitsAndSeps) && /,\d{1,2}$/u.test(digitsAndSeps)) return null;
+    // A separator is only grouping if it splits off whole thousands: "15.000"
+    // and "1,500,000", never "1234.56" or "12,5". Stripping the point out of
+    // a formula's "9090.91" would read it as 909.091 -- a hundredfold error
+    // that still looks like a price. Decimals are refused here; the
+    // spreadsheet importers round them on purpose with `parseSheetMoney`.
+    if (!/^\d+$/u.test(digitsAndSeps) && !/^\d{1,3}([.,])\d{3}(?:\1\d{3})*$/u.test(digitsAndSeps)) {
+      return null;
+    }
     whole = digitsAndSeps.replace(/[.,]/gu, "");
   } else {
     // The last separator is the decimal point only if it is followed by at
@@ -94,6 +102,32 @@ export function parseMoney(input: string, opts: MoneyOptions = {}): number | nul
   const value = Number(combined);
   if (!Number.isSafeInteger(value)) return null;
   return negative ? -value : value;
+}
+
+/**
+ * Money from a spreadsheet, where a decimal part does turn up: a cost worked
+ * out by a formula, a total exported as 15000.00. Rupiah are whole, so a
+ * decimal part of one or two digits is rounded half up to the nearest rupiah
+ * rather than refused -- "9090,91" and "9090.91" are both 9.091, and
+ * "Rp 15.000,00" is 15.000.
+ *
+ * Only a one- or two-digit tail counts as a decimal part. Three digits after a
+ * separator are thousands in Indonesian ("15.000"), so that case is left to
+ * `parseMoney` and its grouping rule, exactly as a price typed into a form.
+ */
+export function parseSheetMoney(input: string): number | null {
+  const cleaned = input.trim().replace(/rp/iu, "").replace(/\s/gu, "");
+  const decimal = /^(-?)([\d.,]+)([.,])(\d{1,2})$/u.exec(cleaned);
+  if (!decimal) return parseMoney(cleaned);
+
+  const [, sign, integerPart, separator, fraction] = decimal;
+  // "1.234.56": the same mark cannot be both the grouping and the decimal point.
+  if (integerPart.includes(separator)) return null;
+  const whole = parseMoney(integerPart);
+  if (whole === null) return null;
+
+  const value = whole + (Number(fraction.padEnd(2, "0")) >= 50 ? 1 : 0);
+  return sign === "-" ? -value : value;
 }
 
 /** Basis points to a multiplier: 1100 bps (11%) applied to 10000 gives 1100. */

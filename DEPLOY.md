@@ -522,3 +522,61 @@ NAT'd VM), and surviving a reboot.
 
 The manual path above also works on Windows, and remains the fallback. It is
 longer, not worse.
+
+# The hosted demo (Vercel + Supabase)
+
+A private copy for showing the app, separate from every clinic. It runs the
+real rules on the sample pharmacy, shows a **Demo** label on every screen, and
+sends no email (`DEMO_MODE=1`).
+
+**It follows releases, not `main`.** Publishing a tag runs
+`.github/workflows/release.yml`, which also force-moves the `demo` branch to
+that commit. Vercel builds `demo` and ignores every other branch
+(`ignoreCommand` in `vercel.json`). To roll the demo back, push an older tag
+there: `git push --force origin v0.1.5:refs/heads/demo`.
+
+## One-time setup
+
+1. **Supabase**: create a project in Singapore (ap-southeast-1). Under
+   Connect, copy two strings: the **transaction pooler** (port 6543) and the
+   **direct** or **session pooler** connection (port 5432).
+2. **Load it once, from this machine**, against the 5432 string:
+
+   ```
+   DATABASE_URL='postgres://…:5432/postgres' npm run db:migrate
+   DATABASE_URL='postgres://…:5432/postgres' npm run db:seed    # prints the owner's temporary password once
+   DATABASE_URL='postgres://…:5432/postgres' npm run db:demo
+   DATABASE_URL='postgres://…:5432/postgres' npm run db:lock-data-api
+   ```
+
+   The last line matters. Supabase serves every table in `public` over its
+   web API to anyone holding the anon key, unless row-level security is on.
+   The app connects as the table owner, which RLS does not restrict, so
+   switching it on with no policies costs the app nothing and leaves the web
+   API with no rows to show. Every Vercel build runs it again.
+
+3. **Create the branch** once, from the first commit that carries this
+   setup (v0.1.6 does not): `git push origin <commit>:refs/heads/demo`.
+   Every release after that moves it on its own.
+4. **Vercel**: Add New → Project → import `mocowuwu/pharmacy-stock-ledger`.
+   Settings → Git → Production Branch: `demo`.
+5. **Link the database without copying a password**: in Supabase, open the
+   project → Project Settings → Integrations → Vercel → connect it to the
+   Vercel project. That writes `POSTGRES_URL` into Vercel for you, and the app
+   reads it when `DATABASE_URL` is absent. (Pasting the pooler string into
+   `DATABASE_URL` by hand works too.)
+6. Add these in Vercel → Settings → Environment Variables:
+
+   | Name | Value |
+   | --- | --- |
+   | `DATABASE_MAX_CONNECTIONS` | `2` |
+   | `CRON_SECRET` | a long random string (`openssl rand -hex 32`) |
+   | `DEMO_MODE` | `1` |
+   | `PHARMACY_TIMEZONE` | `Asia/Jakarta` |
+
+   Then deploy. The build migrates first (`npm run build:vercel`) and fails
+   rather than build against no database.
+
+Nightly alerts run at 01:00 WIB from the cron in `vercel.json`. The Supabase
+free tier pauses a project after a week with no activity, and that nightly
+call counts as activity. There is no backup job and no daily email on the demo.

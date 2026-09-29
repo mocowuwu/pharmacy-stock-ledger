@@ -57,6 +57,16 @@ export function today(timezone: string = pharmacyTimezone()): string {
   }).format(new Date());
 }
 
+/** The calendar date an instant falls on in the pharmacy's timezone. */
+export function dayOf(instant: Date, timezone: string = pharmacyTimezone()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(instant);
+}
+
 /** Parses `YYYY-MM-DD` to a UTC-midnight epoch, for whole-day arithmetic only. */
 function dayEpoch(isoDate: string): number {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(isoDate);

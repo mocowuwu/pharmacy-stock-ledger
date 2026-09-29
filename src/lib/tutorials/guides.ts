@@ -106,6 +106,20 @@ export const GUIDES: readonly Guide[] = [
     ],
   },
   {
+    key: "phoneApp",
+    icon: "sell",
+    permissions: ["sales.create", "sales.view_all", "users.manage"],
+    tour: ["sales"],
+    sections: [
+      { id: "setup", tip: true },
+      { id: "signIn", warn: true },
+      { id: "offline", permissions: ["sales.create"], warn: true },
+      { id: "back", permissions: ["sales.create"] },
+      { id: "review", permissions: ["sales.view_all"] },
+      { id: "devices", permissions: ["users.manage"], tip: true },
+    ],
+  },
+  {
     key: "delivery",
     icon: "receive",
     permissions: ["batches.receive"],
@@ -198,6 +212,7 @@ export const GUIDES: readonly Guide[] = [
       { id: "movements", permissions: ["reports.sales"], tip: true },
       { id: "money", permissions: ["reports.financial"] },
       { id: "export", tip: true },
+      { id: "history", permissions: ["sales.import_history"], warn: true },
     ],
   },
   {

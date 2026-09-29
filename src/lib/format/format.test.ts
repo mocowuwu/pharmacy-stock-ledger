@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyRateBps, formatMoney, parseMoney, splitInclusiveTax } from "./money";
+import { applyRateBps, formatMoney, parseMoney, parseSheetMoney, splitInclusiveTax } from "./money";
 import {
   addDays,
   daysBetween,
@@ -27,6 +27,30 @@ describe("formatMoney", () => {
   });
 });
 
+describe("parseSheetMoney", () => {
+  it("rounds a spreadsheet's decimal rupiah instead of misreading them", () => {
+    expect(parseSheetMoney("9090.91")).toBe(9_091);
+    expect(parseSheetMoney("9090,91")).toBe(9_091);
+    expect(parseSheetMoney("9090.4")).toBe(9_090);
+    expect(parseSheetMoney("12,5")).toBe(13);
+    expect(parseSheetMoney("Rp 15.000,00")).toBe(15_000);
+    expect(parseSheetMoney("15,000.50")).toBe(15_001);
+  });
+
+  it("reads whole amounts exactly as parseMoney does", () => {
+    expect(parseSheetMoney("15.000")).toBe(15_000);
+    expect(parseSheetMoney("15000")).toBe(15_000);
+    expect(parseSheetMoney("1.500.000")).toBe(1_500_000);
+  });
+
+  it("refuses what cannot be read one way only", () => {
+    expect(parseSheetMoney("1.234.56")).toBeNull();
+    expect(parseSheetMoney("9090.909")).toBeNull();
+    expect(parseSheetMoney("abc")).toBeNull();
+    expect(parseSheetMoney("")).toBeNull();
+  });
+});
+
 describe("parseMoney", () => {
   it("reads an Indonesian-formatted price without dividing it by a thousand", () => {
     // The trap this function exists for: parseFloat("15.000") is 15.
@@ -45,6 +69,19 @@ describe("parseMoney", () => {
     // Reading this as 1.500.000 would be a hundredfold error that still looks
     // like a plausible price, so it is rejected instead.
     expect(parseMoney("15.000,00")).toBeNull();
+  });
+
+  it("refuses a decimal point rather than reading it as a thousands mark", () => {
+    // Stripping the point would make 9.090,91 into 909.091.
+    expect(parseMoney("9090.91")).toBeNull();
+    expect(parseMoney("1234.5")).toBeNull();
+    expect(parseMoney("12,5")).toBeNull();
+    expect(parseMoney("9090.909")).toBeNull();
+    // Mixed marks are not a grouping anyone writes.
+    expect(parseMoney("1.500,000")).toBeNull();
+    // Real groupings still read, including negative ones.
+    expect(parseMoney("909.091")).toBe(909_091);
+    expect(parseMoney("-15.000")).toBe(-15_000);
   });
 
   it("returns null for unreadable input", () => {

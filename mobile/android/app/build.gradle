@@ -1,0 +1,85 @@
+apply plugin: 'com.android.application'
+
+import groovy.json.JsonSlurper
+
+// The app is versioned with the pharmacy release it ships in: the APK
+// attached to v0.1.8 is 0.1.8, and the devices screen can tell which phones
+// run an older build. Android refuses an update whose versionCode is not
+// higher, so it is derived from the same number: 0.1.8 -> 108.
+def releaseVersion = new JsonSlurper().parse(file('../../../package.json')).version
+def (major, minor, patch) = releaseVersion.tokenize('.').collect { it.replaceAll(/\D.*/, '') as int }
+def releaseCode = major * 10000 + minor * 100 + patch
+
+android {
+    namespace = "id.cuanison.pharmacyledger"
+    // NativeBridge.appVersion() reads BuildConfig.VERSION_NAME.
+    buildFeatures {
+        buildConfig true
+    }
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "id.cuanison.pharmacyledger"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode releaseCode
+        versionName releaseVersion
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    // Release builds are signed with the pharmacy's own key, handed in by the
+    // environment (the release workflow decodes it from repository secrets;
+    // it is never in the repository). Every release must use the same key:
+    // Android installs an update only over an app signed by the same one,
+    // and uninstalling to get round it would delete unsent offline sales.
+    signingConfigs {
+        release {
+            def keystore = System.getenv("APOTEK_KEYSTORE")
+            if (keystore) {
+                storeFile file(keystore)
+                storePassword System.getenv("APOTEK_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("APOTEK_KEY_ALIAS")
+                keyPassword System.getenv("APOTEK_KEY_PASSWORD")
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (System.getenv("APOTEK_KEYSTORE")) signingConfig signingConfigs.release
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

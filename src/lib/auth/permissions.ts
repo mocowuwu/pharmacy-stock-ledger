@@ -32,6 +32,7 @@ export const PERMISSION_GROUPS = {
     "sales.return",
     "sales.void",
     "sales.view_all",
+    "sales.import_history",
   ],
   alerts: ["alerts.view", "alerts.manage"],
   administration: [
@@ -75,6 +76,9 @@ export const SENSITIVE_PERMISSIONS: readonly Permission[] = [
   "settings.manage",
   "audit.view",
   "items.import",
+  // Imported history lands in every revenue and margin figure, so a wrong file
+  // changes what the owner reads about their own business.
+  "sales.import_history",
 ];
 
 /**

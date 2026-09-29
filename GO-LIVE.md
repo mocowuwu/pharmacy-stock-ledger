@@ -121,6 +121,26 @@ Then reconcile:
 npm run check-ledger
 ```
 
+## 6b. Bring in past sales (optional)
+
+If the old books or the old program have sales worth keeping in the reports --
+last year's months, to compare against -- import them from **Reports → Import
+sales history**. Download the template, fill in the Data sheet (one row per
+item sold: date, quantity, price or total; the Guide sheet explains the rest),
+upload, read the preview, confirm.
+
+- History only feeds the Sales and Gross profit reports. **It never touches
+  stock** -- the shelf was entered as opening batches above.
+- **Only days before the till went live.** Anything rung up at the till is
+  already counted; importing it again counts it twice. The preview names any
+  day that already has till sales. During the parallel run below, the paper
+  record is a check on the till, not history -- do not import it.
+- The same file cannot go in twice, and a wrong import can be withdrawn as a
+  whole from the same screen, with a reason. Nothing is deleted.
+- Fill in `unit_cost` where the old records have it. Lines without a cost are
+  counted as sales but left out of gross profit, and the report says how much
+  was left out.
+
 ## 7. Parallel run
 
 Run both systems for **one to two weeks**. Every sale goes through the till and

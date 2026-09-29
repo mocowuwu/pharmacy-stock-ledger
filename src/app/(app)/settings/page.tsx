@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/lib/dal/session";
 import {
@@ -76,7 +77,15 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
 
   return (
     <>
-      <PageHeader title={t("settings.title")} subtitle={t("settings.subtitle")} />
+      <PageHeader
+        title={t("settings.title")}
+        subtitle={t("settings.subtitle")}
+        actions={
+          <Link href="/settings/app" className={buttonSecondary}>
+            {t("androidApp.title")}
+          </Link>
+        }
+      />
 
       <div className="mb-6 flex flex-col gap-3">
         {query.saved && <Alert tone="notice">{t("settings.saved")}</Alert>}

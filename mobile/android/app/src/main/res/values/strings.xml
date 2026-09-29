@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Apotek</string>
+    <string name="title_activity_main">Apotek</string>
+    <string name="package_name">id.cuanison.pharmacyledger</string>
+    <string name="custom_url_scheme">id.cuanison.pharmacyledger</string>
+    <!-- The phone's own messages, in the pharmacy's default language: they
+         appear before anyone has signed in, when no language is chosen yet. -->
+    <string name="download_started">Mengunduh %1$s…</string>
+    <string name="download_failed">Unduhan gagal. Coba lagi.</string>
+    <string name="download_no_viewer">Tidak ada aplikasi di HP ini yang bisa membuka file tersebut.</string>
+</resources>

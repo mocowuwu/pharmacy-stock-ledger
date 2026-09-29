@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { isUuid } from "@/lib/format/ids";
 import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/lib/dal/session";
 import { getCount } from "@/lib/dal/counts";
@@ -23,6 +24,7 @@ export default async function CountSheetPage({
   const session = await requirePermission("stock.count");
   const t = await getTranslations();
   const { id } = await params;
+  if (!isUuid(id)) notFound();
   const query = await searchParams;
 
   const count = await getCount(id);

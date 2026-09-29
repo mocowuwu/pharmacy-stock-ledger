@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The website's colours: its dark sidebar, which stays dark in both
+         themes, is the app's constant chrome too. -->
+    <color name="chrome">#221C33</color>
+    <color name="accent">#6D3BEB</color>
+    <color name="accent_light">#D9CCFF</color>
+    <color name="colorPrimary">#221C33</color>
+    <color name="colorPrimaryDark">#221C33</color>
+    <color name="colorAccent">#6D3BEB</color>
+</resources>

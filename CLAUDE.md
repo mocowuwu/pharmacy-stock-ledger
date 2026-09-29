@@ -140,9 +140,75 @@ relax one without saying so explicitly.
   `src/app/fonts/` and loaded with `next/font/local`. `next/font/google`
   fetched them during `next build`, which runs on the clinic's machine at
   every update, and failed the build whenever Google was unreachable.
+- **Imported sales history is not a sale.** `history_imports` and
+  `history_sale_lines` (`src/db/schema/history.ts`) hold sales from before the
+  till, for the Sales and Gross profit reports only. Nothing in
+  `src/lib/history/` touches a batch or the ledger, and nothing about stock --
+  the movement report, valuation, alerts, FEFO -- reads history. Only past days
+  are accepted (today belongs to the till), an identical file is refused while
+  its first copy is active, and a wrong import is *withdrawn* with a reason,
+  never deleted. `sales.import_history` is the control; the Settings "import"
+  switch is the catalogue's button and does not hide it.
+- **Net sales are after discounts, returns and PPN**, and every table adds up to
+  the statement above it. `itemSales` in `src/lib/reports/queries.ts` spreads
+  each sale's discount and inclusive PPN over its lines as exact fractions and
+  hands out the whole rupiah by largest remainder (`apportion`); rounding each
+  product on its own left the product table a few rupiah off the statement.
+  History lines without a `unit_cost` count as sales and are left out of gross
+  profit -- a cost of zero would report them as pure profit.
+- **A decimal point is never a thousands mark.** `parseMoney` accepts only true
+  groupings (`15.000`, `1,500,000`) and refuses `9090.91`, which it used to read
+  as 909.091. The spreadsheet importers use `parseSheetMoney`, which rounds a
+  one- or two-digit decimal to the rupiah, and the workbook reader turns a
+  number cell into plain digits (`9999.9899999` -> `9999.99`).
 - **CSV writes money as a plain integer**, never a formatted amount: `15000`,
   not `Rp 15.000`. A formatted amount is text to a spreadsheet, so a column of
   them sums to zero -- `parseFloat("15.000")` arriving from the other direction.
+- **The hosted demo is the only deployment with `DEMO_MODE=1`.** It runs on
+  Vercel + Supabase from the `demo` branch, which the release workflow moves
+  to each new tag -- nobody commits to it. `DEMO_MODE` labels every screen and
+  makes `sendMail` refuse; nothing else relaxes. It must never be set on a
+  clinic install. Its nightly alerts come from `/api/cron/alerts`, which
+  refuses every request when `CRON_SECRET` is unset, as it is on a clinic PC.
+
+- **The Android till's offline sales are replayed, never trusted.** The app
+  (`mobile/`) sells offline from a copy, but each sale reaches the ledger only
+  through `replayOfflineSale` in `src/lib/offline/replay.ts`, which runs it
+  through `commitSale` against the stock as it is now. What cannot be booked
+  is never dropped -- the medicine has already left -- it waits in
+  `offline_sale_reviews` until a manager books it or closes it with a note.
+- **Offline receipts are the one exception to server-allocated numbers.** The
+  phone prints `OFF-<device code>-<seq>`; on sync the real number is allocated
+  under `lockNumberSeries` as usual, in the series of the day the sale
+  happened, and `sales.offline_number` keeps the temporary one so a paper
+  receipt stays findable. This was decided with the owner, not drifted into.
+- **An offline sale is dated by the server's clock.** Its pass was issued at a
+  time the server recorded; the phone reports milliseconds since then on
+  Android's monotonic clock, which the date setting cannot move. The phone's
+  wall clock is informational only.
+- **The till must reach the server once a day.** Each snapshot carries a
+  24-hour pass (`device_passes`); the app refuses to sell once it runs out,
+  after a reboot, or with a clock turned back, and the server flags any sale
+  outside its pass. Only a `till` device gets a snapshot, and a snapshot never
+  holds cost prices.
+- **The app and the website share one set of totals.** `saleTotals` in
+  `src/lib/stock/totals.ts` is what `commitSale` charges and what the app
+  bundles; `src/lib/offline/contract.ts` is the API both compile against.
+  Neither may grow a second copy.
+- **Every release of the app is signed with the same key, or not published.**
+  Android installs an update only over an app signed by the one before, and
+  uninstalling to get round it deletes unsent offline sales. The key lives
+  outside the repository (`npm run signing-key` in `mobile/`) and reaches the
+  release workflow as secrets; without them the workflow skips the APK rather
+  than signing it with a throwaway key. The app's version code is derived
+  from the release version, so each release installs as an update.
+- **Anyone signed in may download the app** (`/settings/app`). It grants
+  nothing their account does not already have; `/settings` itself stays
+  `settings.manage`. The server fetches the APK of its own version from the
+  release once and serves it over the tailnet (`src/lib/app-download.ts`).
+- **Signing in on the app goes through `authenticate`**
+  (`src/lib/auth/sign-in.ts`), the same rate limits and locks as the website's
+  form -- the app is not a second door with weaker locks.
 
 ## Conventions
 
@@ -167,6 +233,15 @@ depending on the reader, and a misread expiry is a safety problem.
 **Enum values live in `src/lib/catalogue/enums.ts`**, not in the schema. The
 schema builds its `pgEnum`s from that module, so forms can render options
 without pulling drizzle's pg-core into the browser bundle.
+
+**Every report downloads as CSV and as Excel from one description**:
+`src/app/(app)/reports/[report]/export/model.ts` lists each report's tables as
+plain values (rupiah as integers, percentages as basis points) and `route.ts`
+writes the first table as CSV or all of them as a workbook -- a summary sheet,
+then a sheet per table, each with the letterhead, number cells and a totals
+row. A report is also printable on A4 (the report page sets its own `@page`;
+the global print rule is the 80mm receipt), and a table prints every row even
+when the screen shows the first 25.
 
 **Reports aggregate in SQL**, in `src/lib/reports/queries.ts`, which takes an
 executor and no session -- the same split as `src/lib/stock/*`, and what makes
@@ -206,6 +281,12 @@ steps as numbered keys (`"1"`, `"2"`...) because the catalogues are trees of
 strings. When a screen's behaviour changes, change its guide too -- a guide
 that describes the old till is worse than none.
 
+**Every literal message key exists.** `tests/message-keys.test.ts` scans `src`
+for `t("a.b.c")` and fails on any key that is not text in both catalogues; a
+missing key renders as its own name on screen. It cannot see keys built at run
+time, so a key that is both a label and a group of labels (`reports.export` once
+was) still needs care.
+
 **Add a dependency by editing `package-lock.json`, not by `npm install` on a
 Mac.** npm on macOS prunes the optional platform packages from the lock (esbuild
 and friends for Windows and Linux), which is exactly what broke `npm ci` on
@@ -242,6 +323,17 @@ Two colour rules do not bend to the accent:
   and red are adjacent hues and the first pass failed the normal-vision
   separation floor. Re-run `scripts/validate_palette.js` from the dataviz skill
   before changing any of them.
+
+## The Android app
+
+`mobile/` is its own package (Vite + React + Capacitor), excluded from the root
+tsconfig, eslint and vitest. It imports the server's pure modules through `@/`
+-- `totals`, `fefo`, `gs1`, `money`, `date`, `contract` -- so anything those
+modules import must stay free of `server-only`, drizzle and Node built-ins, or
+the app's bundle breaks. `cd mobile && npm test` covers the offline rules;
+`npm run apk` builds the APK. `mobile/README.md` documents the native bridge
+and the files the website's `AppBridge` reads and writes -- a change to either
+side's file formats is a change to both.
 
 ## Testing
 

@@ -121,6 +121,7 @@ export async function listSales(opts: { limit?: number } = {}) {
       paymentMethod: sales.paymentMethod,
       status: sales.status,
       cashier: users.fullName,
+      offlineNumber: sales.offlineNumber,
     })
     .from(sales)
     .innerJoin(users, eq(users.id, sales.cashierId))
@@ -227,6 +228,7 @@ export async function getSale(saleId: string) {
       notes: sales.notes,
       cashierId: sales.cashierId,
       cashier: users.fullName,
+      offlineNumber: sales.offlineNumber,
     })
     .from(sales)
     .innerJoin(users, eq(users.id, sales.cashierId))

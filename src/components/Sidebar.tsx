@@ -95,6 +95,12 @@ const ICONS: Record<string, ReactNode> = {
       <path d="M16.5 5.4a3.2 3.2 0 0 1 0 5.2M18 14.4a6 6 0 0 1 3 5.6" />
     </>
   ),
+  app: (
+    <>
+      <rect x="6.5" y="2.5" width="11" height="19" rx="2.5" />
+      <path d="M12 7.5v6M9.5 11l2.5 2.5 2.5-2.5M10.5 18h3" />
+    </>
+  ),
   settings: (
     <>
       <circle cx="12" cy="12" r="3" />
@@ -112,6 +118,38 @@ const ICONS: Record<string, ReactNode> = {
     <>
       <path d="M3.5 11.5V5a1.5 1.5 0 0 1 1.5-1.5h6.5L20.5 12 12 20.5 3.5 11.5Z" />
       <circle cx="8" cy="8" r="1.3" />
+    </>
+  ),
+  // Not menu entries: the report tabs and the history import.
+  movements: (
+    <>
+      <path d="M7 20V5M3.5 8.5 7 5l3.5 3.5" />
+      <path d="M17 4v15M13.5 15.5 17 19l3.5-3.5" />
+    </>
+  ),
+  margin: (
+    <>
+      <path d="M3 17 9 11l4 4 8-8" />
+      <path d="M15 7h6v6" />
+    </>
+  ),
+  valuation: (
+    <>
+      <ellipse cx="12" cy="6" rx="7" ry="2.8" />
+      <path d="M5 6v6c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8V6" />
+      <path d="M5 12v6c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8v-6" />
+    </>
+  ),
+  expiry: (
+    <>
+      <path d="M7 3h10M7 21h10" />
+      <path d="M8 3c0 4.5 8 5 8 9s-8 4.5-8 9M16 3c0 4.5-8 5-8 9s8 4.5 8 9" />
+    </>
+  ),
+  import: (
+    <>
+      <path d="M12 3v12M7.5 10.5 12 15l4.5-4.5" />
+      <path d="M4 15v3.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V15" />
     </>
   ),
   // Not menu entries: the Tutorials page's first two guides.

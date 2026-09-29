@@ -12,6 +12,7 @@ import { MODULE_NAV, moduleFlags, type ModuleKey } from "@/lib/catalogue/modules
 import { TutorialLauncher, TutorialProvider } from "@/components/Tutorial";
 import { signOut } from "../actions";
 import { markTutorialSeenAction } from "./tutorial-actions";
+import { isDemo } from "@/lib/demo";
 
 /**
  * Navigation is generated from the signed-in user's permissions: a cashier does
@@ -37,6 +38,9 @@ const NAV: Array<{ key: string; href: string; group: NavGroup; permissions: Perm
   { key: "categories", href: "/categories", group: "records", permissions: ["items.view"] },
   { key: "users", href: "/users", group: "admin", permissions: ["users.manage"] },
   { key: "settings", href: "/settings", group: "admin", permissions: ["settings.manage"] },
+  // Everyone who signs in may put the app on their phone: it gives nobody any
+  // access their account does not already have.
+  { key: "app", href: "/settings/app", group: "admin", permissions: [] },
 ];
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
@@ -56,7 +60,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   );
 
   const entries: NavEntry[] = NAV.filter(
-    (entry) => canAny(session.grant, entry.permissions) && !hidden.has(entry.key),
+    (entry) =>
+      (entry.permissions.length === 0 || canAny(session.grant, entry.permissions)) &&
+      !hidden.has(entry.key),
   ).map((entry) => ({
     key: entry.key,
     href: entry.href,
@@ -114,8 +120,15 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
               {businessName.trim().charAt(0).toUpperCase()}
             </span>
             <span className="min-w-0 md:group-data-[collapsed=true]/side:sr-only">
-              <span className="block truncate text-[0.95rem] leading-tight font-semibold tracking-tight text-sidebar-ink">
-                {businessName}
+              <span className="flex items-center gap-2">
+                <span className="truncate text-[0.95rem] leading-tight font-semibold tracking-tight text-sidebar-ink">
+                  {businessName}
+                </span>
+                {isDemo() && (
+                  <span title={t("app.demoHint")} className="shrink-0 rounded-md border border-warning/30 bg-warning-soft px-1.5 py-0.5 text-[0.65rem] font-semibold tracking-wide text-warning-ink uppercase">
+                    {t("app.demoBadge")}
+                  </span>
+                )}
               </span>
               <span className="mt-0.5 block truncate text-xs text-sidebar-muted">
                 {settings.businessTagline || t("app.tagline")}

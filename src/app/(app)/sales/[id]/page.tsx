@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { isUuid } from "@/lib/format/ids";
 import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/lib/dal/session";
 import { can } from "@/lib/auth/permissions";
@@ -18,6 +19,7 @@ export default async function SaleDetailPage({
   const session = await requirePermission("sales.create");
   const t = await getTranslations();
   const { id } = await params;
+  if (!isUuid(id)) notFound();
   const query = await searchParams;
 
   const sale = await getSale(id);
@@ -57,6 +59,11 @@ export default async function SaleDetailPage({
           {typeof query.error === "string" && (
             <Alert>{t(`errors.${query.error}`)}</Alert>
           )}
+          {sale.offlineNumber && (
+            <Alert tone="notice">
+              {t("sales.offlineNotice", { number: sale.offlineNumber })}
+            </Alert>
+          )}
           {sale.status === "voided" && (
             <Alert tone="warning">
               {t("sales.voidedNotice", { reason: sale.voidReason ?? "" })}
@@ -76,6 +83,9 @@ export default async function SaleDetailPage({
             {settings.businessName || t("app.name")}
           </div>
           <div className="tabular mt-1 text-xs text-muted">{sale.saleNumber}</div>
+          {sale.offlineNumber && (
+            <div className="tabular text-xs text-faint">{sale.offlineNumber}</div>
+          )}
           <div className="tabular text-xs text-muted">
             {formatDateTime(sale.soldAt, locale)}
           </div>

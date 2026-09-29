@@ -6,6 +6,9 @@ import { getSettings } from "./settings";
 import { today } from "@/lib/format/date";
 import * as reports from "@/lib/reports/queries";
 import type { DateRange } from "@/lib/reports/queries";
+import { previousRange, type Preset } from "@/lib/reports/catalogue";
+import { abcClasses } from "@/lib/reports/analysis";
+import { isUuid } from "@/lib/format/ids";
 
 // The catalogue is plain data in its own module, so the nav, the export route
 // and the tests can read it without pulling the database in behind it.
@@ -14,6 +17,7 @@ export {
   REPORT_PERMISSION,
   PRESETS,
   isReportSlug,
+  previousRange,
   resolveRange,
 } from "@/lib/reports/catalogue";
 export type { ReportSlug, Preset } from "@/lib/reports/catalogue";
@@ -36,19 +40,72 @@ async function withTimezone(range: DateRange) {
 
 /* ------------------------------------------------------------ sales report */
 
-export async function salesReport(range: DateRange) {
+/**
+ * Everything the sales screen shows, for the window and the one before it.
+ *
+ * The per-product rows are fetched once and folded into categories here, so
+ * the category table cannot disagree with the product table above it.
+ */
+export async function salesReport(range: DateRange & { preset?: Preset | "custom" }) {
   await assertPermission("reports.sales");
   const db = await getDb();
   const options = await withTimezone(range);
+  const previous = { ...previousRange(range), timezone: options.timezone };
+
+  const byItem = await reports.itemSales(db, options);
+  const classes = abcClasses(byItem);
 
   return {
     summary: await reports.salesSummary(db, options),
+    previousSummary: await reports.salesSummary(db, previous),
+    previousRange: { from: previous.from, to: previous.to },
     daily: await reports.dailyRevenue(db, options),
-    byItem: await reports.salesByItem(db, options),
-    byCategory: await reports.salesByCategory(db, options),
+    previousDaily: await reports.dailyRevenue(db, previous),
+    byHour: await reports.salesByHour(db, options),
+    byItem: byItem.map((row) => ({ ...row, abc: classes.get(row.key) ?? "C" })),
+    byCategory: reports.groupByCategory(byItem),
     byCashier: await reports.salesByCashier(db, options),
     byPaymentMethod: await reports.salesByPaymentMethod(db, options),
   };
+}
+
+/**
+ * The figures the reports home page opens on. Each half of the permission
+ * split is fetched only for someone who holds it -- a manager's overview has
+ * no margin in it at all, not a margin that is hidden.
+ */
+export async function reportsOverview(
+  range: DateRange & { preset?: Preset | "custom" },
+  access: { sales: boolean; financial: boolean },
+) {
+  const db = await getDb();
+  const options = await withTimezone(range);
+  const previous = { ...previousRange(range), timezone: options.timezone };
+
+  let sales = null;
+  if (access.sales) {
+    await assertPermission("reports.sales");
+    sales = {
+      summary: await reports.salesSummary(db, options),
+      previousSummary: await reports.salesSummary(db, previous),
+      daily: await reports.dailyRevenue(db, options),
+      previousDaily: await reports.dailyRevenue(db, previous),
+    };
+  }
+
+  let financial = null;
+  if (access.financial) {
+    await assertPermission("reports.financial");
+    const byCategory = await reports.valuationByCategory(db);
+    financial = {
+      margin: await reports.marginSummary(db, options),
+      previousMargin: await reports.marginSummary(db, previous),
+      stockValue: byCategory.reduce((sum, row) => sum + row.value, 0),
+      expiryLoss: (await reports.expiryLoss(db, options)).reduce((sum, row) => sum + row.value, 0),
+    };
+  }
+
+  return { sales, financial, previousRange: { from: previous.from, to: previous.to } };
 }
 
 /* -------------------------------------------------------------- movements */
@@ -70,6 +127,8 @@ export async function movementsReport(
   const db = await getDb();
   const options = await withTimezone(range);
 
+  // The product comes from a URL; a malformed one is no filter, not a crash.
+  if (!isUuid(itemId)) itemId = undefined;
   const all = await reports.movementTotalsByItem(db, options);
   const ledger = await reports.movementLedger(db, { ...options, itemId, limit });
   // The totals follow the filter: with one item selected the headline figures
@@ -97,14 +156,36 @@ export async function movementsReport(
 
 /* ----------------------------------------------------------------- margin */
 
-export async function marginReport(range: DateRange) {
+export async function marginReport(range: DateRange & { preset?: Preset | "custom" }) {
   await assertPermission("reports.financial");
   const db = await getDb();
   const options = await withTimezone(range);
+  const previous = { ...previousRange(range), timezone: options.timezone };
+
+  const itemRows = await reports.itemSales(db, options);
+  const byItem = reports.toMarginRows(itemRows);
+  const summary = reports.summariseMargin(itemRows, byItem);
+
+  // Categories from the same rows, so they add up to the products exactly.
+  const categories = new Map<string, { categoryId: string | null; name: string; revenue: number; cost: number; margin: number; items: number }>();
+  for (const row of byItem) {
+    const key = row.categoryId ?? "";
+    const hit = categories.get(key) ?? { categoryId: row.categoryId, name: row.categoryName ?? "", revenue: 0, cost: 0, margin: 0, items: 0 };
+    hit.revenue += row.marginRevenue;
+    hit.cost += row.cost;
+    hit.margin += row.margin;
+    hit.items += 1;
+    categories.set(key, hit);
+  }
 
   return {
-    summary: await reports.marginSummary(db, options),
-    byItem: await reports.marginByItem(db, options),
+    summary,
+    previousSummary: await reports.marginSummary(db, previous),
+    previousRange: { from: previous.from, to: previous.to },
+    byItem,
+    byCategory: [...categories.values()]
+      .map((row) => ({ ...row, marginBps: row.revenue > 0 ? Math.round((row.margin / row.revenue) * 10_000) : 0 }))
+      .sort((a, b) => b.margin - a.margin),
   };
 }
 
