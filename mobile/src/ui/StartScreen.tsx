@@ -54,7 +54,7 @@ export function StartScreen() {
       <div className="name">{name || t("app.name")}</div>
       <div className="note">
         <Spinner />
-        {phase === "sending" ? t("start.sending") : phase === "opening" ? t("start.opening") : t("start.connecting")}
+        {phase === "sending" ? t("start.sending") : t("start.connecting")}
       </div>
       <button className="small ghost" style={{ color: "var(--chrome-muted)", marginTop: 24 }} onClick={() => go("/home")}>
         {t("start.menu")}
