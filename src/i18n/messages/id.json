@@ -43,6 +43,7 @@
     "categories": "Kategori",
     "returns": "Retur",
     "counts": "Stok opname",
+    "panel": "Panel Apotek",
     "menu": "Menu utama",
     "sellCta": "Buka kasir",
     "sellCtaHint": "Catat penjualan baru",
@@ -68,7 +69,8 @@
       "categories": "Kelompok obat",
       "users": "Akun staf dan hak akses",
       "settings": "Nama apotek, pajak, fitur",
-      "app": "Pasang aplikasi apotek di HP"
+      "app": "Pasang aplikasi apotek di HP",
+      "panel": "Catat distribusi panel apotek"
     },
     "openMenu": "Buka menu",
     "closeMenu": "Tutup menu",
@@ -1087,7 +1089,9 @@
       "dispose": "Pemusnahan",
       "disposeHint": "Mencatat barang kedaluwarsa atau rusak sebagai kerugian. Jika mati, layar Pemusnahan disembunyikan dari menu.",
       "import": "Impor dari spreadsheet",
-      "importHint": "Tombol Impor di layar Katalog. Siapa yang boleh memakainya tetap diatur lewat izin \"Mengimpor katalog\" per akun."
+      "importHint": "Tombol Impor di layar Katalog. Siapa yang boleh memakainya tetap diatur lewat izin \"Mengimpor katalog\" per akun.",
+      "panel": "Panel Apotek",
+      "panelHint": "Catat distribusi panel apotek (pinjam nama apotek ke PBF/MR). Jika mati, layar Panel disembunyikan dari menu."
     },
     "tax": "PPN",
     "taxEnabled": "Pungut PPN",
@@ -1168,7 +1172,9 @@
     "stock": {
       "adjust": "Menyesuaikan jumlah",
       "dispose": "Memusnahkan stok",
-      "count": "Menjalankan stok opname"
+      "count": "Menjalankan stok opname",
+      "view": "Melihat panel apotek",
+      "create": "Mencatat panel apotek"
     },
     "suppliers": {
       "manage": "Mengelola pemasok"
@@ -2662,5 +2668,51 @@
       "not_published": "Aplikasi untuk versi {version} belum diterbitkan. Aplikasi dilampirkan di setiap rilis setelah pemilik menyiapkan kunci penandatanganan; lihat mobile/README.md.",
       "unreachable": "Server ini tidak bisa mengambil aplikasi dari rilis. Pastikan server tersambung ke internet, lalu coba lagi."
     }
+  },
+  "panel": {
+    "title": "Panel Apotek",
+    "subtitle": "Catat distribusi panel apotek (pinjam nama apotek ke PBF/MR untuk obat keras)",
+    "newEntry": "Entri baru",
+    "newEntryHint": "Isi data distribusi panel. Entri ini tidak memengaruhi stok, hanya untuk rekap data dan keuangan.",
+    "entryDate": "Tanggal entri",
+    "itemCode": "Kode barang",
+    "itemCodePlaceholder": "Contoh: PARA500",
+    "itemName": "Nama barang",
+    "itemNamePlaceholder": "Contoh: Paracetamol 500 mg",
+    "itemSearch": "Cari barang",
+    "itemSearchPlaceholder": "Ketik kode atau nama barang (min. 2 huruf)...",
+    "noResults": "Tidak ada barang yang cocok",
+    "clearSelection": "Hapus pilihan",
+    "unit": "Satuan",
+    "unitPlaceholder": "Contoh: tablet, kapsul, botol",
+    "qty": "Jumlah",
+    "unitCost": "Harga beli / satuan",
+    "unitPrice": "Harga jual / satuan",
+    "partnerName": "Nama PBF / MR / Distributor",
+    "partnerNamePlaceholder": "Contoh: PT Kimia Farma",
+    "destination": "Tujuan (dokter, klinik, bidan, dll.)",
+    "destinationPlaceholder": "Contoh: Dr. Budi, Klinik Sehat",
+    "notes": "Catatan",
+    "notesPlaceholder": "Catatan tambahan...",
+    "pharmacistId": "ID Apoteker penanggung jawab (opsional)",
+    "pharmacistIdPlaceholder": "Nomor SIPA atau nama apoteker",
+    "save": "Simpan",
+    "saving": "Menyimpan...",
+    "saved": "Entri panel tersimpan.",
+    "entryNumber": "Nomor",
+    "entryDateLabel": "Tanggal",
+    "item": "Barang",
+    "unitCostLabel": "Harga beli",
+    "unitPriceLabel": "Harga jual",
+    "margin": "Margin",
+    "partnerDestination": "Mitra / Tujuan",
+    "totalEntries": "Total entri",
+    "totalQty": "Total qty",
+    "totalCost": "Total modal",
+    "totalRevenue": "Total penjualan",
+    "totalMargin": "Total margin",
+    "empty": "Belum ada entri panel",
+    "emptyBody": "Tambahkan entri panel pertama Anda di formulir di samping.",
+    "showingFirst100": "Menampilkan 100 entri terbaru. Gunakan penyaring tanggal untuk melihat lebih banyak."
   }
 }

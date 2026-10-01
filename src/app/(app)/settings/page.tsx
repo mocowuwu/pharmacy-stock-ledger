@@ -73,6 +73,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
     counts: "countsEnabled",
     dispose: "disposeEnabled",
     import: "importEnabled",
+    panel: "panelEnabled",
   };
 
   return (

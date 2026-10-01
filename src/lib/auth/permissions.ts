@@ -23,6 +23,8 @@ export const PERMISSION_GROUPS = {
     "stock.dispose",
     "stock.count",
     "suppliers.manage",
+    "panel.view",
+    "panel.create",
   ],
   selling: [
     "sales.create",
