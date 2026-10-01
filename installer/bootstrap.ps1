@@ -24,6 +24,11 @@ $IsArmMachine = $RealArch -notin @("AMD64", "x86")
 function Say  { param($m) Write-Host "   $m" }
 function Die  { param($m) Write-Host ""; Write-Host "Stopped. $m" -ForegroundColor Red; Write-Host ""; exit 1 }
 
+$os = [System.Environment]::OSVersion.Version
+if ($os.Major -lt 10) {
+    Die "Windows 7 / 8 / 8.1 detected ($($os.Major).$($os.Minor)).`n`nNext.js 16 and PostgreSQL 18 require Windows 10 or newer to run natively.`nTo keep Windows 7 on this machine and run the pharmacy reliably,`nplease see WINDOWS-7.md for the recommended VirtualBox setup."
+}
+
 function Find-Node {
     $command = Get-Command node -ErrorAction SilentlyContinue
     if (-not $command) { return $null }
@@ -54,8 +59,8 @@ function Get-Node {
     try {
         # Windows PowerShell 5 negotiates TLS 1.0 by default, which nodejs.org
         # refuses. The download fails as "could not create SSL/TLS channel",
-        # which names everything except the reason.
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        # which names everything except the reason. 3072 is Tls12.
+        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]3072
         $ProgressPreference = "SilentlyContinue"   # the progress bar makes this ~10x slower
         Invoke-WebRequest -Uri $url -OutFile $archive -UseBasicParsing
     } catch {

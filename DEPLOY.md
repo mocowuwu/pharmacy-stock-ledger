@@ -519,6 +519,10 @@ NAT'd VM), and surviving a reboot.
   drive is refused: PostgreSQL needs fsync semantics a share does not give, and
   the boot task runs as SYSTEM, which cannot see a per-user mapped drive at all.
   Running the installer *from* a share is fine — only the destination matters.
+- **Windows 7 / 8**: The native installer requires Windows 10 or 11 because Node
+  20+ and PostgreSQL 18 require modern Windows APIs. If this machine must stay on
+  Windows 7 without wiping or upgrading the OS, see `WINDOWS-7.md` for running the
+  server inside a lightweight headless VirtualBox VM.
 
 The manual path above also works on Windows, and remains the fallback. It is
 longer, not worse.

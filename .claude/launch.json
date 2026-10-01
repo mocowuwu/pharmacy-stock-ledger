@@ -4,8 +4,23 @@
     {
       "name": "pharmacy-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000
+    },
+    {
+      "name": "pharmacy-dev-3001",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "PORT=3001",
+        "PGLITE_DIR=.data/pgdata-fresh",
+        "npm",
+        "run",
+        "dev"
+      ],
+      "port": 3001
     }
   ]
 }
