@@ -31,6 +31,7 @@ const NAV: Array<{ key: string; href: string; group: NavGroup; permissions: Perm
   { key: "alerts", href: "/alerts", group: "stock", permissions: ["alerts.view"] },
   { key: "counts", href: "/counts", group: "stock", permissions: ["stock.count"] },
   { key: "dispose", href: "/dispose", group: "stock", permissions: ["stock.dispose"] },
+  { key: "panel", href: "/panel", group: "stock", permissions: ["panel.view"] },
   // Reports appears for anyone holding either half of the split: a manager may
   // be able to see what sold without being able to see what it cost.
   { key: "reports", href: "/reports", group: "records", permissions: ["reports.sales", "reports.financial"] },

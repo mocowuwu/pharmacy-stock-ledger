@@ -152,6 +152,15 @@ const ICONS: Record<string, ReactNode> = {
       <path d="M4 15v3.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V15" />
     </>
   ),
+  panel: (
+    <>
+      <path d="M12 3v18M3 12h18" />
+      <rect x="5" y="5" width="4" height="4" rx="0.5" />
+      <rect x="15" y="5" width="4" height="4" rx="0.5" />
+      <rect x="5" y="15" width="4" height="4" rx="0.5" />
+      <rect x="15" y="15" width="4" height="4" rx="0.5" />
+    </>
+  ),
   // Not menu entries: the Tutorials page's first two guides.
   start: (
     <>

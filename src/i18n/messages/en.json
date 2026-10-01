@@ -43,6 +43,7 @@
     "categories": "Categories",
     "returns": "Returns",
     "counts": "Stock count",
+    "panel": "Panel Apotek",
     "menu": "Main menu",
     "sellCta": "Open the till",
     "sellCtaHint": "Ring up a new sale",
@@ -68,7 +69,8 @@
       "categories": "Groups of medicines",
       "users": "Staff accounts and access",
       "settings": "Pharmacy name, tax, features",
-      "app": "Put the pharmacy on your phone"
+      "app": "Put the pharmacy on your phone",
+      "panel": "Record panel apotek distributions"
     },
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
@@ -1087,7 +1089,9 @@
       "dispose": "Disposal",
       "disposeHint": "Recording expired or damaged stock as a loss. Off hides the Dispose screen from the menu.",
       "import": "Spreadsheet import",
-      "importHint": "The Import button on the Catalogue screen. Who may actually use it is still controlled by the \"Import catalogue\" permission per account."
+      "importHint": "The Import button on the Catalogue screen. Who may actually use it is still controlled by the \"Import catalogue\" permission per account.",
+      "panel": "Panel Apotek",
+      "panelHint": "Record panel apotek distributions (lending pharmacy license to PBF/MR). Off hides the Panel screen from the menu."
     },
     "tax": "PPN",
     "taxEnabled": "Charge PPN",
@@ -1168,7 +1172,9 @@
     "stock": {
       "adjust": "Adjust quantities",
       "dispose": "Write stock off",
-      "count": "Run a stock count"
+      "count": "Run a stock count",
+      "view": "View panel apotek entries",
+      "create": "Record panel apotek entries"
     },
     "suppliers": {
       "manage": "Manage suppliers"
@@ -2662,5 +2668,51 @@
       "not_published": "The app for version {version} has not been published yet. It is attached to each release once the owner has set up app signing; see mobile/README.md.",
       "unreachable": "This server could not fetch the app from the release. Check that it is connected to the internet, and try again."
     }
+  },
+  "panel": {
+    "title": "Panel Apotek",
+    "subtitle": "Record panel apotek distributions (lending pharmacy license to PBF/MR for hard drugs)",
+    "newEntry": "New entry",
+    "newEntryHint": "Fill in panel distribution data. This entry does not affect stock, only for data and finance recap.",
+    "entryDate": "Entry date",
+    "itemCode": "Item code",
+    "itemCodePlaceholder": "e.g., PARA500",
+    "itemName": "Item name",
+    "itemNamePlaceholder": "e.g., Paracetamol 500 mg",
+    "itemSearch": "Search item",
+    "itemSearchPlaceholder": "Type code or item name (min. 2 chars)...",
+    "noResults": "No matching items found",
+    "clearSelection": "Clear selection",
+    "unit": "Unit",
+    "unitPlaceholder": "e.g., tablet, capsule, bottle",
+    "qty": "Quantity",
+    "unitCost": "Purchase price / unit",
+    "unitPrice": "Selling price / unit",
+    "partnerName": "PBF / MR / Distributor name",
+    "partnerNamePlaceholder": "e.g., PT Kimia Farma",
+    "destination": "Destination (doctor, clinic, midwife, etc.)",
+    "destinationPlaceholder": "e.g., Dr. Smith, Healthy Clinic",
+    "notes": "Notes",
+    "notesPlaceholder": "Additional notes...",
+    "pharmacistId": "Responsible pharmacist ID (optional)",
+    "pharmacistIdPlaceholder": "SIPA number or pharmacist name",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Panel entry saved.",
+    "entryNumber": "Number",
+    "entryDateLabel": "Date",
+    "item": "Item",
+    "unitCostLabel": "Cost price",
+    "unitPriceLabel": "Sell price",
+    "margin": "Margin",
+    "partnerDestination": "Partner / Destination",
+    "totalEntries": "Total entries",
+    "totalQty": "Total qty",
+    "totalCost": "Total cost",
+    "totalRevenue": "Total revenue",
+    "totalMargin": "Total margin",
+    "empty": "No panel entries yet",
+    "emptyBody": "Add your first panel entry using the form on the side.",
+    "showingFirst100": "Showing 100 most recent entries. Use date filter to see more."
   }
 }

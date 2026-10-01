@@ -116,6 +116,12 @@ export const settings = pgTable(
      */
     importEnabled: boolean("import_enabled").notNull().default(false),
 
+    /**
+     * Panel apotek entries for recording manual distributions via PBF/MR.
+     * Does not affect stock levels.
+     */
+    panelEnabled: boolean("panel_enabled").notNull().default(false),
+
     digestEnabled: boolean("digest_enabled").notNull().default(false),
     digestEmail: text("digest_email"),
     /** Local hour the digest is sent, 0-23. The job decides; nothing polls. */
