@@ -1,170 +1,209 @@
 import "server-only";
 
-import { and, desc, eq, sql } from "drizzle-orm";
 import { getDb } from "@/db";
-import { panelEntries, panelSequences } from "@/db/schema";
-import { assertPermission } from "./session";
 import { recordAudit } from "@/lib/audit";
-import { today } from "@/lib/format/date";
+import { can } from "@/lib/auth/permissions";
+import {
+  applyCostVisibility,
+  decidePanelEntry as decideEntry,
+  listPanelRows,
+  panelPendingCount,
+  panelTaxChoices,
+  panelTotals,
+  parsePanelInput,
+  pharmacistChoices,
+  recordPanelEntry,
+  searchPanelItems,
+  voidPanelEntry as voidEntry,
+  type PanelRange,
+  type RawPanelInput,
+} from "@/lib/panel/entries";
+import { assertPermission } from "./session";
+import { getSettings } from "./settings";
 
-/** Next panel entry number for the current year, e.g. PANEL-2026-001. */
-export async function nextPanelNumber(): Promise<string> {
-  const db = await getDb();
-  const zone = process.env.PHARMACY_TIMEZONE || "Asia/Jakarta";
-  const year = Number(
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone: zone,
-      year: "numeric",
-    }).format(new Date())
-  );
-
-  const [row] = await db
-    .insert(panelSequences)
-    .values({ year, lastNumber: 0 })
-    .onConflictDoUpdate({
-      target: panelSequences.year,
-      set: { lastNumber: sql`${panelSequences.lastNumber} + 1` },
-    })
-    .returning({ lastNumber: panelSequences.lastNumber });
-
-  const n = row?.lastNumber ?? 1;
-  return `PANEL-${year}-${String(n).padStart(3, "0")}`;
-}
-
-export type PanelEntryInput = {
-  entryDate: string;
-  itemCode: string;
-  itemName: string;
-  unit: string;
-  qty: number;
-  unitCost: number;
-  unitPrice: number;
-  partnerName: string | null;
-  destination: string | null;
-  notes: string | null;
-  pharmacistId: string | null;
-};
+export { PanelError } from "@/lib/panel/entries";
 
 /**
- * Creates a panel entry.
- * Does NOT affect stock levels -- purely financial/administrative record.
+ * Records an entry for a panel order. Writes no stock movement: see
+ * `src/lib/panel/entries.ts`.
+ *
+ * The audit row goes in the same transaction as the entry, so the record cannot
+ * exist without the log of who made it, or the reverse.
  */
-export async function createPanelEntry(input: PanelEntryInput) {
+export async function createPanelEntry(raw: RawPanelInput) {
   const session = await assertPermission("panel.create");
+  // Reading the settings is what makes the owner's timezone the process's, and
+  // "today" -- the latest date an entry may carry -- is read from it.
+  await getSettings();
+  const input = parsePanelInput(raw);
   const db = await getDb();
 
-  const entryNumber = await nextPanelNumber();
+  return db.transaction(async (tx) => {
+    const executor = tx as unknown as typeof db;
+    const created = await recordPanelEntry(executor, {
+      ...input,
+      actorId: session.user.id,
+      // The owner has nobody above them, so an order of theirs is never held for
+      // approval; everyone else's is, when the pharmacy asks for it.
+      actorIsOwner: session.user.isOwner,
+      // The operator is the answerable pharmacist when they are one and nobody
+      // else was named, as at the disposal screen.
+      pharmacistId:
+        input.pharmacistId ?? (session.user.isPharmacist ? session.user.id : null),
+    });
 
-  const [created] = await db
-    .insert(panelEntries)
-    .values({
-      entryNumber,
-      entryDate: new Date(input.entryDate),
-      recordedBy: session.user.id,
-      pharmacistId: input.pharmacistId,
-      itemCode: input.itemCode,
-      itemName: input.itemName,
-      unit: input.unit,
-      qty: input.qty,
-      unitCost: input.unitCost,
-      unitPrice: input.unitPrice,
-      partnerName: input.partnerName,
-      destination: input.destination,
-      notes: input.notes,
-    })
-    .returning();
-
-  await recordAudit({
-    userId: session.user.id,
-    actorLabel: session.user.username,
-    action: "panel.entry_created",
-    entityType: "panel_entries",
-    entityId: created.id,
-    after: {
-      entryNumber,
-      entryDate: input.entryDate,
-      itemCode: input.itemCode,
-      itemName: input.itemName,
-      qty: input.qty,
-      unitCost: input.unitCost,
-      unitPrice: input.unitPrice,
-      partnerName: input.partnerName,
-      destination: input.destination,
-    },
+    await recordAudit(
+      {
+        userId: session.user.id,
+        actorLabel: session.user.username,
+        action: "panel.entry_created",
+        entityType: "panel_entries",
+        entityId: created.id,
+        after: {
+          entryNumber: created.entryNumber,
+          entryDate: created.entryDate,
+          orderRef: created.orderRef,
+          itemCode: created.itemCode,
+          qty: created.qty,
+          unitCost: created.unitCost,
+          unitPrice: created.unitPrice,
+          taxMode: created.taxMode,
+          taxRateBps: created.taxRateBps,
+          taxAmount: created.taxAmount,
+          status: created.status,
+          partnerName: created.partnerName,
+          destination: created.destination,
+        },
+      },
+      executor,
+    );
+    return created;
   });
-
-  return created;
 }
 
-export type PanelEntryFilters = {
-  from?: string;
-  to?: string;
-  itemCode?: string;
-  recordedBy?: string;
-};
-
-/** Lists panel entries with optional filters. */
-export async function listPanelEntries(filters: PanelEntryFilters = {}, limit = 100) {
-  await assertPermission("panel.view");
+/** Voids an entry with a reason. The row stays; it just stops counting. */
+export async function voidPanelEntry(entryId: string, reason: string) {
+  const session = await assertPermission("panel.void");
+  await getSettings();
   const db = await getDb();
 
-  const conditions = [];
-
-  if (filters.from) conditions.push(sql`${panelEntries.entryDate} >= ${filters.from}`);
-  if (filters.to) conditions.push(sql`${panelEntries.entryDate} <= ${filters.to}`);
-  if (filters.itemCode) conditions.push(sql`${panelEntries.itemCode} ILIKE ${`%${filters.itemCode}%`}`);
-  if (filters.recordedBy) conditions.push(eq(panelEntries.recordedBy, filters.recordedBy));
-
-  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-
-  return db
-    .select({
-      id: panelEntries.id,
-      entryNumber: panelEntries.entryNumber,
-      entryDate: sql<string>`to_char(${panelEntries.entryDate} at time zone ${process.env.PHARMACY_TIMEZONE || 'Asia/Jakarta'}, 'YYYY-MM-DD')`.as("entryDate"),
-      itemCode: panelEntries.itemCode,
-      itemName: panelEntries.itemName,
-      unit: panelEntries.unit,
-      qty: panelEntries.qty,
-      unitCost: panelEntries.unitCost,
-      unitPrice: panelEntries.unitPrice,
-      partnerName: panelEntries.partnerName,
-      destination: panelEntries.destination,
-      notes: panelEntries.notes,
-      recordedBy: panelEntries.recordedBy,
-      recordedByName: sql<string>`${panelEntries.recordedBy}`.as("recordedByName"),
-      pharmacistId: panelEntries.pharmacistId,
-      createdAt: panelEntries.createdAt,
-    })
-    .from(panelEntries)
-    .where(whereClause)
-    .orderBy(desc(panelEntries.entryDate), desc(panelEntries.createdAt))
-    .limit(limit);
+  return db.transaction(async (tx) => {
+    const executor = tx as unknown as typeof db;
+    const voided = await voidEntry(executor, { entryId, reason, actorId: session.user.id });
+    await recordAudit(
+      {
+        userId: session.user.id,
+        actorLabel: session.user.username,
+        action: "panel.entry_voided",
+        entityType: "panel_entries",
+        entityId: voided.id,
+        after: { entryNumber: voided.entryNumber, reason: voided.voidReason },
+      },
+      executor,
+    );
+    return voided;
+  });
 }
 
-/** Summary totals for a date range. */
-export async function panelSummary(from: string, to: string) {
-  await assertPermission("panel.view");
+/**
+ * Approves or rejects a pending entry. Needs `panel.approve`, which is the whole
+ * point of the approval switch: it is a permission the owner hands to few. The
+ * rule that nobody decides their own entry is in the logic, not here.
+ */
+export async function decidePanelEntry(
+  entryId: string,
+  decision: "approve" | "reject",
+  note: string,
+) {
+  const session = await assertPermission("panel.approve");
+  await getSettings();
   const db = await getDb();
 
-  const [row] = await db
-    .select({
-      totalEntries: sql<number>`count(*)::int`,
-      totalQty: sql<number>`coalesce(sum(${panelEntries.qty}), 0)::int`,
-      totalCost: sql<number>`coalesce(sum(${panelEntries.qty} * ${panelEntries.unitCost}), 0)::bigint`,
-      totalRevenue: sql<number>`coalesce(sum(${panelEntries.qty} * ${panelEntries.unitPrice}), 0)::bigint`,
-    })
-    .from(panelEntries)
-    .where(and(
-      sql`${panelEntries.entryDate} >= ${from}`,
-      sql`${panelEntries.entryDate} <= ${to}`
-    ));
+  return db.transaction(async (tx) => {
+    const executor = tx as unknown as typeof db;
+    const decided = await decideEntry(executor, {
+      entryId,
+      decision,
+      note,
+      actorId: session.user.id,
+      actorIsOwner: session.user.isOwner,
+    });
+    await recordAudit(
+      {
+        userId: session.user.id,
+        actorLabel: session.user.username,
+        action: decision === "approve" ? "panel.entry_approved" : "panel.entry_rejected",
+        entityType: "panel_entries",
+        entityId: decided.id,
+        after: { entryNumber: decided.entryNumber, status: decided.status, note: decided.decisionNote },
+      },
+      executor,
+    );
+    return decided;
+  });
+}
 
-  return {
-    totalEntries: row?.totalEntries ?? 0,
-    totalQty: row?.totalQty ?? 0,
-    totalCost: Number(row?.totalCost ?? 0),
-    totalRevenue: Number(row?.totalRevenue ?? 0),
-    totalMargin: Number((row?.totalRevenue ?? 0) - (row?.totalCost ?? 0)),
-  };
+/** How many entries are waiting, for whoever may decide them. */
+export async function panelPending() {
+  await assertPermission("panel.approve");
+  return panelPendingCount(await getDb());
+}
+
+/** What the order form needs to offer PPN. Needs `panel.create`: it exists to fill that form. */
+export async function panelTaxInfo() {
+  await assertPermission("panel.create");
+  return panelTaxChoices(await getDb());
+}
+
+/**
+ * The screen's data: entries, totals, and whether the reader may see costs.
+ *
+ * Cost prices and margins are the pharmacy's purchase terms, which the split
+ * between `reports.sales` and `reports.financial` keeps off the shop floor.
+ * The screen hiding a column would not be a control, so they are removed here,
+ * before the data leaves the DAL: someone without `reports.financial` gets the
+ * selling side only.
+ */
+export async function panelOverview(range: PanelRange, only?: { status: "pending" }) {
+  const session = await assertPermission("panel.view");
+  await getSettings();
+  const db = await getDb();
+  const canSeeCost = can(session.grant, "reports.financial");
+
+  const [{ rows, truncated }, totals] = await Promise.all([
+    listPanelRows(db, range, 200, only),
+    panelTotals(db, range),
+  ]);
+
+  return { canSeeCost, truncated, ...applyCostVisibility({ rows, totals }, canSeeCost) };
+}
+
+/**
+ * Everything in a window, for a download: no row cap, costs removed on the same
+ * terms as the screen. A route handler is as exposed as a page, so the
+ * permission is checked here and not assumed from the link that led to it.
+ */
+export async function panelExport(range: PanelRange) {
+  const session = await assertPermission("panel.view");
+  await getSettings();
+  const db = await getDb();
+  const canSeeCost = can(session.grant, "reports.financial");
+
+  const [{ rows }, totals] = await Promise.all([
+    listPanelRows(db, range, null),
+    panelTotals(db, range),
+  ]);
+
+  return { canSeeCost, ...applyCostVisibility({ rows, totals }, canSeeCost) };
+}
+
+/** The item picker. Needs `panel.create`: it exists only to fill that form. */
+export async function panelItemSearch(query: string, limit = 10) {
+  await assertPermission("panel.create");
+  return searchPanelItems(await getDb(), query, limit);
+}
+
+export async function panelPharmacists() {
+  await assertPermission("panel.create");
+  return pharmacistChoices(await getDb());
 }

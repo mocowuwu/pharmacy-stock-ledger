@@ -51,6 +51,16 @@ export type CommitSaleRequest = {
     deviceId: string;
     soldAt: Date;
   };
+  /**
+   * Set when the Android till rings a sale while it can reach the server. The
+   * sale is booked now and numbered now -- there is no temporary number -- but
+   * it keeps the phone's id for it, so a phone that lost the answer and
+   * queues the same sale offline books it once.
+   */
+  app?: {
+    clientId: string;
+    deviceId: string;
+  };
 };
 
 export class SaleError extends Error {
@@ -113,6 +123,7 @@ export async function nextSaleNumber(tx: Database, on: string): Promise<string> 
  */
 export async function commitSale(tx: Database, request: CommitSaleRequest) {
   if (request.lines.length === 0) throw new SaleError("empty_sale");
+  if (request.offline && request.app) throw new SaleError("offline_and_online");
 
   const saleDate = request.offline ? dayOf(request.offline.soldAt) : today();
   const tax = await activeTax(tx, saleDate);
@@ -230,7 +241,9 @@ export async function commitSale(tx: Database, request: CommitSaleRequest) {
             offlineNumber: request.offline.number,
             deviceId: request.offline.deviceId,
           }
-        : {}),
+        : request.app
+          ? { offlineClientId: request.app.clientId, deviceId: request.app.deviceId }
+          : {}),
     })
     .returning();
 

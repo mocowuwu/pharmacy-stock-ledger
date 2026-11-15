@@ -20,7 +20,10 @@ function Row({ icon, title, meta, onClick }: { icon: IconName; title: string; me
   );
 }
 
-/** The app's own menu, for when the website is not the answer. */
+/**
+ * The app's own menu. On the till it is also the way to the website, which
+ * the till otherwise never opens: signing in from here goes there instead.
+ */
 export function HomeScreen() {
   const { t, device, go, revision } = useApp();
   void revision;
@@ -37,7 +40,12 @@ export function HomeScreen() {
       />
       <main>
         <div className="card flush">
-          <Row icon="globe" title={t("home.openWebsite")} meta={t("home.openWebsiteHint")} onClick={() => go("/start")} />
+          <Row
+            icon="globe"
+            title={t("home.openWebsite")}
+            meta={t("home.openWebsiteHint")}
+            onClick={() => go(till ? "/login?to=web" : "/start")}
+          />
           <Row icon="user" title={t("home.signIn")} meta={t("home.signInHint")} onClick={() => go("/login")} />
         </div>
         {till || pending > 0 ? (

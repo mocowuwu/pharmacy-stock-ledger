@@ -3,7 +3,16 @@ import { PAYMENT_METHODS, type PaymentMethod, type SnapshotItem } from "@/lib/of
 import { RESTRICTED_DRUG_CLASSES } from "@/lib/catalogue/enums";
 import type { MessageKey } from "../i18n";
 import { checkPass } from "../lib/pass";
-import { clock, recordSale } from "../lib/services";
+import {
+  canResume,
+  clock,
+  liveToken,
+  recordSale,
+  refreshSnapshot,
+  sellOnline,
+  syncQueue,
+  type OnlineSale,
+} from "../lib/services";
 import { hasPermission } from "../lib/signin";
 import { readQueue, readSnapshot, readState } from "../lib/store";
 import {
@@ -28,10 +37,14 @@ import { Scanner, scanUnavailable } from "./Scanner";
 import { useBackHandler } from "./back";
 
 /**
- * The backup till. Deliberately smaller than the website's: sell, and look up
- * stock -- nothing else is possible offline. Every rule that decides money or
- * stock lives in lib/till.ts and the server modules it imports; this screen
- * only gathers the cart and shows what those rules say.
+ * The till. Deliberately smaller than the website's: sell, and look up stock.
+ * The same screen online and offline -- what changes is where the sale goes.
+ * While the server answers, each sale is booked there at once and the receipt
+ * carries its real number; when it does not, the sale stays on the phone
+ * under the pass with a temporary `OFF-…` number and goes as soon as the
+ * server is back. Every rule that decides money or stock lives in lib/till.ts,
+ * lib/online.ts and the server modules they import; this screen only gathers
+ * the cart and shows what those rules say.
  *
  * `readOnly` is the locked till: stock and expiry can be looked up, nothing
  * can be sold.
@@ -98,14 +111,19 @@ export function TillScreen({ readOnly }: { readOnly: boolean }) {
 
   const snapshot = readSnapshot();
   const state = readState();
-  const pass = checkPass(snapshot, state.usage, clock(), state.wallHighWater);
+  const moment = clock();
+  const pass = checkPass(snapshot, state.usage, moment, state.wallHighWater);
+  const live = session ? liveToken(session.id) : null;
+  const online = reachable === true && live !== null;
 
-  // Selling needs a person and a pass; either missing sends the cashier back
-  // to the sign-in screen, which says which.
-  const mustLeave = !readOnly && (!session || !pass.ok);
+  // Selling needs a person, and either the server or a pass; without them the
+  // cashier is signed out and the start screen says what is possible.
+  const mustLeave = !readOnly && (!session || !(pass.ok || online));
   useEffect(() => {
-    if (mustLeave) go("/offline");
-  }, [mustLeave, go]);
+    if (!mustLeave) return;
+    if (session) setSession(null);
+    go("/start", { replace: true });
+  }, [mustLeave, session, setSession, go]);
 
   const items = snapshot?.data.items ?? NO_ITEMS;
   const byId = snapshot ? itemIndex(snapshot) : NO_INDEX;
@@ -135,8 +153,9 @@ export function TillScreen({ readOnly }: { readOnly: boolean }) {
 
   const tz = snapshot.data.settings.timezone;
   // Offline-now; when locked (read-only), the last trustworthy moment is the
-  // pass's own time, which is the best the phone can say about "today".
-  const now = pass.ok ? pass.now : Date.parse(snapshot.data.pass.issuedAt);
+  // pass's own time, which is the best the phone can say about "today". Online
+  // the server judges expiry itself; the phone's day only shapes the display.
+  const now = pass.ok ? pass.now : online ? moment.wall : Date.parse(snapshot.data.pass.issuedAt);
   const today = offlineToday(now, tz);
   const used = usedByBatch(snapshot, state.usage, readQueue());
   const results = searchItems(items, query);
@@ -230,23 +249,27 @@ export function TillScreen({ readOnly }: { readOnly: boolean }) {
           </div>
         </div>
 
-        {reachable ? (
+        {reachable && session && !live && !readOnly ? (
           <Alert tone="ok">
             <strong>{t("till.serverBack")}</strong>
-            {serverBack ? t("till.serverBackBody") : t("offline.backBody")}
-            <div style={{ marginTop: 10 }}>
-              <button
-                className="primary small"
-                onClick={() => {
-                  setSession(null);
-                  go("/login");
-                }}
-              >
-                {t("till.signInOnline")}
-              </button>
-            </div>
+            {serverBack ? `${t("till.serverBackBody")} ` : ""}
+            {canResume(session.id) ? t("till.goingOnline") : t("till.signInAgain")}
+            {!canResume(session.id) ? (
+              <div style={{ marginTop: 10 }}>
+                <button
+                  className="primary small"
+                  onClick={() => {
+                    setSession(null);
+                    go("/login");
+                  }}
+                >
+                  {t("till.signInOnline")}
+                </button>
+              </div>
+            ) : null}
           </Alert>
         ) : null}
+        {reachable === false && session && !readOnly ? <Alert tone="warning">{t("till.offlineNow")}</Alert> : null}
         {readOnly ? <Alert tone="warning">{t("locked.stockOnly")}</Alert> : null}
         {notFound ? (
           <Alert tone="warning">
@@ -362,7 +385,7 @@ export function TillScreen({ readOnly }: { readOnly: boolean }) {
               </div>
             )}
             {restricted ? <Alert tone="warning">{t("till.restricted")}</Alert> : null}
-            {pass.ok ? (
+            {pass.ok && !online ? (
               <p className="hint center">
                 <Icon name="clock" size={14} /> {t("till.passLeft", { hours: Math.max(1, Math.floor(pass.remainingMs / 3_600_000)) })}
               </p>
@@ -414,7 +437,7 @@ function PaymentSheet({
   onClose: () => void;
   onDone: (clientId: string) => void;
 }) {
-  const { t, session } = useApp();
+  const { t, session, device, reachable, bump } = useApp();
   const snapshot = readSnapshot()!;
   const byId = itemIndex(snapshot);
   const [method, setMethod] = useState<PaymentMethod>("tunai");
@@ -433,7 +456,34 @@ function PaymentSheet({
   const cash = method === "tunai";
   const change = cash && tendered !== null ? tendered - totals.total : null;
 
-  function complete() {
+  function onlineRefusal(r: Exclude<OnlineSale, { kind: "sold" | "offline" }>): string {
+    if (r.kind === "session_ended") return t("till.sessionEnded");
+    const detail = r.detail ?? {};
+    switch (r.code) {
+      case "insufficient_stock": {
+        let text = t("till.shortOnline", { name: String(detail.item ?? "?") });
+        const expired = Number(detail.blockedByExpiry ?? 0);
+        if (expired > 0) text += ` ${t("till.shortExpired", { expired })}`;
+        return text;
+      }
+      case "price_changed":
+      case "total_changed":
+        return t("till.priceChanged");
+      case "discount_not_allowed":
+        return t("till.noDiscount");
+      case "forbidden":
+        return t("offline.notPermitted");
+      case "tendered_short":
+        return t("till.tenderedShort", { total: formatMoney(Number(detail.total ?? totals.total)) });
+      case "item_archived":
+      case "item_not_found":
+        return t("till.itemGone");
+      default:
+        return t("till.refused", { code: r.code });
+    }
+  }
+
+  async function complete() {
     if (!session || busy) return;
     setError(null);
     if (discountText.trim() && parseMoney(discountText) === null) {
@@ -444,17 +494,46 @@ function PaymentSheet({
       setError(t("till.badMoney"));
       return;
     }
+    if (cash && (tendered === null || tendered < totals.total)) {
+      setError(t("till.tenderedShort", { total: formatMoney(totals.total) }));
+      return;
+    }
+    if (discount > 0 && !mayDiscount) {
+      setError(t("till.noDiscount"));
+      return;
+    }
+    const input = { cart, discount, paymentMethod: method, tendered: cash ? tendered : null, notes, cashier: session };
+    // One id for both attempts: if the server booked the sale but its answer
+    // was lost, the offline copy is recognised when it syncs.
+    const clientId = crypto.randomUUID();
     setBusy(true);
-    const result = recordSale({
-      cart,
-      discount,
-      paymentMethod: method,
-      tendered: cash ? tendered : null,
-      notes,
-      cashier: session,
-    });
+
+    if (device && reachable !== false && liveToken(session.id)) {
+      const online = await sellOnline(device, session, { ...input, clientId });
+      if (online.kind === "sold") {
+        setBusy(false);
+        onDone(clientId);
+        return;
+      }
+      if (online.kind !== "offline") {
+        setBusy(false);
+        setError(onlineRefusal(online));
+        if (online.kind === "refused" && (online.code === "price_changed" || online.code === "total_changed")) {
+          void refreshSnapshot(device)
+            .catch(() => undefined)
+            .then(bump);
+        }
+        if (online.kind === "session_ended") bump();
+        return;
+      }
+      // No answer from the server: keep the sale on the phone instead.
+    }
+
+    const result = recordSale({ ...input, clientId });
     setBusy(false);
     if (result.ok) {
+      // If the server is there after all, the sale goes now rather than at the next ping.
+      if (device && reachable !== false) void syncQueue(device).catch(() => undefined).then(bump);
       onDone(result.entry.sale.clientId);
       return;
     }
@@ -594,7 +673,7 @@ function PaymentSheet({
           className="primary block big"
           style={{ marginTop: 16 }}
           disabled={busy || (cash && change !== null && change < 0)}
-          onClick={complete}
+          onClick={() => void complete()}
         >
           {busy ? <Spinner /> : <Icon name="check" />}
           {t("till.complete")}

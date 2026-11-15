@@ -21,9 +21,19 @@ import { isDemo } from "@/lib/demo";
  * Only built sections appear, so the nav can never advertise a screen that does
  * not exist.
  */
-const NAV: Array<{ key: string; href: string; group: NavGroup; permissions: Permission[] }> = [
+const NAV: Array<{
+  key: string;
+  href: string;
+  group: NavGroup;
+  permissions: Permission[];
+  /** Shown to the owner only -- a courtesy; the screen and its actions check too. */
+  ownerOnly?: boolean;
+}> = [
   { key: "dashboard", href: "/", group: "home", permissions: ["items.view"] },
   { key: "sell", href: "/sell", group: "home", permissions: ["sales.create"] },
+  // Orders the pharmacy places for doctors are sold, so the entry sits with selling,
+  // directly under the till, and not with the stock screens: it never touches stock.
+  { key: "panel", href: "/panel", group: "sales", permissions: ["panel.view"] },
   { key: "sales", href: "/sales", group: "sales", permissions: ["sales.create"] },
   { key: "returns", href: "/returns", group: "sales", permissions: ["sales.return"] },
   { key: "items", href: "/items", group: "stock", permissions: ["items.view"] },
@@ -31,7 +41,6 @@ const NAV: Array<{ key: string; href: string; group: NavGroup; permissions: Perm
   { key: "alerts", href: "/alerts", group: "stock", permissions: ["alerts.view"] },
   { key: "counts", href: "/counts", group: "stock", permissions: ["stock.count"] },
   { key: "dispose", href: "/dispose", group: "stock", permissions: ["stock.dispose"] },
-  { key: "panel", href: "/panel", group: "stock", permissions: ["panel.view"] },
   // Reports appears for anyone holding either half of the split: a manager may
   // be able to see what sold without being able to see what it cost.
   { key: "reports", href: "/reports", group: "records", permissions: ["reports.sales", "reports.financial"] },
@@ -39,6 +48,8 @@ const NAV: Array<{ key: string; href: string; group: NavGroup; permissions: Perm
   { key: "categories", href: "/categories", group: "records", permissions: ["items.view"] },
   { key: "users", href: "/users", group: "admin", permissions: ["users.manage"] },
   { key: "settings", href: "/settings", group: "admin", permissions: ["settings.manage"] },
+  // What each account's dashboard shows is the owner's call, not a permission.
+  { key: "dashboards", href: "/settings/dashboards", group: "admin", permissions: [], ownerOnly: true },
   // Everyone who signs in may put the app on their phone: it gives nobody any
   // access their account does not already have.
   { key: "app", href: "/settings/app", group: "admin", permissions: [] },
@@ -62,6 +73,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   const entries: NavEntry[] = NAV.filter(
     (entry) =>
+      (!entry.ownerOnly || session.user.isOwner) &&
       (entry.permissions.length === 0 || canAny(session.grant, entry.permissions)) &&
       !hidden.has(entry.key),
   ).map((entry) => ({

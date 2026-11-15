@@ -17,6 +17,21 @@ export function tableLabels(
   };
 }
 
+/**
+ * What to say about a row that names no catalogue item. Imported history and
+ * Panel Apotek entries both produce them, and "history, not in catalogue" on an
+ * order the pharmacist typed in by hand would be a wrong label on a right row.
+ */
+export function notInCatalogueTag(
+  row: { itemId: string | null; panelRevenue: number; historyRevenue: number },
+  t: (key: string, values?: Record<string, string | number>) => string,
+): string | undefined {
+  if (row.itemId) return undefined;
+  return row.panelRevenue > 0 && row.historyRevenue === 0
+    ? t("reports.panel.notInCatalogue")
+    : t("reports.history.notInCatalogue");
+}
+
 /** "Paracetamol 500 mg" -- a product's name as the shelf label has it. */
 export function productName(row: { name: string; strength: string | null }): string {
   return `${row.name}${row.strength ? ` ${row.strength}` : ""}`;

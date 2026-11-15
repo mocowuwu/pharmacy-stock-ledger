@@ -51,7 +51,7 @@ export async function RangePicker({
               key={option}
               href={href(option)}
               aria-current={preset === option ? "true" : undefined}
-              className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
+              className={`rounded-lg px-3 py-2.5 text-sm transition-colors sm:py-1.5 ${
                 preset === option
                   ? "bg-accent text-accent-contrast shadow-sm"
                   : "text-muted hover:bg-surface-2 hover:text-foreground"
@@ -73,7 +73,7 @@ export async function RangePicker({
               name="from"
               defaultValue={from}
               required
-              className={`${inputBase} tabular w-auto py-1.5 text-sm`}
+              className={`${inputBase} tabular w-auto py-1.5 text-base sm:text-sm`}
             />
           </label>
           <label className="flex flex-col gap-1">
@@ -83,12 +83,12 @@ export async function RangePicker({
               name="to"
               defaultValue={to}
               required
-              className={`${inputBase} tabular w-auto py-1.5 text-sm`}
+              className={`${inputBase} tabular w-auto py-1.5 text-base sm:text-sm`}
             />
           </label>
           <button
             type="submit"
-            className={`rounded-lg border px-3 py-2 text-sm ${
+            className={`rounded-lg border px-3 py-2.5 text-sm sm:py-2 ${
               preset === "custom"
                 ? "border-accent bg-accent-soft text-accent"
                 : "border-rule text-muted hover:border-accent hover:text-accent"
@@ -140,14 +140,14 @@ export async function ReportActions({
       <PrintButton label={t("reports.print")} />
       <a
         href={`${basePath}/export?${xlsx.toString()}`}
-        className={buttonSecondarySmall}
+        className={`${buttonSecondarySmall} max-sm:py-2.5`}
         title={t("reports.exportXlsxHint")}
       >
         {t("reports.exportXlsx")}
       </a>
       <a
         href={`${basePath}/export?${query.toString()}`}
-        className={buttonSecondarySmall}
+        className={`${buttonSecondarySmall} max-sm:py-2.5`}
         title={t("reports.exportHint")}
       >
         {t("reports.export")}

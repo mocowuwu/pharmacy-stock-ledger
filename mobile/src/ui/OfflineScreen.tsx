@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type { MessageKey } from "../i18n";
-import { currentPass, offlineSignIn } from "../lib/services";
+import { currentPass, offlineSignIn, setLive } from "../lib/services";
 import { Alert, Bar, Spinner } from "./components";
 import { useApp } from "./context";
 import { Icon } from "./icons";
@@ -124,12 +124,16 @@ export function OfflineScreen() {
     if (busy) return;
     setBusy(true);
     setError(null);
-    const result = await offlineSignIn(username, password);
+    const typed = password;
+    const result = await offlineSignIn(username, typed);
     setBusy(false);
     setPassword("");
     bump();
     if (result.ok) {
       setSession(result.user);
+      // Held in memory only, so the till can go online by itself when the
+      // server is back (services.ts, `resumeOnline`).
+      setLive({ userId: result.user.id, token: null, password: typed });
       go("/till", { replace: true });
       return;
     }

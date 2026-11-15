@@ -9,11 +9,12 @@ import { useApp } from "./context";
 import { formatExpiry, formatMoney, formatMoment, formatRate } from "./format";
 
 /**
- * The customer's receipt for an offline sale.
+ * The customer's receipt.
  *
  * In the pharmacy's receipt language, not the cashier's: it is the customer's
- * document. It says plainly that the number is temporary -- the real one comes
- * when the phone syncs, and the server keeps this one on the sale so a paper
+ * document. A sale rung online carries the server's own number. An offline
+ * sale says plainly that its number is temporary -- the real one comes when
+ * the phone syncs, and the server keeps this one on the sale so a paper
  * receipt can always be matched to it.
  */
 export function ReceiptScreen({ clientId }: { clientId: string }) {
@@ -41,12 +42,14 @@ export function ReceiptScreen({ clientId }: { clientId: string }) {
   }
 
   const s = snapshot.data.settings;
+  const offline = receipt.offlineNumber != null;
+  const number = receipt.saleNumber ?? receipt.offlineNumber ?? "";
   const r = translator(s.receiptLocale);
   const loc = s.receiptLocale;
 
   return (
     <div className="screen">
-      <Bar title={receipt.offlineNumber} sub={t("receipt.title")} onBack={back} />
+      <Bar title={number} sub={t("receipt.title")} onBack={back} />
       <main className="with-dock">
         <div className="no-print">
           {queued && session ? (
@@ -59,8 +62,16 @@ export function ReceiptScreen({ clientId }: { clientId: string }) {
             </div>
           ) : queued ? (
             <Alert tone="notice">{t("receipt.queued")}</Alert>
+          ) : !offline && session ? (
+            <div className="hero" style={{ paddingTop: 8 }}>
+              <div className="hero-icon ok">
+                <Icon name="check" size={36} strokeWidth={2.5} />
+              </div>
+              <h2>{t("receipt.done")}</h2>
+              <p>{t("receipt.doneBody", { number })}</p>
+            </div>
           ) : null}
-          {synced ? (
+          {synced && offline ? (
             <Alert tone={synced.status === "review" ? "warning" : "ok"}>
               <strong>{synced.saleNumber ? t("receipt.synced", { number: synced.saleNumber }) : t("queue.status.review")}</strong>
               {synced.status === "review" ? t("receipt.reviewHelp") : t(`queue.status.${synced.status}` as MessageKey)}
@@ -89,10 +100,10 @@ export function ReceiptScreen({ clientId }: { clientId: string }) {
               </div>
             ) : null}
           </div>
-          <div className="offline-note">{r("receipt.offline")}</div>
+          {offline ? <div className="offline-note">{r("receipt.offline")}</div> : null}
           <div className="line">
             <span>{r("receipt.number")}</span>
-            <span>{receipt.offlineNumber}</span>
+            <span>{number}</span>
           </div>
           <div className="line">
             <span>{r("receipt.date")}</span>
@@ -161,14 +172,16 @@ export function ReceiptScreen({ clientId }: { clientId: string }) {
             </>
           ) : null}
           <hr />
-          <p style={{ textAlign: "center", margin: 0 }}>{r("receipt.offlineHelp")}</p>
-          {s.receiptFooter ? <p style={{ textAlign: "center", margin: "6px 0 0" }}>{s.receiptFooter}</p> : null}
+          {offline ? <p style={{ textAlign: "center", margin: 0 }}>{r("receipt.offlineHelp")}</p> : null}
+          {s.receiptFooter ? (
+            <p style={{ textAlign: "center", margin: offline ? "6px 0 0" : 0 }}>{s.receiptFooter}</p>
+          ) : null}
         </div>
 
       </main>
       <div className="dock no-print">
         <div className="inner">
-          <button className="big" onClick={() => native().print(receipt.offlineNumber)} style={{ minWidth: 0, flex: session ? "0 0 auto" : 1 }}>
+          <button className="big" onClick={() => native().print(number)} style={{ minWidth: 0, flex: session ? "0 0 auto" : 1 }}>
             <Icon name="printer" /> {t("receipt.print")}
           </button>
           {session ? (

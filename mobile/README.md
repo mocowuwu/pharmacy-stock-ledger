@@ -1,13 +1,22 @@
 # Apotek — the Android app
 
-A phone window onto the pharmacy website, plus a backup till that keeps selling
-when the pharmacy server cannot be reached.
+A phone window onto the pharmacy website, and -- on the one phone set up as
+the **till** -- the till itself, which keeps selling when the pharmacy server
+cannot be reached.
 
-- **Online**, the app *is* the website: staff sign in on the app's own screen,
-  and it opens the website already signed in.
-- **Offline**, on the one phone set up as the **till**, staff can sell from a
-  copy of the catalogue. Sales wait on the phone and go to the server when it
-  is back. Nothing else works offline — no receiving, returns, voids or counts.
+- **Management phones** *are* the website: staff sign in on the app's own
+  screen, and it opens the website already signed in.
+- **The till** never sends the cashier to the website. Signing in opens the
+  app's own till, the same screen online and offline:
+  - **online**, each sale is booked on the server the moment it is completed
+    (`/api/device/sale`) and the receipt carries its real number -- no
+    temporary number;
+  - **offline**, the sale is kept on the phone under the pass with a temporary
+    `OFF-…` number, and goes to the server as soon as it answers again.
+
+  The website is still there from the device menu (**Buka aplikasi apotek**),
+  for anyone who needs the rest of the system on that phone. Nothing but
+  selling works offline -- no receiving, returns, voids or counts.
 
 Tailscale is the network security: only devices on the pharmacy's tailnet can
 reach the server. The app adds no login of its own beyond the normal staff
@@ -93,6 +102,29 @@ standing in for the phone's storage).
 
 The owner sees every device under Users → Devices, and can revoke a lost one.
 
+## Selling online
+
+The cashier signs in on the app's screen with their own password, through the
+same `authenticate` as the website. On the till the answer includes a
+**till session** -- an ordinary server session, kept in memory only -- and
+every online sale is sent with both the device token and that session
+(`X-Till-Session`). The cashier is the session's user, never a field in the
+request. The server books the sale through `commitSale`, against the stock as
+it is now, and refuses outright what it cannot book (a shortfall, an expired
+lot, a price that changed since the copy, a total it would not charge):
+nothing has left the shop yet, so nothing waits for review.
+
+If the server does not answer within 12 seconds (or answers with a server
+error), the till keeps the sale offline instead, with the same `clientId`, so
+a sale that was booked but whose answer was lost is recognised as a duplicate
+when it syncs.
+
+A cashier who signed in offline is taken online by themselves when the server
+is back: the password they typed is held in memory -- never on disk -- for one
+online sign-in attempt, then dropped whether it worked or not. While the
+server answers the till also sends anything queued at once and takes a fresh
+copy every 15 minutes, which keeps prices current and the pass full.
+
 ## The offline rules
 
 All of these are enforced on the phone, and checked again by the server when
@@ -113,6 +145,9 @@ record.
 | Totals, FEFO and barcode parsing are the server's own code, bundled. | `@/lib/stock/totals`, `fefo`, `gs1` |
 | The sale is written to disk (atomic write + fsync) before the receipt shows. | `recordSale`, `NativeBridge.writeFile` |
 | Receipts carry a temporary `OFF-<device>-<seq>` number; the server gives the real one and keeps both. | `offlineNumber`; `sales.offline_number` |
+| A sale rung online never gets one: it is booked at once and printed with its real number. | `src/lib/online.ts`, server `bookTillSale` |
+| An online sale the server never answered is kept offline under the same `clientId`, so it books once. | `sellOnline`, `recordSale({ clientId })` |
+| Online sales do not count towards the pass's limits. | `recordOnlineUsage`; server counts only `offline_number` sales |
 | Sending a sale twice books it once. | server dedupes on `clientId` |
 | A sale the server cannot book (stock gone since) is never dropped: it waits on Sales → Offline sales to review. | `offline_sale_reviews` |
 

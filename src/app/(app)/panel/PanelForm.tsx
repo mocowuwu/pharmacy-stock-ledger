@@ -1,363 +1,477 @@
 "use client";
 
-import { useActionState } from "react";
-import { useState, useEffect, useRef, useCallback } from "react";
-import { createPanelEntryAction, type PanelFormState } from "./actions";
+import { useActionState, useEffect, useId, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { format } from "date-fns";
+import { Alert, Field, buttonPrimaryLarge, inputClass } from "@/components/ui";
+import { formatMoney, parseMoney } from "@/lib/format/money";
+import { saleTotals } from "@/lib/stock/totals";
+import { createPanelEntryAction, type PanelFormState } from "./actions";
 
-interface SearchItem {
-  id: string;
-  code: string;
-  genericName: string;
-  brandName: string | null;
-  form: string;
-  strength: string | null;
+type Hit = { id: string; code: string; name: string; unit: string; drugClass: string };
+
+type Values = {
+  entryDate: string;
+  orderRef: string;
+  itemCode: string;
+  itemName: string;
   unit: string;
-  packSize: number | null;
-  drugClass: string;
-  defaultPrice: number;
-}
+  qty: string;
+  unitCost: string;
+  unitPrice: string;
+  partnerName: string;
+  destination: string;
+  notes: string;
+  pharmacistId: string;
+};
 
-export function PanelForm({ defaultDate }: { defaultDate: string }) {
-  const t = useTranslations("panel");
-  const [state, formAction, isPending] = useActionState<PanelFormState, FormData>(
+/**
+ * What stays after an entry is saved. One surat pesanan lists several items for
+ * the same doctor from the same PBF, so the order, the date, who it is for and
+ * who ordered it carry over; the item and the money start again.
+ */
+const ITEM_FIELDS = {
+  itemCode: "",
+  itemName: "",
+  unit: "",
+  qty: "",
+  unitCost: "",
+  unitPrice: "",
+  notes: "",
+} as const;
+
+type TaxChoices = {
+  /** Whether the pharmacy charges PPN at all. Without it the form has no tax field. */
+  enabled: boolean;
+  mode: "inclusive" | "exclusive";
+  /** Whether a new order starts with PPN ticked. */
+  defaultOn: boolean;
+  rates: { rateBps: number; effectiveFrom: string; effectiveTo: string | null }[];
+};
+
+export function PanelForm({
+  today,
+  pharmacists,
+  defaultPharmacistId,
+  tax,
+  needsApproval,
+}: {
+  /** Today in the pharmacy's timezone, from the server. The browser's clock may differ. */
+  today: string;
+  pharmacists: { id: string; fullName: string }[];
+  defaultPharmacistId: string;
+  tax: TaxChoices;
+  /** An order from this account will wait for approval before it counts. */
+  needsApproval: boolean;
+}) {
+  const t = useTranslations();
+  const listId = useId();
+  const [state, formAction, pending] = useActionState<PanelFormState, FormData>(
     createPanelEntryAction,
-    { error: undefined, success: undefined }
+    {},
   );
+  // Starts from the pharmacy's default and is the person's to change per order.
+  // It stays as they left it between items: one order, one decision about PPN.
+  const [taxed, setTaxed] = useState(tax.enabled && tax.defaultOn);
 
-  const today = format(new Date(), "yyyy-MM-dd");
-  const entryDate = defaultDate > today ? today : defaultDate;
+  // Pressing Save at the bottom of a long form on a phone leaves the outcome --
+  // saved, or what was wrong -- at the top, out of sight, and a button that
+  // appears to do nothing gets pressed twice. So the message is brought into view.
+  const outcome = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (state.saved || state.error) {
+      outcome.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [state]);
 
-  // Search state
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<SearchItem[]>([]);
-  const [showResults, setShowResults] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<SearchItem | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
-  const [unitValue, setUnitValue] = useState("");
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const resultsRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [values, setValues] = useState<Values>({
+    entryDate: today,
+    orderRef: "",
+    partnerName: "",
+    destination: "",
+    pharmacistId: defaultPharmacistId,
+    ...ITEM_FIELDS,
+  });
 
-  // Debounced search
-  const handleSearch = useCallback(async (query: string) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+  // A saved entry clears the item and the money, once per saved number. Adjusting
+  // state while rendering, guarded by the number, rather than in an effect: the
+  // form would otherwise paint the old values for a frame after saving.
+  const [clearedFor, setClearedFor] = useState<string | undefined>();
+  if (state.saved && state.saved !== clearedFor) {
+    setClearedFor(state.saved);
+    setValues((current) => ({ ...current, ...ITEM_FIELDS }));
+  }
 
-    debounceRef.current = setTimeout(async () => {
-      if (!query || query.trim().length < 2) {
-        setSearchResults([]);
-        setShowResults(false);
-        return;
-      }
+  // The "saved" banner is about the last submission, so it goes away on the next
+  // edit, and when the page comes back from voiding an entry: the form's state
+  // outlives that redirect, and two contradictory notices side by side read as a
+  // fault.
+  const [dismissed, setDismissed] = useState<string | undefined>();
+  const params = useSearchParams();
+  const marker = params.get("voided") ?? params.get("error");
+  const [seenMarker, setSeenMarker] = useState(marker);
+  if (marker !== seenMarker) {
+    setSeenMarker(marker);
+    setDismissed(state.saved);
+  }
 
-      setIsSearching(true);
+  const bind = (name: keyof Values) => ({
+    name,
+    value: values[name],
+    onChange: (event: { target: { value: string } }) => {
+      setDismissed(state.saved);
+      setValues((current) => ({ ...current, [name]: event.target.value }));
+    },
+  });
+
+  // The catalogue picker. It only ever fills the same three fields the
+  // pharmacist can type into, so a code the catalogue does not know still works.
+  const [query, setQuery] = useState("");
+  const [hits, setHits] = useState<Hit[]>([]);
+  const [open, setOpen] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [active, setActive] = useState(-1);
+  const term = query.trim();
+  const searching = term.length >= 2;
+
+  useEffect(() => {
+    if (term.length < 2) return;
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/panel/search-items?q=${encodeURIComponent(query)}&limit=10`);
-        const data = await res.json();
-        if (data.items) {
-          setSearchResults(data.items);
-          setShowResults(true);
-        }
-      } catch {
-        setSearchResults([]);
-      } finally {
-        setIsSearching(false);
+        const response = await fetch(`/api/panel/search-items?q=${encodeURIComponent(term)}`, {
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error(String(response.status));
+        const data = (await response.json()) as { items?: Hit[] };
+        setHits(data.items ?? []);
+        setFailed(false);
+        setActive(-1);
+      } catch (error) {
+        // A superseded request is cancelled, not failed.
+        if ((error as Error).name === "AbortError") return;
+        setHits([]);
+        setFailed(true);
       }
     }, 200);
-  }, []);
-
-  // Handle item selection
-  const selectItem = (item: SearchItem) => {
-    setSelectedItem(item);
-    setSearchQuery(item.genericName + (item.brandName ? ` (${item.brandName})` : ""));
-    setUnitValue(item.unit || "");
-    setShowResults(false);
-  };
-
-  // Clear selection
-  const clearSelection = () => {
-    setSelectedItem(null);
-    setSearchQuery("");
-    setUnitValue("");
-  };
-
-  // Click outside to close
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (searchInputRef.current && !searchInputRef.current.contains(e.target as Node) &&
-          resultsRef.current && !resultsRef.current.contains(e.target as Node)) {
-        setShowResults(false);
-      }
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [term]);
 
-  // Determine form values (from selected item or manual entry)
-  const itemCode = selectedItem?.code || "";
-  const itemName = selectedItem?.genericName + (selectedItem?.brandName ? ` ${selectedItem.brandName}` : "") || "";
-  // Use controlled unitValue state, fallback to selected item's unit
-  const effectiveUnit = unitValue || selectedItem?.unit || "";
-  const itemForm = selectedItem?.form || "";
-  const itemStrength = selectedItem?.strength || "";
+  const shown = searching ? hits : [];
 
-  // Display value for search input - show readable name when item selected
-  const displaySearchValue = selectedItem
-    ? selectedItem.genericName + (selectedItem.brandName ? ` (${selectedItem.brandName})` : "")
-    : searchQuery;
+  const pick = (hit: Hit) => {
+    setDismissed(state.saved);
+    setValues((current) => ({ ...current, itemCode: hit.code, itemName: hit.name, unit: hit.unit }));
+    setQuery("");
+    setOpen(false);
+  };
+
+  const onSearchKey = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Escape") {
+      setOpen(false);
+    } else if (event.key === "ArrowDown" && shown.length > 0) {
+      event.preventDefault();
+      setOpen(true);
+      setActive((index) => (index + 1) % shown.length);
+    } else if (event.key === "ArrowUp" && shown.length > 0) {
+      event.preventDefault();
+      setActive((index) => (index <= 0 ? shown.length - 1 : index - 1));
+    } else if (event.key === "Enter" && open && active >= 0 && shown[active]) {
+      // Enter picks the highlighted hit; it must not also submit the form.
+      event.preventDefault();
+      pick(shown[active]);
+    }
+  };
+
+  const qty = parseMoney(values.qty);
+  const price = parseMoney(values.unitPrice);
+  const lineTotal = qty !== null && price !== null ? qty * price : null;
+
+  // The rate that applies is the one in force on the order's own day -- the
+  // server picks it the same way -- so the preview follows the date field.
+  const rate = tax.enabled
+    ? tax.rates.find(
+        (r) =>
+          r.effectiveFrom <= values.entryDate &&
+          (r.effectiveTo === null || r.effectiveTo >= values.entryDate),
+      )
+    : undefined;
+  const preview =
+    taxed && rate && qty !== null && price !== null
+      ? saleTotals([{ qty, unitPrice: price, taxExempt: false }], 0, {
+          mode: tax.mode,
+          rateBps: rate.rateBps,
+        })
+      : null;
+  const ratePercent = rate
+    ? `${(rate.rateBps / 100).toLocaleString("id-ID", { maximumFractionDigits: 2 })}%`
+    : "";
+
+  const heading = "text-xs font-semibold tracking-[0.08em] text-accent uppercase";
 
   return (
-    <form action={formAction} className="space-y-4 p-4 bg-surface-2 rounded-xl border border-rule">
-      <h2 className="text-sm font-semibold text-ink">{t("newEntry")}</h2>
-      <p className="text-xs text-muted">{t("newEntryHint")}</p>
+    <form action={formAction} className="flex flex-col gap-5">
+      <div>
+        <h2 className="text-base font-semibold">{t("panel.newEntry")}</h2>
+        <p className="mt-1 text-xs text-muted">{t("panel.newEntryHint")}</p>
+        {needsApproval && <p className="mt-1.5 text-xs text-warning-ink">{t("panel.needsApprovalHint")}</p>}
+      </div>
 
-      {state.error && (
-        <div className="rounded-lg bg-critical-soft p-3 text-sm text-critical-ink" role="alert">
-          {state.error}
-        </div>
-      )}
-      {state.success && (
-        <div className="rounded-lg bg-positive-soft p-3 text-sm text-positive-ink" role="status">
-          {t("saved")}
-        </div>
-      )}
+      <div ref={outcome} className="flex scroll-mt-20 flex-col gap-3 empty:hidden">
+        {state.error && <Alert>{t(`errors.${state.error}`)}</Alert>}
+        {state.saved && state.saved !== dismissed && (
+          <Alert tone={state.pending ? "warning" : "notice"}>
+            {t(state.pending ? "panel.savedPending" : "panel.saved", { number: state.saved })}
+          </Alert>
+        )}
+      </div>
 
-      <div className="space-y-3">
-        <div>
-          <label htmlFor="entryDate" className="block text-xs font-medium text-muted mb-1">
-            {t("entryDate")}
-          </label>
-          <input
-            type="date"
-            id="entryDate"
-            name="entryDate"
-            value={entryDate}
-            max={today}
-            className="w-full rounded-lg border border-rule bg-surface px-3 py-2 text-sm focus:ring-2 focus:ring-accent focus:border-transparent"
-            required
-          />
-        </div>
-
-        {/* Searchable Item Field */}
-        <div>
-          <label className="block text-xs font-medium text-muted mb-1">
-            {t("itemSearch")}
-          </label>
-          <div className="relative">
+      {/* The order: filled in once, then carried over to every item on it. */}
+      <section className="flex flex-col gap-4">
+        <h3 className={heading}>{t("panel.sectionOrder")}</h3>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+          <Field label={t("panel.entryDate")} required>
+            <input type="date" {...bind("entryDate")} max={today} required className={inputClass} />
+          </Field>
+          <Field label={t("panel.orderRef")} required>
             <input
-              ref={searchInputRef}
-              type="text"
-              id="itemSearch"
-              value={displaySearchValue}
-              onChange={(e) => {
-                const value = e.target.value;
-                setSearchQuery(value);
-                handleSearch(value);
-                // Clear selected item when user types something different
-                if (selectedItem && value !== displaySearchValue) {
-                  clearSelection();
-                }
-              }}
-              onFocus={() => !selectedItem && searchQuery.trim().length >= 2 && setShowResults(true)}
-              onBlur={() => setTimeout(() => setShowResults(false), 200)}
-              placeholder={t("itemSearchPlaceholder")}
-              className="w-full rounded-lg border border-rule bg-surface px-3 py-2 text-sm focus:ring-2 focus:ring-accent focus:border-transparent pr-10"
-              autoComplete="off"
+              {...bind("orderRef")}
               required
+              maxLength={60}
+              autoComplete="off"
+              placeholder={t("panel.orderRefPlaceholder")}
+              className={inputClass}
             />
-            {isSearching && (
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted" aria-hidden="true">
-                ⏳
-              </span>
-            )}
-            {selectedItem && !isSearching && (
-              <button
-                type="button"
-                onClick={clearSelection}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink"
-                aria-label={t("clearSelection")}
-              >
-                ✕
-              </button>
-            )}
-          </div>
-
-          {/* Search Results Dropdown */}
-          {showResults && searchResults.length > 0 && (
-            <div
-              ref={resultsRef}
-              className="absolute z-10 mt-1 w-full max-h-60 overflow-y-auto rounded-lg border border-rule bg-surface shadow-lg"
-              role="listbox"
-            >
-              {searchResults.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => selectItem(item)}
-                  className="w-full text-left px-3 py-2 hover:bg-accent-soft/20 focus:bg-accent-soft/20 focus:outline-none focus:ring-2 focus:ring-accent"
-                  role="option"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-ink font-medium">{item.code}</span>
-                    <span className="text-sm text-ink flex-1 truncate">
-                      {item.genericName}
-                      {item.brandName && <span className="text-muted"> ({item.brandName})</span>}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5 text-xs text-muted">
-                    <span className="font-mono">{item.form}</span>
-                    {item.strength && <span>• {item.strength}</span>}
-                    <span>• {item.unit}</span>
-                    <span className="px-1.5 py-0.5 rounded text-[0.6rem] font-medium uppercase bg-accent-soft/20 text-accent">
-                      {item.drugClass}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {showResults && searchResults.length === 0 && searchQuery.trim().length >= 2 && !isSearching && (
-            <div className="absolute z-10 mt-1 w-full rounded-lg border border-rule bg-surface p-3 text-center text-sm text-muted">
-              {t("noResults")}
-            </div>
-          )}
-
-          {/* Hidden inputs for form submission */}
-          <input type="hidden" name="itemCode" value={itemCode} />
-          <input type="hidden" name="itemName" value={itemName} />
-          <input type="hidden" name="unit" value={effectiveUnit} />
+          </Field>
         </div>
+        <p className="-mt-2 text-xs text-faint">{t("panel.orderRefHint")}</p>
+        <Field label={t("panel.destination")} required>
+          <input
+            {...bind("destination")}
+            required
+            maxLength={120}
+            autoComplete="off"
+            placeholder={t("panel.destinationPlaceholder")}
+            className={inputClass}
+          />
+        </Field>
+      </section>
 
-        {/* Unit - auto-filled from search, but editable */}
-        <div>
-          <label htmlFor="unit" className="block text-xs font-medium text-muted mb-1">
-            {t("unit")}
+      <section className="flex flex-col gap-4">
+        <h3 className={heading}>{t("panel.sectionItem")}</h3>
+        <div className="relative">
+          <label htmlFor={`${listId}-search`} className="text-sm font-medium text-foreground/90">
+            {t("panel.itemSearch")}
           </label>
           <input
+            id={`${listId}-search`}
             type="text"
-            id="unit"
-            name="unit"
-            value={effectiveUnit}
-            onChange={(e) => setUnitValue(e.target.value)}
-            placeholder={t("unitPlaceholder")}
-            className="w-full rounded-lg border border-rule bg-surface px-3 py-2 text-sm focus:ring-2 focus:ring-accent focus:border-transparent"
-            required
-            maxLength={20}
+            role="combobox"
+            aria-expanded={open && shown.length > 0}
+            aria-controls={listId}
+            aria-autocomplete="list"
+            aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
+            autoComplete="off"
+            value={query}
+            placeholder={t("panel.itemSearchPlaceholder")}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            onBlur={() => setOpen(false)}
+            onKeyDown={onSearchKey}
+            className={`${inputClass} mt-2`}
           />
+          <p className="mt-2 text-xs text-faint">{t("panel.itemSearchHint")}</p>
+
+          {open && searching && (
+            <ul
+              id={listId}
+              role="listbox"
+              className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-rule bg-surface p-1 shadow-[var(--shadow-pop)]"
+            >
+              {failed ? (
+                <li className="px-3 py-3 text-sm text-critical">{t("panel.searchFailed")}</li>
+              ) : shown.length === 0 ? (
+                <li className="px-3 py-3 text-sm text-muted">{t("panel.noResults")}</li>
+              ) : (
+                shown.map((hit, index) => (
+                  <li
+                    key={hit.id}
+                    id={`${listId}-${index}`}
+                    role="option"
+                    aria-selected={index === active}
+                    // Mouse-down, not click, and default prevented: the input must
+                    // keep focus, or its blur closes the list before a tap lands.
+                    // Taller than a mouse needs: this is pressed with a thumb.
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      pick(hit);
+                    }}
+                    className={`min-h-11 cursor-pointer rounded-lg px-3 py-2.5 text-sm ${
+                      index === active ? "bg-accent-soft" : "active:bg-surface-2 hover:bg-surface-2"
+                    }`}
+                  >
+                    <span className="font-medium">{hit.name}</span>
+                    <span className="ml-2 font-mono text-xs text-faint">{hit.code}</span>
+                  </li>
+                ))
+              )}
+            </ul>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label htmlFor="qty" className="block text-xs font-medium text-muted mb-1">
-              {t("qty")}
-            </label>
+          <Field label={t("panel.itemCode")} required>
             <input
-              type="number"
-              id="qty"
-              name="qty"
-              min="1"
-              step="1"
-              value="1"
-              className="w-full rounded-lg border border-rule bg-surface px-3 py-2 text-sm focus:ring-2 focus:ring-accent focus:border-transparent"
+              {...bind("itemCode")}
               required
+              maxLength={40}
+              autoComplete="off"
+              autoCapitalize="characters"
+              placeholder={t("panel.itemCodePlaceholder")}
+              className={`${inputClass} font-mono`}
             />
-          </div>
-
-          <div>
-            <label htmlFor="unitCost" className="block text-xs font-medium text-muted mb-1">
-              {t("unitCost")}
-            </label>
+          </Field>
+          <Field label={t("panel.unit")} required>
             <input
-              type="number"
-              id="unitCost"
-              name="unitCost"
-              min="0"
-              step="1"
-              value="0"
-              className="w-full rounded-lg border border-rule bg-surface px-3 py-2 text-sm focus:ring-2 focus:ring-accent focus:border-transparent"
+              {...bind("unit")}
+              required
+              maxLength={20}
+              autoComplete="off"
+              placeholder={t("panel.unitPlaceholder")}
+              className={inputClass}
             />
+          </Field>
+        </div>
+
+        <Field label={t("panel.itemName")} required>
+          <input
+            {...bind("itemName")}
+            required
+            maxLength={200}
+            autoComplete="off"
+            placeholder={t("panel.itemNamePlaceholder")}
+            className={inputClass}
+          />
+        </Field>
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <h3 className={heading}>{t("panel.sectionPrice")}</h3>
+        {/* Quantity on a row of its own on a phone, the two prices side by side
+            below it: three columns of money in 300px left every label wrapping
+            to three lines. */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-2">
+          <div className="col-span-2 sm:col-span-1 xl:col-span-2">
+            <Field label={t("panel.qty")} required>
+              <input {...bind("qty")} required inputMode="numeric" autoComplete="off" className={`${inputClass} tabular`} />
+            </Field>
           </div>
+          <Field label={t("panel.unitCost")} required>
+            <input {...bind("unitCost")} required inputMode="numeric" autoComplete="off" className={`${inputClass} tabular`} />
+          </Field>
+          <Field label={t("panel.unitPrice")} required>
+            <input {...bind("unitPrice")} required inputMode="numeric" autoComplete="off" className={`${inputClass} tabular`} />
+          </Field>
         </div>
 
-        <div>
-          <label htmlFor="unitPrice" className="block text-xs font-medium text-muted mb-1">
-            {t("unitPrice")}
-          </label>
-          <input
-            type="number"
-            id="unitPrice"
-            name="unitPrice"
-            min="0"
-            step="1"
-            value="0"
-            className="w-full rounded-lg border border-rule bg-surface px-3 py-2 text-sm focus:ring-2 focus:ring-accent focus:border-transparent"
-          />
-        </div>
+        {tax.enabled && (
+          <div>
+            {/* The whole row is the target, not just the box: 16px is not a thing to hit. */}
+            <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-lg py-1 text-sm">
+              <input
+                type="checkbox"
+                name="taxed"
+                checked={taxed}
+                onChange={(event) => {
+                  setDismissed(state.saved);
+                  setTaxed(event.target.checked);
+                }}
+                className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--accent)]"
+              />
+              <span>
+                <span className="font-medium">
+                  {rate ? t("panel.taxCheckbox", { rate: ratePercent }) : t("panel.taxCheckboxPlain")}
+                </span>
+                <span className="mt-0.5 block text-xs text-faint">
+                  {tax.mode === "exclusive" ? t("panel.taxOnTopNote") : t("panel.taxInsideNote")}
+                </span>
+              </span>
+            </label>
+            {taxed && !rate && <p className="mt-1 text-xs text-critical">{t("panel.taxNoRate")}</p>}
+          </div>
+        )}
 
-        <div>
-          <label htmlFor="partnerName" className="block text-xs font-medium text-muted mb-1">
-            {t("partnerName")}
-          </label>
-          <input
-            type="text"
-            id="partnerName"
-            name="partnerName"
-            placeholder={t("partnerNamePlaceholder")}
-            className="w-full rounded-lg border border-rule bg-surface px-3 py-2 text-sm focus:ring-2 focus:ring-accent focus:border-transparent"
-            maxLength={100}
-          />
-        </div>
+        {lineTotal !== null && (
+          <p className="rounded-lg bg-surface-2 px-3.5 py-2.5 text-sm text-muted">
+            {t("panel.lineTotal")}:{" "}
+            <span className="tabular font-semibold text-foreground">{formatMoney(lineTotal)}</span>
+            {preview && (
+              <span className="mt-0.5 block text-xs text-faint">
+                {tax.mode === "exclusive"
+                  ? t("panel.taxPreviewTop", {
+                      tax: formatMoney(preview.taxAmount),
+                      total: formatMoney(preview.total),
+                    })
+                  : t("panel.taxPreviewInside", { tax: formatMoney(preview.taxAmount) })}
+              </span>
+            )}
+          </p>
+        )}
+      </section>
 
-        <div>
-          <label htmlFor="destination" className="block text-xs font-medium text-muted mb-1">
-            {t("destination")}
-          </label>
-          <input
-            type="text"
-            id="destination"
-            name="destination"
-            placeholder={t("destinationPlaceholder")}
-            className="w-full rounded-lg border border-rule bg-surface px-3 py-2 text-sm focus:ring-2 focus:ring-accent focus:border-transparent"
-            maxLength={100}
-          />
-        </div>
+      {/* Optional, and so out of the way until wanted. A closed <details> still
+          submits what is inside it, so the pharmacist default is not lost. */}
+      <details className="group rounded-xl border border-rule">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3.5 py-2.5 [&::-webkit-details-marker]:hidden">
+          <span>
+            <span className="block text-sm font-medium">{t("panel.moreDetails")}</span>
+            <span className="block text-xs text-faint">{t("panel.moreDetailsHint")}</span>
+          </span>
+          <span aria-hidden="true" className="text-muted transition-transform group-open:rotate-180">
+            ▾
+          </span>
+        </summary>
+        <div className="flex flex-col gap-4 px-3.5 pt-1 pb-4">
+          <Field label={t("panel.partnerName")}>
+            <input
+              {...bind("partnerName")}
+              maxLength={120}
+              autoComplete="off"
+              placeholder={t("panel.partnerNamePlaceholder")}
+              className={inputClass}
+            />
+          </Field>
 
-        <div>
-          <label htmlFor="notes" className="block text-xs font-medium text-muted mb-1">
-            {t("notes")}
-          </label>
-          <textarea
-            id="notes"
-            name="notes"
-            rows={2}
-            placeholder={t("notesPlaceholder")}
-            className="w-full rounded-lg border border-rule bg-surface px-3 py-2 text-sm focus:ring-2 focus:ring-accent focus:border-transparent resize-none"
-            maxLength={500}
-          />
-        </div>
+          <Field label={t("panel.pharmacist")}>
+            <select {...bind("pharmacistId")} className={inputClass}>
+              <option value="">{t("panel.pharmacistNone")}</option>
+              {pharmacists.map((pharmacist) => (
+                <option key={pharmacist.id} value={pharmacist.id}>
+                  {pharmacist.fullName}
+                </option>
+              ))}
+            </select>
+          </Field>
 
-        <div>
-          <label htmlFor="pharmacistId" className="block text-xs font-medium text-muted mb-1">
-            {t("pharmacistId")}
-          </label>
-          <input
-            type="text"
-            id="pharmacistId"
-            name="pharmacistId"
-            placeholder={t("pharmacistIdPlaceholder")}
-            className="w-full rounded-lg border border-rule bg-surface px-3 py-2 text-sm focus:ring-2 focus:ring-accent focus:border-transparent"
-            maxLength={50}
-          />
+          <Field label={t("panel.notes")}>
+            <textarea {...bind("notes")} rows={2} maxLength={500} className={`${inputClass} resize-none`} />
+          </Field>
         </div>
+      </details>
 
-        <button
-          type="submit"
-          disabled={isPending}
-          className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-contrast transition-colors hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isPending ? t("saving") : t("save")}
+      {/* Stuck to the bottom of the screen on a phone, so Save is always under the
+          thumb however far down the form has been scrolled; an ordinary button
+          from `xl`, where the whole form fits. The negative margins cancel the
+          card's own padding so the bar sits flush with its edges. */}
+      <div className="sticky bottom-0 z-10 -mx-4 -mb-4 rounded-b-2xl border-t border-rule bg-surface/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:-mx-5 sm:-mb-5 sm:px-5 xl:static xl:m-0 xl:border-0 xl:bg-transparent xl:p-0 xl:backdrop-blur-none">
+        <button type="submit" disabled={pending} className={`${buttonPrimaryLarge} disabled:opacity-60`}>
+          {pending ? t("panel.saving") : t("panel.save")}
         </button>
       </div>
     </form>

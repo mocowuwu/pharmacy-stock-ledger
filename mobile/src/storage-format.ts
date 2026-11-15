@@ -97,8 +97,11 @@ export type ReceiptLine = {
 };
 
 export type Receipt = {
-  offlineNumber: string;
-  /** Offline-now at the sale (pass time, not the phone's clock), epoch ms. */
+  /** The temporary `OFF-…` number; null on a sale rung online, which never had one. */
+  offlineNumber: string | null;
+  /** The server's number, printed on a sale rung online. Absent on an offline receipt. */
+  saleNumber?: string | null;
+  /** Offline: offline-now at the sale (pass time, not the phone's clock). Online: the server's time. Epoch ms. */
   soldAt: number;
   cashierName: string;
   lines: ReceiptLine[];
@@ -126,7 +129,8 @@ export type QueueFile = { sales: QueueEntry[] };
 
 export type HistoryEntry = {
   clientId: string;
-  offlineNumber: string;
+  /** Null for a sale rung online: it went straight to the server and never queued. */
+  offlineNumber: string | null;
   /** The real number, once the server has booked it. */
   saleNumber: string | null;
   status: SyncResult["status"];
@@ -136,7 +140,7 @@ export type HistoryEntry = {
   receipt: Receipt;
 };
 
-/** `history.json` -- the last HISTORY_LIMIT synced sales, newest first. */
+/** `history.json` -- the last HISTORY_LIMIT sales the server has, synced or rung online, newest first. */
 export type HistoryFile = { sales: HistoryEntry[] };
 export const HISTORY_LIMIT = 200;
 

@@ -101,6 +101,13 @@ const ICONS: Record<string, ReactNode> = {
       <path d="M12 7.5v6M9.5 11l2.5 2.5 2.5-2.5M10.5 18h3" />
     </>
   ),
+  dashboards: (
+    <>
+      <rect x="3" y="3" width="18" height="5" rx="1.5" />
+      <rect x="3" y="11" width="8" height="10" rx="1.5" />
+      <path d="M15 12l2 2 4-4M15 19h6" />
+    </>
+  ),
   settings: (
     <>
       <circle cx="12" cy="12" r="3" />

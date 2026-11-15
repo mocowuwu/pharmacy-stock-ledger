@@ -70,12 +70,14 @@
       "users": "Akun staf dan hak akses",
       "settings": "Nama apotek, pajak, fitur",
       "app": "Pasang aplikasi apotek di HP",
-      "panel": "Catat distribusi panel apotek"
+      "panel": "Catat pesanan obat untuk dokter",
+      "dashboards": "Atur apa yang tampil di beranda tiap akun."
     },
     "openMenu": "Buka menu",
     "closeMenu": "Tutup menu",
     "collapse": "Ciutkan menu",
-    "expand": "Lebarkan menu"
+    "expand": "Lebarkan menu",
+    "dashboards": "Beranda Akun"
   },
   "auth": {
     "signIn": "Masuk",
@@ -284,7 +286,7 @@
     "item_archived": "Barang ini sudah diarsipkan.",
     "override_reason_required": "Isi alasan memilih bets selain yang paling cepat kedaluwarsa.",
     "sale_not_found": "Penjualan tidak ditemukan.",
-    "already_voided": "Penjualan ini sudah dibatalkan.",
+    "already_voided": "Entri itu sudah dibatalkan.",
     "not_enough": "Stok {item} kurang {short}.",
     "alert_not_found": "Peringatan tidak ditemukan.",
     "cannot_snooze_critical": "Peringatan kritis tidak dapat ditunda.",
@@ -327,7 +329,22 @@
     "import_not_found": "Impor itu tidak ditemukan.",
     "already_withdrawn": "Impor itu sudah ditarik.",
     "too_many_history_rows": "Berkas ini lebih dari 20.000 baris. Pisahkan per tahun atau per bulan.",
-    "review_not_open": "Tinjauan ini sudah ditutup."
+    "review_not_open": "Tinjauan ini sudah ditutup.",
+    "order_ref_required": "Nomor surat pesanan wajib diisi.",
+    "recipient_required": "Isi penerimanya: dokter atau klinik yang dipesankan.",
+    "too_long": "Teks terlalu panjang. Persingkat lalu coba lagi.",
+    "date_in_future": "Tanggal pesanan tidak boleh setelah hari ini.",
+    "restricted_class": "Narkotika dan psikotropika tidak bisa dicatat sebagai panel. Gunakan surat pesanan khusus dan alur stok biasa.",
+    "not_a_pharmacist": "Apoteker yang dipilih tidak valid.",
+    "entry_not_found": "Entri tidak ditemukan.",
+    "tax_unavailable": "Apotek ini belum menarik PPN. Nyalakan PPN di Pengaturan, atau matikan PPN pada pesanan ini.",
+    "no_tax_rate": "Tidak ada tarif PPN yang berlaku pada tanggal pesanan. Tambahkan tarifnya di Pengaturan.",
+    "not_pending": "Entri itu sudah tidak menunggu keputusan.",
+    "cannot_decide_own": "Entri yang Anda catat sendiri harus diputuskan oleh orang lain.",
+    "already_rejected": "Entri itu sudah ditolak.",
+    "unknown_widget": "Widget itu tidak ada.",
+    "duplicate_widget": "Ada widget yang terdaftar dua kali.",
+    "not_owner": "Hanya pemilik yang dapat mengatur beranda."
   },
   "itemsImport": {
     "title": "Impor Katalog",
@@ -661,7 +678,11 @@
     "noSalesYet": "Belum ada penjualan pada periode ini.",
     "catalogue": "Katalog",
     "takingsToday": "Penjualan hari ini",
-    "transactionsToday": "{count} transaksi"
+    "transactionsToday": "{count} transaksi",
+    "panelPending": "{count} pesanan Panel Apotek menunggu persetujuan Anda.",
+    "panelPendingOpen": "Lihat",
+    "includesPanel": "termasuk Panel Apotek {amount}",
+    "emptyLayout": "Belum ada yang ditambahkan ke beranda Anda. Pemilik yang menentukan isinya."
   },
   "returns": {
     "title": "Retur",
@@ -836,7 +857,7 @@
       "received": "Diterima bersih",
       "unrecordedMethod": "Tidak tercatat",
       "byHour": "Jam ramai",
-      "byHourNote": "Jumlah transaksi kasir per jam. Riwayat impor tidak memiliki jam.",
+      "byHourNote": "Jumlah transaksi kasir per jam. Riwayat impor dan pesanan Panel Apotek tidak memiliki jam.",
       "byItemNote": "Kelas ABC: A = barang yang bersama-sama menghasilkan 80% penjualan ({a} barang), B = 15% berikutnya ({b}), C = sisanya ({c}). Barang kelas A jangan sampai kosong.",
       "abc": "ABC",
       "cashier": "Kasir",
@@ -989,6 +1010,13 @@
       "comparedWith": "Dibandingkan dengan periode:",
       "notes": "Catatan",
       "generatedBy": "Dibuat oleh {name}, {when}"
+    },
+    "panel": {
+      "included": "Termasuk pesanan Panel Apotek: {revenue} dari {entries} entri. Dihitung sebagai penjualan, modal, dan margin, tetapi bukan transaksi kasir dan tidak masuk rata-rata penjualan.",
+      "includedMargin": "Termasuk pesanan Panel Apotek: penjualan {revenue} beserta modalnya, sesuai harga beli yang dicatat pada tiap entri.",
+      "open": "Lihat entri",
+      "tag": "panel",
+      "notInCatalogue": "panel, tidak ada di katalog"
     }
   },
   "users": {
@@ -1091,7 +1119,7 @@
       "import": "Impor dari spreadsheet",
       "importHint": "Tombol Impor di layar Katalog. Siapa yang boleh memakainya tetap diatur lewat izin \"Mengimpor katalog\" per akun.",
       "panel": "Panel Apotek",
-      "panelHint": "Catat distribusi panel apotek (pinjam nama apotek ke PBF/MR). Jika mati, layar Panel disembunyikan dari menu."
+      "panelHint": "Catat obat yang dipesankan apotek untuk dokter (tidak memengaruhi stok). Jika mati, layar Panel disembunyikan dari menu."
     },
     "tax": "PPN",
     "taxEnabled": "Pungut PPN",
@@ -1154,7 +1182,14 @@
     "demoConfirm": "Ketik {phrase} untuk mengonfirmasi",
     "demoWipe": "Hapus data demo",
     "demoWiped": "Data demo dihapus. Katalog, stok dan riwayat kosong; akun dan pengaturan tidak tersentuh.",
-    "demoKeeps": "Akun, izin, pengaturan, tarif pajak dan log audit tetap ada. Barang, stok, buku besar, penjualan, retur, pemusnahan, opname dan peringatan tidak."
+    "demoKeeps": "Akun, izin, pengaturan, tarif pajak dan log audit tetap ada. Barang, stok, buku besar, penjualan, retur, pemusnahan, opname dan peringatan tidak.",
+    "panelSection": "Panel Apotek",
+    "panelSectionHint": "Aturan untuk pesanan yang dicatat di Panel Apotek.",
+    "panelTaxDefault": "PPN menyala untuk pesanan Panel baru",
+    "panelTaxDefaultHint": "Hanya berlaku bila apotek menarik PPN (pengaturan PPN di atas) dan ada tarif yang berlaku. Setiap pesanan tetap bisa dinyalakan atau dimatikan di formulirnya.",
+    "panelApproval": "Pesanan Panel perlu disetujui",
+    "panelApprovalHint": "Pesanan dari siapa pun selain pemilik menunggu keputusan akun yang punya hak menyetujui. Selama menunggu, pesanan belum dihitung di laporan, dashboard, maupun ringkasan harian.",
+    "panelTaxNeedsTax": "PPN apotek sedang mati, jadi pesanan Panel tidak membawa PPN. Nyalakan \"Tarik PPN\" di bagian PPN agar pengaturan ini berlaku."
   },
   "permission": {
     "items": {
@@ -1172,9 +1207,7 @@
     "stock": {
       "adjust": "Menyesuaikan jumlah",
       "dispose": "Memusnahkan stok",
-      "count": "Menjalankan stok opname",
-      "view": "Melihat panel apotek",
-      "create": "Mencatat panel apotek"
+      "count": "Menjalankan stok opname"
     },
     "suppliers": {
       "manage": "Mengelola pemasok"
@@ -1208,6 +1241,12 @@
     },
     "audit": {
       "view": "Membaca log audit"
+    },
+    "panel": {
+      "view": "Melihat entri panel apotek",
+      "create": "Mencatat entri panel apotek",
+      "void": "Membatalkan entri panel apotek",
+      "approve": "Menyetujui atau menolak entri panel apotek"
     }
   },
   "permissionGroup": {
@@ -1252,7 +1291,9 @@
       "reports": "Ringkasan penjualan, stok dan keuntungan untuk periode yang Anda pilih.",
       "users": "Akun untuk setiap staf, dan apa saja yang boleh mereka lakukan.",
       "settings": "Nama apotek, pajak, struk, dan fitur mana saja yang dipakai.",
-      "app": "Apotek di HP, termasuk kasir cadangan yang tetap bisa menjual saat server mati."
+      "app": "Apotek di HP, termasuk kasir cadangan yang tetap bisa menjual saat server mati.",
+      "panel": "Untuk obat yang dipesankan apotek atas nama dokter.",
+      "dashboards": "Atur apa yang tampil di beranda tiap akun."
     },
     "outro": {
       "title": "Sekian semuanya",
@@ -1547,6 +1588,28 @@
             "title": "Data demo",
             "body": "Semua obat, stok dan penjualan contoh. Hapus di sini sebelum memasukkan barang sendiri, karena penghapusan mengosongkan seluruh katalog. Akun dan pengaturan tetap ada."
           }
+        },
+        "panel": {
+          "range": {
+            "title": "Pilih periode",
+            "body": "Tentukan rentang tanggal untuk angka dan daftar. Unduhan memakai periode yang sama."
+          },
+          "totals": {
+            "title": "Totalnya",
+            "body": "Jumlah entri, jumlah barang, dan total penjualan untuk periode itu. Entri yang dibatalkan tidak dihitung. Harga beli dan margin hanya tampil untuk akun yang boleh melihatnya."
+          },
+          "form": {
+            "title": "Entri baru",
+            "body": "Satu baris untuk satu barang dalam pesanan. Isi nomor surat pesanan lebih dulu: nomor itu tetap terisi untuk barang berikutnya. Ini tidak pernah mengubah stok apotek."
+          },
+          "list": {
+            "title": "Daftar entri",
+            "body": "Yang terbaru di atas. Entri yang salah bisa dibatalkan di sini dengan alasan: tetap tersimpan, tetapi tidak dihitung."
+          },
+          "export": {
+            "title": "Cetak dan unduh",
+            "body": "Cetak, atau unduh Excel dan CSV untuk periode yang sama. Unduhan berisi semua entri, bukan hanya yang muat di layar."
+          }
         }
       }
     }
@@ -1599,7 +1662,8 @@
               "1": "Setelah masuk, Anda tiba di Beranda.",
               "2": "Empat angka di atas perlu dicek setiap pagi: obat kedaluwarsa yang masih di rak, obat yang habis, obat yang segera kedaluwarsa, dan obat yang stoknya menipis.",
               "3": "Di bawahnya ada omzet hari ini, grafik 30 hari terakhir, dan jumlah isi katalog.",
-              "4": "Klik salah satu angka untuk membuka peringatan atau daftar di baliknya."
+              "4": "Klik salah satu angka untuk membuka peringatan atau daftar di baliknya.",
+              "5": "Pemilik yang menentukan isi beranda tiap akun. Jika ada bagian yang Anda cari tidak muncul, tanyakan kepada pemilik."
             }
           },
           "alerts": {
@@ -2200,7 +2264,8 @@
               "1": "Ringkasan penjualan dimulai dari penjualan kotor, dikurangi diskon, retur, dan PPN yang ada di dalam harga, sampai ke penjualan bersih dan total uang yang diterima.",
               "2": "Grafik harian menunjukkan periode ini beserta periode sebelumnya. Jam ramai menunjukkan jam berapa kasir paling sibuk.",
               "3": "Tabel per barang bisa diurutkan dengan mengklik judul kolom, dan dicari dengan nama atau kode. Kelas ABC menandai barang yang menghasilkan 80% penjualan (A): barang ini jangan sampai kosong.",
-              "4": "Per cara bayar: uang masuk dikurangi uang retur. Cocokkan dengan kas dan mutasi rekening. Penjualan yang dibatalkan tidak dihitung di angka mana pun."
+              "4": "Per cara bayar: uang masuk dikurangi uang retur. Cocokkan dengan kas dan mutasi rekening. Penjualan yang dibatalkan tidak dihitung di angka mana pun.",
+              "5": "Pesanan yang dicatat di Panel Apotek ikut dihitung di sini, sebagai penjualan dan jumlah barang, tetapi bukan transaksi kasir. Di tabel diberi tanda \"panel\"."
             }
           },
           "movements": {
@@ -2217,7 +2282,8 @@
               "1": "Laba kotor: penjualan bersih dikurangi harga pokok (HPP). Harga pokok adalah yang dicatat saat setiap bets diterima, jadi harga baru tidak mengubah laba bulan lalu.",
               "2": "Penjualan bersih sudah dikurangi diskon dan tidak termasuk PPN, jadi laba tidak terlihat lebih besar daripada yang sebenarnya.",
               "3": "Nilai stok: nilai isi rak saat ini menurut harga beli, dan berapa lama lagi waktu untuk menjualnya.",
-              "4": "Kerugian kedaluwarsa: apa yang dimusnahkan dan mengapa. Pemasok: apa yang dikirim setiap pemasok dan berapa yang akhirnya dimusnahkan."
+              "4": "Kerugian kedaluwarsa: apa yang dimusnahkan dan mengapa. Pemasok: apa yang dikirim setiap pemasok dan berapa yang akhirnya dimusnahkan.",
+              "5": "Pesanan Panel Apotek juga masuk ke angka laba, dengan harga beli yang dicatat pada tiap entri."
             }
           },
           "export": {
@@ -2349,6 +2415,14 @@
               "2": "Ketik kalimat konfirmasi untuk menghapusnya. Akun, pengaturan, tarif pajak, dan log audit tetap ada."
             },
             "warn": "Menghapus data demo mengosongkan seluruh katalog. Lakukan sebelum memasukkan barang sungguhan, jangan sesudahnya."
+          },
+          "panelRules": {
+            "title": "Aturan Panel Apotek",
+            "steps": {
+              "1": "Di bagian Panel Apotek, PPN bisa dinyalakan secara bawaan untuk pesanan Panel baru. Berlaku hanya bila apotek menarik PPN dan ada tarif yang berlaku, dan tiap pesanan tetap bisa mengubahnya.",
+              "2": "Anda juga bisa mewajibkan persetujuan: pesanan dari siapa pun selain pemilik menunggu akun yang punya hak menyetujui, dan belum dihitung sebelum diputuskan."
+            },
+            "tip": "Berikan hak menyetujui di layar Akun. Hak itu ditandai sebagai sensitif."
           }
         }
       },
@@ -2369,17 +2443,17 @@
             "title": "Masuk",
             "steps": {
               "1": "Selalu masuk di layar aplikasi sendiri, dengan nama pengguna dan kata sandi biasa.",
-              "2": "Aplikasi lalu membuka situs apotek, dan Anda memakainya persis seperti di komputer.",
-              "3": "Keluar dari situs membawa Anda kembali ke layar masuk aplikasi."
+              "2": "Di Kasir, aplikasi membuka kasirnya sendiri: setiap penjualan langsung tercatat di server dan struk memakai nomor aslinya. HP lain membuka situs apotek, yang dipakai persis seperti di komputer.",
+              "3": "Keluar membawa Anda kembali ke layar masuk aplikasi. Di Kasir, situs apotek ada di menu perangkat (ikon roda gigi di layar masuk)."
             },
             "warn": "Anda hanya bisa masuk offline di Kasir jika sudah masuk online di HP itu dalam 24 jam terakhir."
           },
           "offline": {
             "title": "Saat server mati",
             "steps": {
-              "1": "Jika server berhenti menjawab, muncul bilah kuning. Di Kasir, tekan Buka kasir offline.",
+              "1": "Jika server berhenti menjawab, Kasir tetap jalan sendiri: bilah kuning memberi tahu bahwa penjualan disimpan di HP. Jika aplikasi tertutup, masuk lalu pilih kasir offline.",
               "2": "Masuk, cari obat dengan nama atau barcode, dan jual seperti biasa. Stok kedaluwarsa ditolak.",
-              "3": "Struk memakai nomor sementara yang diawali OFF-. Berikan ke pelanggan seperti biasa.",
+              "3": "Hanya saat itu struk memakai nomor sementara yang diawali OFF-. Berikan ke pelanggan seperti biasa; penjualan dikirim begitu server kembali.",
               "4": "Saat offline hanya bisa menjual. Penerimaan barang, retur, pembatalan, dan stok opname menunggu server kembali."
             },
             "warn": "Kasir harus terhubung ke server paling tidak sekali setiap 24 jam. Setelah itu, atau setelah HP dinyalakan ulang, kasir terkunci sampai bisa terhubung lagi."
@@ -2408,6 +2482,83 @@
               "2": "Jika HP hilang atau tidak dipakai lagi, tekan Cabut. HP itu tidak bisa lagi masuk atau mengirim apa pun."
             },
             "tip": "Sebelum mencabut Kasir, biarkan terhubung sekali bila bisa, agar penjualan offline-nya sampai ke server."
+          }
+        }
+      },
+      "panel": {
+        "title": "Mencatat pesanan panel untuk dokter",
+        "summary": "Mencatat obat yang dipesankan apotek untuk dokter, untuk rekap data dan keuangan. Stok apotek tidak berubah.",
+        "sections": {
+          "what": {
+            "title": "Untuk apa Panel Apotek",
+            "steps": {
+              "1": "Panel Apotek dipakai untuk mencatat obat yang dipesankan apotek atas nama dokter, dengan harga yang disepakati dengan dokter.",
+              "2": "Pesanan dibuat dengan surat pesanan apotek sendiri, jadi setiap entri menyebut nomor surat pesanan itu.",
+              "3": "Entri tidak mengambil dan tidak menambah stok di rak. Ini hanya catatan untuk data dan rekap keuangan.",
+              "4": "Penjualan dan modalnya juga masuk ke laporan Penjualan dan Laba kotor, jadi angka utama ikut menghitungnya.",
+              "5": "Kalau apotek meminta persetujuan, pesanan dari siapa pun selain pemilik menunggu akun yang berhak menyetujui, dan belum dihitung sebelum itu."
+            },
+            "tip": "Kalau obatnya ikut masuk ke rak apotek, terima dan jual dengan cara biasa supaya stok dan tanggal kedaluwarsanya tetap benar."
+          },
+          "enter": {
+            "title": "Mencatat satu entri",
+            "steps": {
+              "1": "Buka Panel Apotek dari menu. Di ponsel, tekan Entri baru di bawah judul untuk membuka formulirnya.",
+              "2": "Periksa tanggal pesanan, lalu ketik nomor surat pesanan.",
+              "3": "Cari obat di katalog, atau ketik sendiri kode dan nama barangnya.",
+              "4": "Isi jumlah, harga beli, dan harga jual per satuan.",
+              "5": "Bila apotek menarik PPN, centang atau hapus centang Kenakan PPN untuk pesanan ini. Formulir menampilkan PPN dan jumlah yang dibayar dokter.",
+              "6": "Isi penerimanya (dokter atau klinik), dan PBF bila ingin dicatat.",
+              "7": "Tekan Simpan. Setiap entri mendapat nomornya sendiri."
+            },
+            "warn": "Narkotika dan psikotropika tidak bisa dicatat di sini. Obat itu dipesan dengan surat pesanan khusus dan lewat alur stok yang biasa."
+          },
+          "several": {
+            "title": "Beberapa barang dalam satu pesanan",
+            "steps": {
+              "1": "Setelah disimpan, nomor surat pesanan, tanggal, penerima, dan PBF tetap terisi di formulir.",
+              "2": "Hanya barang, jumlah, harga, dan catatan yang dikosongkan. Cari barang berikutnya lalu simpan lagi."
+            },
+            "tip": "Harga ditulis dalam rupiah penuh. 15.000 berarti lima belas ribu."
+          },
+          "read": {
+            "title": "Membaca layar",
+            "steps": {
+              "1": "Pilih periode di atas. Angka, daftar, dan unduhan memakai periode yang sama.",
+              "2": "Kotak di atas menunjukkan jumlah entri, jumlah barang, dan total penjualan. Entri yang dibatalkan, ditolak, atau menunggu persetujuan tidak dihitung.",
+              "3": "Daftar menampilkan yang terbaru lebih dulu. Harga satuan tertulis di bawah total tiap baris, dan PPN-nya di bawah itu.",
+              "4": "Harga beli dan margin hanya tampil untuk akun yang boleh melihat laporan keuangan. Margin dihitung dari harga dikurangi PPN yang sudah termasuk di dalamnya.",
+              "5": "Kotak PPN muncul bila ada pesanan pada periode itu yang membawa PPN."
+            }
+          },
+          "void": {
+            "title": "Membatalkan entri yang salah",
+            "steps": {
+              "1": "Cari entrinya di daftar, lalu tekan Batalkan di ujung barisnya.",
+              "2": "Tulis alasannya, lalu tekan Batalkan entri."
+            },
+            "warn": "Entri yang dibatalkan tetap tersimpan dengan nama pembatal dan alasannya, tetapi tidak masuk total mana pun. Pembatalan tidak bisa dikembalikan: catat entri baru yang benar."
+          },
+          "export": {
+            "title": "Mencetak dan mengunduh rekap",
+            "steps": {
+              "1": "Tombol Cetak, Excel, dan CSV ada di kanan atas, di bawah judul.",
+              "2": "Cetak: halaman dicetak di kertas A4 dengan nama apotek, periode, dan siapa yang mencetak. Formulir entri tidak ikut tercetak.",
+              "3": "Excel dan CSV memuat semua entri pada periode yang dipilih, bukan hanya yang muat di layar.",
+              "4": "Excel: lembar Ringkasan, lembar Entri, dan lembar Entri dibatalkan bila ada. Angkanya angka sungguhan, jadi bisa dijumlahkan.",
+              "5": "CSV: hanya entri yang berlaku, tanpa yang dibatalkan."
+            },
+            "tip": "Kirim file Excel ke akuntan untuk rekap bulanan."
+          },
+          "approve": {
+            "title": "Menyetujui pesanan",
+            "steps": {
+              "1": "Bila persetujuan dinyalakan, pesanan dari siapa pun selain pemilik tampil sebagai Menunggu persetujuan dan belum dihitung.",
+              "2": "Akun yang berhak menyetujui melihat pemberitahuan jumlah yang menunggu, di sini dan di dashboard. Tekan Tampilkan untuk melihat semua pesanan yang menunggu, dari tanggal mana pun.",
+              "3": "Tekan Setujui agar pesanan dihitung, atau Tolak dan tulis alasannya. Pesanan yang ditolak tetap tersimpan dan tidak pernah dihitung.",
+              "4": "Anda tidak bisa memutuskan pesanan yang Anda catat sendiri. Harus orang lain."
+            },
+            "tip": "Berikan hak menyetujui ke akun sesedikit mungkin. Pesanan pemilik tidak pernah ditahan: tidak ada yang di atasnya."
           }
         }
       }
@@ -2671,48 +2822,140 @@
   },
   "panel": {
     "title": "Panel Apotek",
-    "subtitle": "Catat distribusi panel apotek (pinjam nama apotek ke PBF/MR untuk obat keras)",
+    "subtitle": "Obat yang dipesankan apotek untuk dokter. Penjualan dan modalnya masuk ke laporan penjualan dan laba kotor; stok apotek tidak berubah.",
     "newEntry": "Entri baru",
-    "newEntryHint": "Isi data distribusi panel. Entri ini tidak memengaruhi stok, hanya untuk rekap data dan keuangan.",
-    "entryDate": "Tanggal entri",
+    "newEntryHint": "Catat satu barang dari surat pesanan. Entri ini tidak mengambil dan tidak menambah stok apotek.",
+    "entryDate": "Tanggal pesanan",
+    "orderRef": "Nomor surat pesanan",
+    "orderRefPlaceholder": "Contoh: SP/2026/10/014",
+    "orderRefHint": "Satu surat pesanan bisa memuat beberapa barang. Nomor ini tetap terisi untuk entri berikutnya.",
+    "itemSearch": "Cari di katalog",
+    "itemSearchPlaceholder": "Ketik kode atau nama (min. 2 huruf)",
+    "itemSearchHint": "Boleh dilewati: isi kode dan nama sendiri. Narkotika dan psikotropika tidak bisa dicatat di sini.",
+    "searching": "Mencari...",
+    "searchFailed": "Pencarian gagal. Isi kode dan nama sendiri.",
+    "noResults": "Tidak ada barang yang cocok",
     "itemCode": "Kode barang",
     "itemCodePlaceholder": "Contoh: PARA500",
     "itemName": "Nama barang",
     "itemNamePlaceholder": "Contoh: Paracetamol 500 mg",
-    "itemSearch": "Cari barang",
-    "itemSearchPlaceholder": "Ketik kode atau nama barang (min. 2 huruf)...",
-    "noResults": "Tidak ada barang yang cocok",
-    "clearSelection": "Hapus pilihan",
     "unit": "Satuan",
-    "unitPlaceholder": "Contoh: tablet, kapsul, botol",
+    "unitPlaceholder": "tablet, kapsul, botol",
     "qty": "Jumlah",
     "unitCost": "Harga beli / satuan",
     "unitPrice": "Harga jual / satuan",
-    "partnerName": "Nama PBF / MR / Distributor",
+    "lineTotal": "Total jual",
+    "partnerName": "PBF / distributor",
     "partnerNamePlaceholder": "Contoh: PT Kimia Farma",
-    "destination": "Tujuan (dokter, klinik, bidan, dll.)",
-    "destinationPlaceholder": "Contoh: Dr. Budi, Klinik Sehat",
+    "destination": "Penerima (dokter / klinik)",
+    "destinationPlaceholder": "Contoh: dr. Budi, Klinik Sehat",
     "notes": "Catatan",
-    "notesPlaceholder": "Catatan tambahan...",
-    "pharmacistId": "ID Apoteker penanggung jawab (opsional)",
-    "pharmacistIdPlaceholder": "Nomor SIPA atau nama apoteker",
+    "pharmacist": "Apoteker penanggung jawab",
+    "pharmacistNone": "Tidak dicantumkan",
     "save": "Simpan",
     "saving": "Menyimpan...",
-    "saved": "Entri panel tersimpan.",
-    "entryNumber": "Nomor",
-    "entryDateLabel": "Tanggal",
-    "item": "Barang",
-    "unitCostLabel": "Harga beli",
-    "unitPriceLabel": "Harga jual",
-    "margin": "Margin",
-    "partnerDestination": "Mitra / Tujuan",
-    "totalEntries": "Total entri",
-    "totalQty": "Total qty",
-    "totalCost": "Total modal",
+    "saved": "Entri {number} tersimpan.",
+    "voidedDone": "Entri {number} dibatalkan.",
+    "totalEntries": "Entri",
+    "totalQty": "Jumlah barang",
     "totalRevenue": "Total penjualan",
-    "totalMargin": "Total margin",
-    "empty": "Belum ada entri panel",
-    "emptyBody": "Tambahkan entri panel pertama Anda di formulir di samping.",
-    "showingFirst100": "Menampilkan 100 entri terbaru. Gunakan penyaring tanggal untuk melihat lebih banyak."
+    "totalCost": "Total modal",
+    "totalMargin": "Margin",
+    "number": "Nomor",
+    "date": "Tanggal",
+    "item": "Barang",
+    "margin": "Margin",
+    "parties": "Penerima / PBF",
+    "recordedBy": "Dicatat oleh",
+    "pharmacistName": "Apoteker: {name}",
+    "empty": "Belum ada entri panel pada periode ini",
+    "emptyBody": "Tambahkan entri pertama lewat formulir di samping.",
+    "showingFirst": "Menampilkan {count} entri terbaru. Persempit periode untuk melihat yang lain.",
+    "void": "Batalkan",
+    "voidReason": "Alasan pembatalan",
+    "voidConfirm": "Batalkan entri",
+    "voidedBadge": "Dibatalkan",
+    "voidedBy": "Dibatalkan oleh {name}",
+    "voidNote": "Entri tetap tersimpan, tetapi tidak dihitung dalam total.",
+    "export": {
+      "note": "Entri yang dibatalkan, ditolak, atau menunggu persetujuan ada di lembar tersendiri dan tidak dihitung dalam angka ini.",
+      "sheetEntries": "Entri",
+      "sheetVoided": "Entri dibatalkan",
+      "voidedBy": "Dibatalkan oleh",
+      "voidedOn": "Dibatalkan pada",
+      "tax": "PPN",
+      "taxMode": "Mode PPN",
+      "taxOnTop": "di atas harga",
+      "taxInside": "termasuk dalam harga",
+      "status": "Status",
+      "sheetPending": "Belum dihitung",
+      "decidedBy": "Diputuskan oleh",
+      "decisionNote": "Catatan keputusan"
+    },
+    "taxCheckbox": "Kenakan PPN {rate}",
+    "taxCheckboxPlain": "Kenakan PPN",
+    "taxOnTopNote": "PPN ditambahkan di atas harga jual.",
+    "taxInsideNote": "Harga jual sudah termasuk PPN.",
+    "taxNoRate": "Tidak ada tarif PPN yang berlaku pada tanggal pesanan. Tambahkan di Pengaturan, atau matikan PPN untuk pesanan ini.",
+    "taxPreviewTop": "PPN {tax}. Dokter membayar {total}.",
+    "taxPreviewInside": "Termasuk PPN {tax}.",
+    "totalTax": "PPN",
+    "taxLineTop": "+ PPN {tax}",
+    "taxLineInside": "termasuk PPN {tax}",
+    "statusPending": "Menunggu persetujuan",
+    "statusRejected": "Ditolak",
+    "notCounted": "Belum dihitung di laporan.",
+    "savedPending": "Entri {number} tersimpan dan menunggu persetujuan. Entri baru dihitung setelah disetujui.",
+    "needsApprovalHint": "Pesanan ini perlu disetujui akun yang berwenang sebelum dihitung.",
+    "approve": "Setujui",
+    "reject": "Tolak",
+    "rejectReason": "Alasan penolakan",
+    "rejectConfirm": "Tolak entri",
+    "approvedDone": "Entri {number} disetujui.",
+    "rejectedDone": "Entri {number} ditolak.",
+    "rejectedBy": "Ditolak oleh {name}",
+    "approvedBy": "Disetujui oleh {name}",
+    "pendingNotice": "{count} pesanan menunggu persetujuan.",
+    "pendingShow": "Tampilkan",
+    "pendingOnly": "Menampilkan pesanan yang menunggu persetujuan, dari tanggal mana pun.",
+    "pendingBack": "Kembali ke periode",
+    "pendingEmpty": "Tidak ada pesanan yang menunggu persetujuan.",
+    "newEntryOpen": "Entri baru",
+    "newEntryClose": "Tutup formulir",
+    "sectionOrder": "Pesanan",
+    "sectionItem": "Barang",
+    "sectionPrice": "Jumlah dan harga",
+    "moreDetails": "Rincian tambahan",
+    "moreDetailsHint": "PBF, apoteker, catatan (opsional)",
+    "for": "Untuk"
+  },
+  "dashboardEditor": {
+    "title": "Beranda Akun",
+    "subtitle": "Tentukan apa yang tampil di beranda tiap akun, dan urutannya.",
+    "back": "Kembali ke pengaturan",
+    "saved": "Beranda disimpan.",
+    "savedReset": "Beranda kembali ke bawaan.",
+    "accounts": "Akun",
+    "isDefault": "Bawaan",
+    "isCustom": "Diatur",
+    "forAccount": "Beranda untuk {name}",
+    "permissionNote": "Beranda hanya menentukan apa yang ditampilkan. Akun tetap tidak melihat apa pun yang tidak diizinkan oleh hak aksesnya, jadi menambah widget di sini tidak memberi siapa pun akses lebih.",
+    "notAllowed": "Hak akses akun ini tidak mencakupnya, jadi tidak akan tampil.",
+    "moveUp": "Naikkan",
+    "moveDown": "Turunkan",
+    "save": "Simpan beranda",
+    "useDefault": "Pakai bawaan",
+    "widget": {
+      "panel_waiting": "Pesanan Panel menunggu",
+      "panel_waitingHint": "Pemberitahuan saat pesanan Panel Apotek menunggu persetujuan akun ini.",
+      "alerts_summary": "Ringkasan stok",
+      "alerts_summaryHint": "Kedaluwarsa, stok habis, segera kedaluwarsa dan stok menipis; tiap kotak membuka daftarnya.",
+      "takings_today": "Penjualan hari ini",
+      "takings_todayHint": "Total hari ini dan jumlah transaksi.",
+      "sales_chart": "Grafik penjualan",
+      "sales_chartHint": "Penjualan 30 hari terakhir.",
+      "catalogue_counts": "Katalog",
+      "catalogue_countsHint": "Jumlah barang, kategori dan pemasok."
+    }
   }
 }

@@ -4,7 +4,11 @@ import { native } from "../native";
 import { ping } from "../lib/api";
 import {
   applySnapshotIfNew,
+  canResume,
   refreshSnapshot,
+  resumeOnline,
+  setLive,
+  snapshotDue,
   syncQueue,
   touchHighWater,
 } from "../lib/services";
@@ -54,7 +58,8 @@ function currentRoute(): { path: string; params: URLSearchParams } {
 export function App() {
   const [route, setRoute] = useState(currentRoute);
   const [device, setDeviceState] = useState<DeviceFile | null>(() => prepareDevice(store.readDevice()));
-  const [session, setSession] = useState<StoredUser | null>(null);
+  const [session, setSessionState] = useState<StoredUser | null>(null);
+  const sessionRef = useRef<StoredUser | null>(null);
   const [reachable, setReachable] = useState<boolean | null>(null);
   const [revision, setRevision] = useState(0);
   const [serverBack, setServerBack] = useState(false);
@@ -78,6 +83,50 @@ export function App() {
     setDeviceState(prepareDevice(d));
   }, []);
 
+  // Signing out also forgets the till session (and any password held to get one).
+  const setSession = useCallback((u: StoredUser | null) => {
+    if (!u) setLive(null);
+    sessionRef.current = u;
+    setSessionState(u);
+  }, []);
+
+  /**
+   * What the till does while the server answers, on every ping: anything on
+   * the phone goes at once, the copy is kept fresh, a cashier who signed in
+   * offline is taken online, and one the server no longer recognises
+   * (suspended, password changed) is signed out.
+   */
+  const maintaining = useRef(false);
+  const maintain = useCallback(async () => {
+    if (!device || maintaining.current) return;
+    maintaining.current = true;
+    try {
+      let changed = false;
+      if (store.readQueue().sales.length > 0) {
+        const sent = await syncQueue(device).catch(() => null);
+        if (sent && sent.sent > 0) changed = true;
+      }
+      if (device.role === "till" && snapshotDue()) {
+        await refreshSnapshot(device).catch(() => undefined);
+        changed = true;
+      }
+      const who = sessionRef.current;
+      if (who && device.role === "till") {
+        if (!store.readUsers().users.some((u) => u.id === who.id)) {
+          setSession(null);
+          changed = true;
+        } else if (canResume(who.id) && (await resumeOnline(store.readDevice() ?? device, who))) {
+          changed = true;
+        }
+      }
+      const current = store.readDevice();
+      if (current && current.deviceToken !== device.deviceToken) setDeviceState(current);
+      if (changed) bump();
+    } finally {
+      maintaining.current = false;
+    }
+  }, [device, bump, setSession]);
+
   const recheck = useCallback(async () => {
     if (!device) return false;
     const answer = await ping(device.serverUrl);
@@ -98,17 +147,17 @@ export function App() {
     if (!device) return;
     const first = setTimeout(() => void recheck(), 0);
     const timer = setInterval(() => {
-      void recheck();
+      void recheck().then((ok) => (ok ? maintain() : undefined));
       if (device.role === "till") touchHighWater();
     }, PING_EVERY_MS);
     return () => {
       clearTimeout(first);
       clearInterval(timer);
     };
-  }, [device, recheck]);
+  }, [device, recheck, maintain]);
 
   // The server came back: send the queue, then take a fresh copy (and with it
-  // a new pass), then invite the cashier to go online.
+  // a new pass), then take the cashier online.
   useEffect(() => {
     const before = wasReachable.current;
     wasReachable.current = reachable;
@@ -121,11 +170,12 @@ export function App() {
       if (cancelled) return;
       if (before === false) setServerBack(true);
       bump();
+      await maintain();
     })();
     return () => {
       cancelled = true;
     };
-  }, [reachable, device, bump]);
+  }, [reachable, device, bump, maintain]);
 
   // Back from the background -- after lunch, after a call -- the status and
   // the pass should be right on the first glance, not 15 seconds later.
@@ -190,7 +240,7 @@ export function App() {
         screen = <SetupScreen />;
         break;
       case "/login":
-        screen = <LoginScreen />;
+        screen = <LoginScreen key={route.params.get("to") ?? ""} website={route.params.get("to") === "web"} />;
         break;
       case "/home":
         screen = <HomeScreen />;

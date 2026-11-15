@@ -1,4 +1,4 @@
-import { and, between, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, between, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import type { Database } from "@/db/client";
 import { devicePasses, items, offlineSaleReviews, sales, users } from "@/db/schema";
 import { commitSale, SaleError } from "@/lib/stock/sale";
@@ -112,6 +112,8 @@ export async function replayOfflineSale(
       .where(
         and(
           eq(sales.deviceId, device.id),
+          // Sales the till rang online were never under the pass.
+          isNotNull(sales.offlineNumber),
           between(sales.soldAt, pass.issuedAt, pass.expiresAt),
         ),
       );

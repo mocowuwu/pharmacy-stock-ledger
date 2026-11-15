@@ -82,9 +82,17 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
         title={t("settings.title")}
         subtitle={t("settings.subtitle")}
         actions={
-          <Link href="/settings/app" className={buttonSecondary}>
-            {t("androidApp.title")}
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            {/* The owner's alone; a manager with settings.manage never sees it. */}
+            {session.user.isOwner && (
+              <Link href="/settings/dashboards" className={buttonSecondary}>
+                {t("dashboardEditor.title")}
+              </Link>
+            )}
+            <Link href="/settings/app" className={buttonSecondary}>
+              {t("androidApp.title")}
+            </Link>
+          </div>
         }
       />
 
@@ -254,6 +262,30 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
               </select>
             </Field>
           </Card>
+        </section>
+
+        <section>
+          <SectionHeading>{t("settings.panelSection")}</SectionHeading>
+          <p className="mb-3 -mt-1 text-sm text-muted">{t("settings.panelSectionHint")}</p>
+          <Card className="grid gap-4 p-5 sm:grid-cols-2">
+            <Toggle
+              name="panelTaxDefault"
+              label={t("settings.panelTaxDefault")}
+              hint={t("settings.panelTaxDefaultHint")}
+              defaultChecked={settings.panelTaxDefault}
+            />
+            <Toggle
+              name="panelApprovalRequired"
+              label={t("settings.panelApproval")}
+              hint={t("settings.panelApprovalHint")}
+              defaultChecked={settings.panelApprovalRequired}
+            />
+          </Card>
+          {settings.panelTaxDefault && !settings.taxEnabled && (
+            <Alert tone="warning" className="mt-3">
+              {t("settings.panelTaxNeedsTax")}
+            </Alert>
+          )}
         </section>
 
         <section>

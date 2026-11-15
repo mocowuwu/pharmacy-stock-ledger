@@ -30,7 +30,8 @@ import {
   type DeviceRow,
 } from "@/lib/offline/devices";
 import { closeOfflineReview, replayOfflineSale, retryOfflineReview } from "@/lib/offline/replay";
-import type { OfflineSale } from "@/lib/offline/contract";
+import { bookTillSale, type TillCashier } from "@/lib/offline/till-sale";
+import type { OfflineSale, TillSaleRequest } from "@/lib/offline/contract";
 import type { Database } from "@/db/client";
 
 let db: TestDb;
@@ -209,7 +210,10 @@ describe("the snapshot", () => {
     expect(item?.batches).toEqual([
       expect.objectContaining({ lotNumber: "SNAP-1", qty: 40 }),
     ]);
-    expect(JSON.stringify(snap)).not.toMatch(/unitCost|unit_cost|400/u);
+    // The seeded cost is 400. It is looked for as a JSON number standing alone, not
+    // as the three characters anywhere: the snapshot is full of random ids and
+    // timestamps, and "400" turns up inside one of those now and then.
+    expect(JSON.stringify(snap)).not.toMatch(/unitCost|unit_cost|[:,[]400[,\]}]/u);
 
     const hours = (Date.parse(snap.pass.expiresAt) - Date.parse(snap.pass.issuedAt)) / 3_600_000;
     expect(hours).toBe(24);
@@ -424,5 +428,179 @@ describe("offline schema guards", () => {
         db.update(offlineSaleReviews).set({ resolvedAt: new Date() }).where(eq(offlineSaleReviews.id, row.id)),
       ),
     ).toBe("offline_sale_reviews_resolution_is_explained");
+  });
+});
+
+describe("online till sales", () => {
+  const seller = (): TillCashier => ({
+    id: cashierId,
+    isPharmacist: false,
+    grant: { isOwner: false, permissions: new Set(["sales.create", "items.view"]) },
+  });
+
+  function tillSale(lines: TillSaleRequest["lines"], extra: Partial<TillSaleRequest> = {}): TillSaleRequest {
+    const total = saleTotals(
+      lines.map((l) => ({ ...l, taxExempt: false })),
+      extra.discount ?? 0,
+      null,
+    ).total;
+    return { clientId: randomUUID(), lines, discount: 0, paymentMethod: "tunai", tendered: null, notes: null, total, ...extra };
+  }
+
+  async function salesFor(clientId: string) {
+    return db.select().from(sales).where(eq(sales.offlineClientId, clientId));
+  }
+
+  it("books at once with its real number, tagged with the phone and no offline number", async () => {
+    const itemId = await makeItem("ON1", 1_500);
+    const early = await stock(itemId, "ON1-A", 2, 100);
+    const late = await stock(itemId, "ON1-B", 10, 300);
+    const sale = tillSale([{ itemId, qty: 3, unitPrice: 1_500 }], { tendered: 5_000 });
+
+    const outcome = await bookTillSale(d(), till, seller(), sale);
+    if (!outcome.ok) throw new Error(outcome.code);
+    expect(outcome.response.status).toBe("posted");
+    expect(outcome.response.saleNumber).toMatch(/^\d{6}-\d{4}$/u);
+    expect(outcome.response.total).toBe(4_500);
+    expect(outcome.response.change).toBe(500);
+    // FEFO, as the counter would: the earlier lot first.
+    expect(outcome.response.lines).toEqual([
+      expect.objectContaining({ batchId: early, lotNumber: "ON1-A", qty: 2, unitPrice: 1_500 }),
+      expect.objectContaining({ batchId: late, lotNumber: "ON1-B", qty: 1, unitPrice: 1_500 }),
+    ]);
+
+    const [row] = await salesFor(sale.clientId);
+    expect(row.saleNumber).toBe(outcome.response.saleNumber);
+    expect(row.offlineNumber).toBe(null);
+    expect(row.deviceId).toBe(till.id);
+    expect(row.cashierId).toBe(cashierId);
+    expect(dayOf(row.soldAt)).toBe(today());
+    expect(await qtyOf(early)).toBe(0);
+    expect(await qtyOf(late)).toBe(9);
+    expect(await findLedgerDrift(ex())).toEqual([]);
+  });
+
+  it("books a resend once, and a later offline copy of it is a duplicate", async () => {
+    const itemId = await makeItem("ON2", 1_000);
+    const batchId = await stock(itemId, "ON2-A", 10, 300);
+    const sale = tillSale([{ itemId, qty: 2, unitPrice: 1_000 }]);
+
+    const first = await bookTillSale(d(), till, seller(), sale);
+    const again = await bookTillSale(d(), till, seller(), sale);
+    if (!first.ok || !again.ok) throw new Error("expected both to answer");
+    expect(again.response.status).toBe("duplicate");
+    expect(again.response.saleNumber).toBe(first.response.saleNumber);
+
+    // The phone lost the answer and queued it offline under the same id.
+    const p = await pass();
+    const queued = offlineSale(p.id, sale.lines, { clientId: sale.clientId });
+    const replayed = await replayOfflineSale(d(), till, queued);
+    expect(replayed.status).toBe("duplicate");
+    expect(replayed.saleNumber).toBe(first.response.saleNumber);
+
+    expect(await salesFor(sale.clientId)).toHaveLength(1);
+    expect(await qtyOf(batchId)).toBe(8);
+  });
+
+  it("refuses a price that changed since the phone's copy, writing nothing", async () => {
+    const itemId = await makeItem("ON3", 2_000);
+    const batchId = await stock(itemId, "ON3-A", 10, 300);
+    const sale = tillSale([{ itemId, qty: 1, unitPrice: 1_800 }]);
+
+    const outcome = await bookTillSale(d(), till, seller(), sale);
+    expect(outcome).toEqual({
+      ok: false,
+      code: "price_changed",
+      detail: { items: [{ itemId, price: 2_000 }] },
+    });
+    expect(await salesFor(sale.clientId)).toHaveLength(0);
+    expect(await qtyOf(batchId)).toBe(10);
+  });
+
+  it("refuses a total the server would not charge, and rolls the sale back", async () => {
+    const itemId = await makeItem("ON4", 1_000);
+    const batchId = await stock(itemId, "ON4-A", 10, 300);
+    const sale = tillSale([{ itemId, qty: 2, unitPrice: 1_000 }], { total: 1_500 });
+
+    const outcome = await bookTillSale(d(), till, seller(), sale);
+    expect(outcome).toMatchObject({ ok: false, code: "total_changed" });
+    expect(await salesFor(sale.clientId)).toHaveLength(0);
+    expect(await qtyOf(batchId)).toBe(10);
+  });
+
+  it("refuses a shortfall outright -- nothing has left the shop, so nothing waits for review", async () => {
+    const itemId = await makeItem("ON5", 1_000);
+    const batchId = await stock(itemId, "ON5-A", 1, 300);
+    const sale = tillSale([{ itemId, qty: 2, unitPrice: 1_000 }]);
+
+    const outcome = await bookTillSale(d(), till, seller(), sale);
+    expect(outcome).toMatchObject({ ok: false, code: "insufficient_stock", detail: { short: 1 } });
+    expect(await salesFor(sale.clientId)).toHaveLength(0);
+    const reviews = await db.select().from(offlineSaleReviews).where(eq(offlineSaleReviews.clientId, sale.clientId));
+    expect(reviews).toHaveLength(0);
+    expect(await qtyOf(batchId)).toBe(1);
+  });
+
+  it("checks the cashier's own permissions, and only a till may sell", async () => {
+    const itemId = await makeItem("ON6", 1_000);
+    await stock(itemId, "ON6-A", 10, 300);
+
+    expect(
+      await bookTillSale(d(), till, seller(), tillSale([{ itemId, qty: 1, unitPrice: 1_000 }], { discount: 100 })),
+    ).toEqual({ ok: false, code: "discount_not_allowed" });
+    expect(
+      await bookTillSale(
+        d(),
+        till,
+        { ...seller(), grant: { isOwner: false, permissions: new Set(["items.view"]) } },
+        tillSale([{ itemId, qty: 1, unitPrice: 1_000 }]),
+      ),
+    ).toEqual({ ok: false, code: "forbidden" });
+    expect(
+      await bookTillSale(d(), { ...till, role: "management" }, seller(), tillSale([{ itemId, qty: 1, unitPrice: 1_000 }])),
+    ).toEqual({ ok: false, code: "not_till" });
+  });
+
+  it("does not count online sales against the offline pass", async () => {
+    const itemId = await makeItem("ON7", 1_000);
+    await stock(itemId, "ON7-A", 10, 300);
+    // A phone of its own, so no other test's sales fall under this pass.
+    const reg = await registerDevice(d(), { deviceId: randomUUID(), name: "HP Kasir 2", role: "till", appVersion: "1", presentedToken: null, userId: cashierId });
+    if (!reg.ok) throw new Error("setup");
+    const phone = reg.device;
+    const [tight] = await db
+      .insert(devicePasses)
+      .values({
+        deviceId: phone.id,
+        issuedAt: new Date(Date.now() - 60_000),
+        expiresAt: new Date(Date.now() + 3_600_000),
+        maxSales: 1,
+        maxTotal: 50_000_000,
+      })
+      .returning();
+
+    const online = await bookTillSale(d(), phone, seller(), tillSale([{ itemId, qty: 1, unitPrice: 1_000 }]));
+    expect(online.ok).toBe(true);
+    const replayed = await replayOfflineSale(
+      d(),
+      phone,
+      offlineSale(tight.id, [{ itemId, qty: 1, unitPrice: 1_000 }], { elapsedMs: 50_000 }),
+    );
+    expect(replayed.flags).not.toContain("over_pass_limit");
+  });
+
+  it("refuses an offline number on a sale with no phone id", async () => {
+    expect(
+      await violatedConstraint(
+        db.insert(sales).values({
+          saleNumber: "990101-9998",
+          cashierId,
+          subtotal: 0,
+          total: 0,
+          paymentMethod: "tunai",
+          offlineNumber: "OFF-XXX-0099",
+        }),
+      ),
+    ).toBe("sales_offline_is_complete");
   });
 });

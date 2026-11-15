@@ -15,6 +15,17 @@ describe("proxy", () => {
     expect(res.headers.get("location")).toBe("http://pharmacy.local/login?next=%2Fitems");
   });
 
+  // Next's request.url is the listen address (localhost); sending the phone
+  // there is "localhost refused to connect". The client's own Host wins.
+  it("redirects to the host the client used, not the listen address", () => {
+    const req = new NextRequest(new URL("/items", "http://localhost:3000"), {
+      headers: { host: "pharmacy.tail1234.ts.net", "x-forwarded-proto": "https" },
+    });
+    expect(proxy(req).headers.get("location")).toBe(
+      "https://pharmacy.tail1234.ts.net/login?next=%2Fitems",
+    );
+  });
+
   it("sends a browser holding a cookie away from the sign-in form", () => {
     const res = proxy(request("/login", "token"));
     expect(res.headers.get("location")).toBe("http://pharmacy.local/");

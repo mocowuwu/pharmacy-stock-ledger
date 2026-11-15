@@ -8,7 +8,7 @@ import { formatDate } from "@/lib/format/date";
 import type { Locale } from "@/i18n/config";
 import { KpiTile, Panel, percentFromBps, Statement, TableHeading } from "../_ui/Figures";
 import { DataTable } from "../_ui/DataTable";
-import { productName, tableLabels } from "../_ui/labels";
+import { notInCatalogueTag, productName, tableLabels } from "../_ui/labels";
 
 /**
  * Gross profit: net sales against the cost of what was sold.
@@ -84,6 +84,12 @@ export async function MarginReport({
         />
       </div>
 
+      {s.panelRevenue > 0 && (
+        <Alert tone="notice" className="mb-6">
+          {t("reports.panel.includedMargin", { revenue: formatMoney(s.panelRevenue) })}
+        </Alert>
+      )}
+
       {s.uncostedRevenue > 0 && (
         <Alert tone="warning" className="mb-6">
           {t("reports.margin.uncosted", { revenue: formatMoney(s.uncostedRevenue) })}
@@ -144,7 +150,7 @@ export async function MarginReport({
             id: row.key,
             href: row.itemId ? `/items/${row.itemId}` : undefined,
             sub: row.code || undefined,
-            tag: row.itemId ? undefined : t("reports.history.notInCatalogue"),
+            tag: notInCatalogueTag(row, t),
             cells: {
               name: productName(row),
               qty: row.marginQty,

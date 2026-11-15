@@ -149,6 +149,38 @@ relax one without saying so explicitly.
   its first copy is active, and a wrong import is *withdrawn* with a reason,
   never deleted. `sales.import_history` is the control; the Settings "import"
   switch is the catalogue's button and does not hide it.
+- **A panel entry is an order the pharmacy places for a doctor, not a sale and
+  not stock.** A doctor may not sell medicine, so the pharmacy orders for them
+  on its own surat pesanan and resells at the negotiated price; that order never
+  sits on the shelf. `panel_entries` (`src/db/schema/panel.ts`,
+  `src/lib/panel/entries.ts`) writes no `stock_movements` row and moves no
+  batch -- putting it through the ledger would invent units the pharmacy never
+  held. It is a record of the order and the money, so every entry names its
+  surat pesanan, the recipient and the account that recorded it; it is never
+  paperwork cover for someone else's shipment, and narkotika and psikotropika
+  are refused (`PANEL_RESTRICTED_CLASSES`). The entry date is a plain `date`, a
+  wrong entry is *voided* with a reason and never deleted, numbers go through
+  `lockNumberSeries`, and cost and margin are removed in the DAL for anyone
+  without `reports.financial` -- the same split as the reports. Its money does
+  reach the main figures, and all of them read one definition of what an entry
+  is worth and when it counts, `src/lib/panel/amounts.ts`: the Panel screen, the
+  Sales and Gross profit reports (`panelWithin`), the dashboard's takings and
+  chart, and the morning digest, the way imported history does -- revenue,
+  units, cost and margin, never stock. It is not a till basket, so it stays out
+  of transactions, the average sale and the hour chart; it shows as its own line
+  ("including Panel Apotek") wherever it is added to takings.
+  **An entry counts only when it is approved and not voided.** With
+  `settings.panelApprovalRequired` on, an order from anyone but the owner starts
+  `pending` and counts for nothing until someone holding `panel.approve` decides
+  it; nobody decides their own, a decision is final (a wrong one is answered
+  with a new entry, as a wrong void is), and the owner's own orders are never
+  held -- nobody is above them. **PPN is a snapshot, not a recomputation.** An
+  order carries it only if the pharmacy charges PPN at all (`taxEnabled`) and
+  the order is ticked (`settings.panelTaxDefault` is only the starting tick),
+  worked out by `saleTotals` -- the till's own function -- at the rate in force
+  on the entry's own day and in the pharmacy's mode, then stored; later changes
+  to rate or mode rewrite nothing. On top it is collected and adds to what was
+  paid; inside it comes out of net sales, exactly as on a till sale.
 - **Net sales are after discounts, returns and PPN**, and every table adds up to
   the statement above it. `itemSales` in `src/lib/reports/queries.ts` spreads
   each sale's discount and inclusive PPN over its lines as exact fractions and
@@ -177,6 +209,17 @@ relax one without saying so explicitly.
   through `commitSale` against the stock as it is now. What cannot be booked
   is never dropped -- the medicine has already left -- it waits in
   `offline_sale_reviews` until a manager books it or closes it with a note.
+- **The till phone sells in the app, online first.** Signing in on a `till`
+  device opens the app's own till, never the website (the device menu still
+  reaches it). Online, each sale goes to `/api/device/sale`
+  (`src/lib/offline/till-sale.ts`), authenticated by the device token *and*
+  the cashier's own till session from `/api/device/login` -- the cashier is
+  never taken from the request body -- and is booked through `commitSale`
+  with its real number on the receipt. A refusal is final: nothing has left
+  the shop. Only a sale the server never answered is kept offline, under the
+  same `clientId`, so `sales.offline_client_id` books it once. Online sales
+  carry `device_id` but no `offline_number`, and only `offline_number` sales
+  count towards a pass's limits.
 - **Offline receipts are the one exception to server-allocated numbers.** The
   phone prints `OFF-<device code>-<seq>`; on sync the real number is allocated
   under `lockNumberSeries` as usual, in the series of the day the sale
@@ -239,9 +282,15 @@ without pulling drizzle's pg-core into the browser bundle.
 plain values (rupiah as integers, percentages as basis points) and `route.ts`
 writes the first table as CSV or all of them as a workbook -- a summary sheet,
 then a sheet per table, each with the letterhead, number cells and a totals
-row. A report is also printable on A4 (the report page sets its own `@page`;
-the global print rule is the 80mm receipt), and a table prints every row even
-when the screen shows the first 25.
+row. The description's types and the workbook layout live in
+`src/lib/reports/export-file.ts`, shared with the Panel's own download
+(`src/lib/panel/export.ts`, `src/app/(app)/panel/export/route.ts`): a second
+copy of the layout is a second place for the letterhead to drift. A report is
+also printable on A4 (the report page sets its own `@page`; the global print
+rule is the 80mm receipt, so any screen meant for paper -- the Panel's too --
+sets its own and brings the letterhead), and a report table prints every row
+even when the screen shows the first 25. The Panel's list is capped at 200 on
+screen and on paper, and says so; a download is never capped.
 
 **Reports aggregate in SQL**, in `src/lib/reports/queries.ts`, which takes an
 executor and no session -- the same split as `src/lib/stock/*`, and what makes
@@ -307,6 +356,20 @@ names the real problem.
 takes an executor and an actor id; `src/lib/dal/*` adds permissions and audit
 around it. That split is what makes the ledger and the till testable at all --
 anything welded to a session cannot be tested.
+
+**A screen people use on a phone is built for the phone first.** The pharmacy's
+staff open the app on theirs, and the main content column is a phone's width on
+a laptop too: the menu takes about 290px, and `<main>` is capped at `max-w-6xl`,
+so a 1280px screen beside the Panel's order form leaves the list about 570px.
+So: a list that has more columns than that is **cards below the width its table
+needs, chosen with a container query on the list's own box (`@container` and
+`@4xl:`), never `md:`/`lg:`, which measure the screen** -- and the table is
+still what paper gets (`print:block`). Inputs are 16px (`inputBase` already is;
+a smaller one makes iOS zoom the page on focus), buttons and rows a thumb hits
+are at least 44px tall, a long form's Save is sticky to the bottom of the
+screen, and an outcome shown at the top of a long form is scrolled into view
+after Save. Optional fields fold away. `src/app/(app)/panel/` is the worked
+example (`PanelList`, `PanelForm`, `PanelEntry`).
 
 ## Visual language
 

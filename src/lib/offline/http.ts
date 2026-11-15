@@ -14,13 +14,16 @@ import { deviceForToken, type DeviceRow } from "./devices";
  * bearer token -- so credentials are never allowed either.
  */
 
+/** Carries the cashier's till session on `/api/device/sale`, beside the device's bearer token. */
+export const TILL_SESSION_HEADER = "X-Till-Session";
+
 function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("origin");
   if (!origin || !(APP_ORIGINS as readonly string[]).includes(origin)) return {};
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Authorization, Content-Type",
+    "Access-Control-Allow-Headers": `Authorization, Content-Type, ${TILL_SESSION_HEADER}`,
     "Access-Control-Max-Age": "600",
     Vary: "Origin",
   };

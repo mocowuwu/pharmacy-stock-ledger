@@ -7,6 +7,7 @@ import {
   historyImports,
   historySaleLines,
   items,
+  panelEntries,
   returns,
   returnLines,
   sales,
@@ -17,6 +18,7 @@ import {
   users,
 } from "@/db/schema";
 import { addDays, DEFAULT_TIMEZONE, today } from "@/lib/format/date";
+import { panelCounts, panelLine, panelPaid, panelTaxInside } from "@/lib/panel/amounts";
 
 /**
  * The reporting queries.
@@ -42,6 +44,14 @@ import { addDays, DEFAULT_TIMEZONE, today } from "@/lib/format/date";
  *    and it is reported beside net sales rather than inside them. Imported
  *    history (`history_sale_lines`) adds to sales and margin only -- never to
  *    anything about stock -- and a withdrawn import adds nothing.
+ * 5. **Panel Apotek entries are money without stock, like history.** What the
+ *    pharmacy ordered for a doctor is sold at `unit_price` and costs `unit_cost`,
+ *    so both reach the sales and margin figures; the entry never touches a
+ *    batch, so nothing about stock reads it. It is not a till basket either:
+ *    it is left out of transactions, the average sale and the hour of day. Only
+ *    an approved, unvoided entry counts. Its PPN is the snapshot on the entry
+ *    and follows the till's own statement: on top, it is collected and adds to
+ *    what was paid; inside, it comes out of net sales.
  */
 
 export type DateRange = { from: string; to: string };
@@ -77,13 +87,30 @@ function historyWithin({ from, to }: ReportOptions) {
   );
 }
 
+/**
+ * Panel entries that still count: approved, not voided, on a day in the window.
+ * What "counts" means is `panelCounts` in `src/lib/panel/amounts.ts`, shared with
+ * the Panel screen, the dashboard and the digest.
+ */
+function panelWithin({ from, to }: ReportOptions) {
+  return and(panelCounts, sql`${panelEntries.entryDate} between ${from} and ${to}`);
+}
+
+/**
+ * The catalogue item a panel entry's code names, if it names one. The code is
+ * typed by a person, so case is ignored -- the same match the entry's own
+ * restricted-class check makes. One row at most, whatever the catalogue holds.
+ * Written with fixed names because it is correlated with the outer row.
+ */
+const panelItemId = sql<string | null>`(select i.id from items i where lower(i.code) = lower(panel_entries.item_code) order by i.id limit 1)`;
+
 /** Postgres hands `numeric` back as text; sums of shares are rounded here, once. */
 const num = (value: unknown) => Number(value ?? 0);
 
 /* ------------------------------------------------------------------ sales */
 
 export type SalesSummary = {
-  /** Every line at the price asked, plus imported history. */
+  /** Every line at the price asked, plus imported history and Panel entries. */
   gross: number;
   discount: number;
   /** PPN inside the prices of sales rung up with tax-inclusive pricing. */
@@ -100,7 +127,7 @@ export type SalesSummary = {
   tax: number;
   /** PPN kept: `tax` less what went back out with refunds. */
   taxNet: number;
-  /** What the till took plus imported history, before refunds. */
+  /** What the till took plus imported history and Panel entries, before refunds. */
   revenue: number;
   /** What the drawer and the bank actually kept: `revenue` less refunds. */
   collected: number;
@@ -119,6 +146,15 @@ export type SalesSummary = {
     /** Lines with no receipt number: in the revenue, not in the transaction count. */
     withoutReceipt: number;
     withoutReceiptRevenue: number;
+  };
+  /** Panel Apotek entries in the window: money and units, never a till basket. */
+  panel: {
+    entries: number;
+    /** What changed hands: the price, plus PPN where it sits on top. */
+    revenue: number;
+    units: number;
+    /** The PPN on the entries, wherever it sits. */
+    tax: number;
   };
 };
 
@@ -196,19 +232,43 @@ export async function salesSummary(tx: Database, options: ReportOptions): Promis
     withoutReceiptRevenue: num(history?.withoutReceiptRevenue),
   };
 
+  const [ordered] = await tx
+    .select({
+      entries: sql<number>`count(*)::int`,
+      line: sql<number>`coalesce(sum(${panelLine}), 0)::bigint`,
+      paid: sql<number>`coalesce(sum(${panelPaid}), 0)::bigint`,
+      tax: sql<number>`coalesce(sum(${panelEntries.taxAmount}), 0)::bigint`,
+      taxInside: sql<number>`coalesce(sum(${panelTaxInside}), 0)::bigint`,
+      units: sql<number>`coalesce(sum(${panelEntries.qty}), 0)::bigint`,
+    })
+    .from(panelEntries)
+    .where(panelWithin(options));
+  const panel = {
+    entries: ordered?.entries ?? 0,
+    /** What changed hands: the price, plus PPN where it sits on top. */
+    revenue: num(ordered?.paid),
+    units: num(ordered?.units),
+    /** The PPN on those entries, wherever it sits. */
+    tax: num(ordered?.tax),
+  };
+  const panelLineTotal = num(ordered?.line);
+  const panelTaxInsideTotal = num(ordered?.taxInside);
+
   const tillTotal = num(sold?.total);
   const discount = num(sold?.discount);
-  const tax = num(sold?.tax);
-  const taxIncluded = num(sold?.taxIncluded);
+  const tax = num(sold?.tax) + panel.tax;
+  const taxIncluded = num(sold?.taxIncluded) + panelTaxInsideTotal;
   const refunds = num(refunded?.refunds);
   const refundTax = num(refunded?.refundTax);
   const refundsExTax = refunds - refundTax;
-  const gross = num(sold?.subtotal) + hist.revenue;
-  const revenue = tillTotal + hist.revenue;
+  const gross = num(sold?.subtotal) + hist.revenue + panelLineTotal;
+  const revenue = tillTotal + hist.revenue + panel.revenue;
   const transactions = (sold?.transactions ?? 0) + hist.receipts;
   // The average basket counts only what was counted as a transaction: history
-  // lines without a receipt number are in the takings but belong to no basket.
-  const basketRevenue = revenue - hist.withoutReceiptRevenue;
+  // lines without a receipt number are in the takings but belong to no basket,
+  // and a Panel order is a doctor's order, not a till basket -- averaging it in
+  // would make every ordinary sale look small.
+  const basketRevenue = revenue - hist.withoutReceiptRevenue - panel.revenue;
 
   return {
     gross,
@@ -225,9 +285,10 @@ export async function salesSummary(tx: Database, options: ReportOptions): Promis
     transactions,
     returns: refunded?.count ?? 0,
     voided: voided?.count ?? 0,
-    units: num(units?.total) + hist.units,
+    units: num(units?.total) + hist.units + panel.units,
     averageSale: transactions > 0 ? Math.round(basketRevenue / transactions) : 0,
     history: hist,
+    panel,
   };
 }
 
@@ -264,8 +325,19 @@ export async function dailyRevenue(tx: Database, options: ReportOptions) {
     .where(historyWithin(options))
     .groupBy(historySaleLines.soldOn);
 
+  // A Panel entry's day is the day the pharmacist chose, a plain date, and it is
+  // takings with no basket, so it adds to the day's total and not to its count.
+  const panel = await tx
+    .select({
+      day: sql<string>`${panelEntries.entryDate}::text`,
+      total: sql<number>`coalesce(sum(${panelPaid}), 0)::bigint`,
+    })
+    .from(panelEntries)
+    .where(panelWithin(options))
+    .groupBy(panelEntries.entryDate);
+
   const byDay = new Map<string, { total: number; count: number }>();
-  for (const row of [...till, ...history]) {
+  for (const row of [...till, ...history, ...panel.map((r) => ({ ...r, count: 0 }))]) {
     const hit = byDay.get(row.day) ?? { total: 0, count: 0 };
     byDay.set(row.day, { total: hit.total + num(row.total), count: hit.count + row.count });
   }
@@ -330,13 +402,15 @@ export type ItemSalesRow = {
   cost: number;
   /** How much of `revenue` came from imported history. */
   historyRevenue: number;
+  /** How much of `revenue` came from Panel Apotek entries. */
+  panelRevenue: number;
   /** History revenue and units with no cost behind them: left out of margin. */
   historyUncostedRevenue: number;
   historyUncostedQty: number;
 };
 
 /**
- * Sales per product: till lines, returns and imported history, merged.
+ * Sales per product: till lines, returns, imported history and Panel entries, merged.
  *
  * A till line's share of its sale's discount is its share of the subtotal;
  * its share of the PPN on a tax-inclusive sale is its share of the taxable
@@ -414,11 +488,35 @@ export async function itemSales(tx: Database, options: ReportOptions): Promise<I
     .where(historyWithin(options))
     .groupBy(historySaleLines.itemId, sql`2`);
 
+  // A Panel entry carries the code the pharmacist typed. When it names a
+  // catalogue item it joins that item's row (and its category); when it does
+  // not -- "xxx" for paracetamol -- it is grouped by its name as written, the
+  // same way an unlinked history line is. Cost is the entry's own unit cost: a
+  // snapshot by nature, so it never moves with a later delivery.
+  const panelNameKey = sql<string | null>`case when ${panelItemId} is null then lower(regexp_replace(trim(${panelEntries.itemName}), '\\s+', ' ', 'g')) end`;
+  const panel = await tx
+    .select({
+      itemId: panelItemId,
+      nameKey: panelNameKey,
+      name: sql<string>`min(${panelEntries.itemName})`,
+      qty: sql<number>`coalesce(sum(${panelEntries.qty}), 0)::bigint`,
+      gross: sql<number>`coalesce(sum(${panelLine}), 0)::bigint`,
+      // PPN inside the price comes out of net sales, as on a till sale.
+      taxInside: sql<number>`coalesce(sum(${panelTaxInside}), 0)::bigint`,
+      cost: sql<number>`coalesce(sum(${panelEntries.qty} * ${panelEntries.unitCost}), 0)::bigint`,
+    })
+    .from(panelEntries)
+    .where(panelWithin(options))
+    .groupBy(sql`1`, sql`2`);
+
   const ids = [
     ...new Set(
-      [...till.map((r) => r.itemId), ...back.map((r) => r.itemId), ...history.map((r) => r.itemId)].filter(
-        (id): id is string => id !== null,
-      ),
+      [
+        ...till.map((r) => r.itemId),
+        ...back.map((r) => r.itemId),
+        ...history.map((r) => r.itemId),
+        ...panel.map((r) => r.itemId),
+      ].filter((id): id is string => id !== null),
     ),
   ];
   const catalogue =
@@ -468,6 +566,7 @@ export async function itemSales(tx: Database, options: ReportOptions): Promise<I
         revenue: 0,
         cost: 0,
         historyRevenue: 0,
+        panelRevenue: 0,
         historyUncostedRevenue: 0,
         historyUncostedQty: 0,
       },
@@ -504,6 +603,15 @@ export async function itemSales(tx: Database, options: ReportOptions): Promise<I
     acc.base.historyRevenue += num(row.gross);
     acc.base.historyUncostedRevenue += num(row.uncostedRevenue);
     acc.base.historyUncostedQty += num(row.uncostedQty);
+  }
+  for (const row of panel) {
+    const key = row.itemId ?? `name:${row.nameKey ?? ""}`;
+    const acc = entry(row.itemId, key, row.name);
+    acc.base.qtySold += num(row.qty);
+    acc.base.revenue += num(row.gross);
+    acc.base.cost += num(row.cost);
+    acc.base.panelRevenue += num(row.gross);
+    acc.taxIncluded += num(row.taxInside);
   }
 
   // Shares are fractions of a rupiah until here. Rounding each product on its
@@ -596,6 +704,8 @@ export type CashierSalesRow = {
   revenue: number;
   /** An old till's cashier, named in imported history, not an account here. */
   fromHistory: boolean;
+  /** The one row for Panel Apotek takings: orders for doctors, not a cashier's baskets. */
+  fromPanel: boolean;
 };
 
 export async function salesByCashier(tx: Database, options: ReportOptions): Promise<CashierSalesRow[]> {
@@ -622,20 +732,34 @@ export async function salesByCashier(tx: Database, options: ReportOptions): Prom
     .where(historyWithin(options))
     .groupBy(sql`1`);
 
+  const [ordered] = await tx
+    .select({
+      // What changed hands, so the table adds up to the statement's takings.
+      revenue: sql<number>`coalesce(sum(${panelPaid}), 0)::bigint`,
+    })
+    .from(panelEntries)
+    .where(panelWithin(options));
+  const panelRevenue = num(ordered?.revenue);
+
   return [
-    ...till.map((r) => ({ ...r, revenue: num(r.revenue), fromHistory: false })),
+    ...till.map((r) => ({ ...r, revenue: num(r.revenue), fromHistory: false, fromPanel: false })),
     ...history.map((r) => ({
       cashierId: null,
       name: r.name,
       transactions: r.transactions,
       revenue: num(r.revenue),
       fromHistory: true,
+      fromPanel: false,
     })),
+    // No baskets, so no transactions: the column still adds up to the statement.
+    ...(panelRevenue > 0
+      ? [{ cashierId: null, name: "", transactions: 0, revenue: panelRevenue, fromHistory: false, fromPanel: true }]
+      : []),
   ].sort((a, b) => b.revenue - a.revenue);
 }
 
 export type PaymentSalesRow = {
-  /** A payment method key, or `unrecorded` for history that never said. */
+  /** A payment method key, or `unrecorded` for history and Panel entries that never said. */
   method: string;
   transactions: number;
   /** Taken in, before refunds. */
@@ -684,6 +808,16 @@ export async function salesByPaymentMethod(
     .where(historyWithin(options))
     .groupBy(sql`1`);
 
+  // Nothing says how a doctor paid, so a Panel entry's money is "not recorded",
+  // like history that never said. It brings no transaction, only takings.
+  const [ordered] = await tx
+    .select({
+      // What changed hands, so the table adds up to the statement's takings.
+      revenue: sql<number>`coalesce(sum(${panelPaid}), 0)::bigint`,
+    })
+    .from(panelEntries)
+    .where(panelWithin(options));
+
   const byMethod = new Map<string, PaymentSalesRow>();
   const at = (method: string) => {
     const existing =
@@ -696,6 +830,7 @@ export async function salesByPaymentMethod(
     hit.transactions += row.transactions;
     hit.revenue += num(row.revenue);
   }
+  if (num(ordered?.revenue) > 0) at("unrecorded").revenue += num(ordered?.revenue);
   for (const row of refunds) at(row.method).refunds += num(row.refunds);
 
   return [...byMethod.values()]
@@ -755,6 +890,8 @@ export type MarginSummary = {
   items: number;
   /** Imported history left out of the margin for want of a cost. */
   uncostedRevenue: number;
+  /** The part of `revenue` that came from Panel Apotek entries, cost and all. */
+  panelRevenue: number;
 };
 
 export function summariseMargin(itemRows: ItemSalesRow[], marginRows: MarginRow[]): MarginSummary {
@@ -768,6 +905,7 @@ export function summariseMargin(itemRows: ItemSalesRow[], marginRows: MarginRow[
     marginBps: revenue > 0 ? Math.round((margin / revenue) * 10_000) : 0,
     items: marginRows.length,
     uncostedRevenue: itemRows.reduce((sum, r) => sum + r.historyUncostedRevenue, 0),
+    panelRevenue: itemRows.reduce((sum, r) => sum + r.panelRevenue, 0),
   };
 }
 
