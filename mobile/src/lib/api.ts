@@ -11,6 +11,8 @@ import type {
   SnapshotResponse,
   SyncRequest,
   SyncResponse,
+  TillSaleRequest,
+  TillSaleResponse,
 } from "@/lib/offline/contract";
 
 export const PING_TIMEOUT_MS = 4_000;
@@ -47,7 +49,13 @@ export function normaliseServerUrl(input: string): string | null {
 async function request<T>(
   server: string,
   path: string,
-  init: { method: "GET" | "POST"; body?: unknown; token?: string | null; timeoutMs?: number },
+  init: {
+    method: "GET" | "POST";
+    body?: unknown;
+    token?: string | null;
+    timeoutMs?: number;
+    headers?: Record<string, string>;
+  },
 ): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), init.timeoutMs ?? REQUEST_TIMEOUT_MS);
@@ -59,6 +67,7 @@ async function request<T>(
         Accept: "application/json",
         ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
         ...(init.token ? { Authorization: `Bearer ${init.token}` } : {}),
+        ...init.headers,
       },
       body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
       signal: controller.signal,
@@ -127,6 +136,25 @@ export function postSync(server: string, body: SyncRequest, token: string) {
   });
 }
 
-export function handoffUrl(server: string, code: string): string {
-  return `${server}/api/device/handoff?code=${encodeURIComponent(code)}`;
+/**
+ * How long a cashier waits for an online sale before the till gives up and
+ * keeps it on the phone instead. Short, because the customer is standing
+ * there; the same id goes with the offline copy, so an answer that was only
+ * slow costs nothing.
+ */
+export const SALE_TIMEOUT_MS = 12_000;
+
+export function postTillSale(server: string, body: TillSaleRequest, token: string, tillSession: string) {
+  return request<TillSaleResponse>(server, "/api/device/sale", {
+    method: "POST",
+    body,
+    token,
+    timeoutMs: SALE_TIMEOUT_MS,
+    headers: { "X-Till-Session": tillSession },
+  });
+}
+
+export function handoffUrl(server: string, code: string, next?: string): string {
+  const url = `${server}/api/device/handoff?code=${encodeURIComponent(code)}`;
+  return next ? `${url}&next=${encodeURIComponent(next)}` : url;
 }

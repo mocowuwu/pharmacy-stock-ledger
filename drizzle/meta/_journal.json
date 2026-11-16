@@ -57,6 +57,48 @@
       "when": 1790584281451,
       "tag": "0007_android_devices",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790781908505,
+      "tag": "0008_add_panel_entries",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790782962286,
+      "tag": "0009_add_panel_enabled",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790858946436,
+      "tag": "0010_panel_orders",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790913225799,
+      "tag": "0011_panel_tax_approval",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794214611166,
+      "tag": "0012_dashboard_layouts",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794541299695,
+      "tag": "0013_till_online_sales",
+      "breakpoints": true
     }
   ]
 }

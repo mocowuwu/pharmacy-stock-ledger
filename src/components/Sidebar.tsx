@@ -101,6 +101,13 @@ const ICONS: Record<string, ReactNode> = {
       <path d="M12 7.5v6M9.5 11l2.5 2.5 2.5-2.5M10.5 18h3" />
     </>
   ),
+  dashboards: (
+    <>
+      <rect x="3" y="3" width="18" height="5" rx="1.5" />
+      <rect x="3" y="11" width="8" height="10" rx="1.5" />
+      <path d="M15 12l2 2 4-4M15 19h6" />
+    </>
+  ),
   settings: (
     <>
       <circle cx="12" cy="12" r="3" />
@@ -150,6 +157,15 @@ const ICONS: Record<string, ReactNode> = {
     <>
       <path d="M12 3v12M7.5 10.5 12 15l4.5-4.5" />
       <path d="M4 15v3.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V15" />
+    </>
+  ),
+  panel: (
+    <>
+      <path d="M12 3v18M3 12h18" />
+      <rect x="5" y="5" width="4" height="4" rx="0.5" />
+      <rect x="15" y="5" width="4" height="4" rx="0.5" />
+      <rect x="5" y="15" width="4" height="4" rx="0.5" />
+      <rect x="15" y="15" width="4" height="4" rx="0.5" />
     </>
   ),
   // Not menu entries: the Tutorials page's first two guides.

@@ -139,7 +139,7 @@ export async function listDevices() {
       lastSyncAt: devices.lastSyncAt,
       revokedAt: devices.revokedAt,
       registeredBy: registrar.fullName,
-      offlineSales: sql<number>`(select count(*)::int from ${sales} where ${sales.deviceId} = ${devices.id})`,
+      offlineSales: sql<number>`(select count(*)::int from ${sales} where ${sales.deviceId} = ${devices.id} and ${sales.offlineNumber} is not null)`,
     })
     .from(devices)
     .innerJoin(registrar, eq(registrar.id, devices.registeredBy))

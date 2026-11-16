@@ -23,6 +23,27 @@ REM  the session in C:\Windows; `pushd` maps the UNC path to a temporary drive
 REM  letter and works. `popd` at the end releases it.
 pushd "%~dp0"
 
+REM  Check Windows OS version before launching PowerShell.
+REM  Windows 7 (6.1), Windows 8 (6.2), and Windows 8.1 (6.3) cannot run Node 20+
+REM  or PostgreSQL 18 natively.
+ver | findstr /i " 5. 6.0. 6.1. 6.2. 6.3." > nul
+if %ERRORLEVEL% equ 0 (
+  echo.
+  echo   ========================================================================
+  echo   Windows 7 / 8 detected:
+  echo.
+  echo   Next.js 16 and PostgreSQL 18 require Windows 10 or newer to run natively.
+  echo   Node 20+ cannot execute directly on Windows 7.
+  echo.
+  echo   To run the pharmacy on this machine without upgrading or wiping Windows:
+  echo   Please read WINDOWS-7.md to set up the lightweight VirtualBox server.
+  echo   ========================================================================
+  echo.
+  pause
+  popd
+  exit /b 1
+)
+
 echo.
 echo   Pharmacy Stock Ledger -- installing
 echo.

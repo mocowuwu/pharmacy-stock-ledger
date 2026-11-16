@@ -1,0 +1,2 @@
+ALTER TABLE "sales" DROP CONSTRAINT "sales_offline_is_complete";--> statement-breakpoint
+ALTER TABLE "sales" ADD CONSTRAINT "sales_offline_is_complete" CHECK (("sales"."offline_client_id" is null) = ("sales"."device_id" is null) and ("sales"."offline_number" is null or "sales"."offline_client_id" is not null));

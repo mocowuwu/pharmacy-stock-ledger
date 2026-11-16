@@ -170,6 +170,7 @@ describe("module switches", () => {
       countsEnabled: true,
       disposeEnabled: false,
       importEnabled: true,
+      panelEnabled: true,
     });
     expect(flags).toEqual({
       returns: true,
@@ -181,6 +182,7 @@ describe("module switches", () => {
       counts: true,
       dispose: false,
       import: true,
+      panel: true,
     });
   });
 

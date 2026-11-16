@@ -116,6 +116,26 @@ export const settings = pgTable(
      */
     importEnabled: boolean("import_enabled").notNull().default(false),
 
+    /**
+     * Panel apotek entries for recording manual distributions via PBF/MR.
+     * Does not affect stock levels.
+     */
+    panelEnabled: boolean("panel_enabled").notNull().default(false),
+
+    /**
+     * Whether a new Panel order starts with PPN on. Only meaningful once the
+     * pharmacy charges PPN at all (`taxEnabled`); the order form can still switch
+     * it per order, so this is a default and not a rule.
+     */
+    panelTaxDefault: boolean("panel_tax_default").notNull().default(false),
+
+    /**
+     * Whether a Panel order must be approved by someone above the person who
+     * recorded it before it counts. Off by default. The owner is exempt: nobody
+     * is above them.
+     */
+    panelApprovalRequired: boolean("panel_approval_required").notNull().default(false),
+
     digestEnabled: boolean("digest_enabled").notNull().default(false),
     digestEmail: text("digest_email"),
     /** Local hour the digest is sent, 0-23. The job decides; nothing polls. */

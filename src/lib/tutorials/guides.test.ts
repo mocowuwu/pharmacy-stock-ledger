@@ -3,6 +3,7 @@ import id from "@/i18n/messages/id.json";
 import en from "@/i18n/messages/en.json";
 import { PERMISSION_TEMPLATES, type Grant } from "@/lib/auth/permissions";
 import { MODULES, type ModuleFlags } from "@/lib/catalogue/modules";
+import { TOUR } from "@/components/tutorial-steps";
 import { GUIDES, guidesFor } from "./guides";
 
 type Tree = Record<string, unknown>;
@@ -110,5 +111,43 @@ describe("tutorial guides", () => {
     // Voids still happen with returns switched off, so the guide stays for them.
     const returns = guidesFor({ grant: owner, flags }).find((g) => g.key === "returns");
     expect(returns?.sections.map((s) => s.id)).toEqual(["which", "void"]);
+  });
+  it("offers the panel guide to those who hold a panel permission, cut to what they can do", () => {
+    const viewer: Grant = { isOwner: false, permissions: new Set(["panel.view"]) };
+    const recorder: Grant = {
+      isOwner: false,
+      permissions: new Set(["panel.view", "panel.create", "panel.void"]),
+    };
+    const sections = (grant: Grant) =>
+      guidesFor({ grant, flags: allOn })
+        .find((g) => g.key === "panel")
+        ?.sections.map((s) => s.id);
+
+    const approver: Grant = { isOwner: false, permissions: new Set(["panel.view", "panel.approve"]) };
+
+    expect(sections(viewer)).toEqual(["what", "read", "export"]);
+    // Deciding waiting orders is its own right, and its own section.
+    expect(sections(approver)).toEqual(["what", "read", "approve", "export"]);
+    expect(guidesFor({ grant: { isOwner: false, permissions: new Set(["panel.approve"]) }, flags: allOn }).map((g) => g.key))
+      .toContain("panel");
+    expect(sections(recorder)).toEqual(["what", "enter", "several", "read", "void", "export"]);
+    expect(keys(staff("stock_clerk"))).not.toContain("panel");
+    expect(keys(staff("cashier"))).not.toContain("panel");
+    // Switched off in Settings, the guide goes with the menu entry.
+    expect(keys(owner, { ...allOn, panel: false })).not.toContain("panel");
+  });
+
+  it("has words for every stop of every tour chapter, in both languages", () => {
+    // A stop with no strings would be drawn with its raw key as the title.
+    for (const [locale, messages] of [["id", id], ["en", en]] as const) {
+      for (const [chapter, stops] of Object.entries(TOUR)) {
+        expect(at(messages, `tutorial.chapters.${chapter}`), `${locale}:chapters.${chapter}`).toBeTypeOf("string");
+        for (const stop of stops) {
+          const base = `tutorial.tour.stops.${chapter}.${stop.id}`;
+          expect(at(messages, `${base}.title`), `${locale}:${base}.title`).toBeTypeOf("string");
+          expect(at(messages, `${base}.body`), `${locale}:${base}.body`).toBeTypeOf("string");
+        }
+      }
+    }
   });
 });

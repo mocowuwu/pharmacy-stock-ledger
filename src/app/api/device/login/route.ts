@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getDb } from "@/db";
 import { authenticate, clientIp } from "@/lib/auth/sign-in";
+import { createSession } from "@/lib/auth/session";
 import { AuthEvents, recordAudit } from "@/lib/audit";
 import { bearer, fail, json, preflight } from "@/lib/offline/http";
 import { createHandoff, deviceUser, registerDevice } from "@/lib/offline/devices";
@@ -23,7 +24,9 @@ const Body = z.object({
  * because it is the same `authenticate`. What differs is the answer: instead of
  * a cookie, the app gets its device token (the first time), the user's details
  * for offline sign-in, and a one-minute code that becomes a website session
- * when the app opens `/api/device/handoff`.
+ * when the app opens `/api/device/handoff`. On the till it also gets a session
+ * of its own to sell with (`/api/device/sale`), because the cashier stays in
+ * the app rather than going to the website.
  */
 export async function POST(request: Request) {
   const parsed = Body.safeParse(await request.json().catch(() => null));
@@ -70,10 +73,25 @@ export async function POST(request: Request) {
     after: { via: "android_app", deviceId: device.id },
   });
 
+  const appUser = await deviceUser(db, user);
+  // The till sells in the app itself, so the cashier needs a session the app
+  // can sell with. Someone on a temporary password changes it on the website
+  // first; someone who may not sell gets the website, not the till.
+  const tillSession =
+    device.role === "till" && !user.mustChangePassword && appUser.permissions.includes("sales.create")
+      ? (
+          await createSession(user.id, {
+            ip: await clientIp(),
+            userAgent: request.headers.get("user-agent"),
+          })
+        ).token
+      : null;
+
   const body: LoginResponse = {
     ...(registered.token ? { deviceToken: registered.token } : {}),
+    ...(tillSession ? { tillSession } : {}),
     device: { id: device.id, name: device.name, role: device.role, code: device.code },
-    user: { ...(await deviceUser(db, user)), mustChangePassword: user.mustChangePassword },
+    user: { ...appUser, mustChangePassword: user.mustChangePassword },
     serverTime: new Date().toISOString(),
     handoffCode: await createHandoff(db, { deviceId: device.id, userId: user.id }),
   };

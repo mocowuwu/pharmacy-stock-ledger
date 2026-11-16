@@ -9,12 +9,14 @@ import { Capsule } from "./icons";
  * Where the app opens: a continuation of the launch screen -- same dark
  * chrome, same capsule -- while it finds out whether the server is there.
  *
- * Reachable: anything rung offline is sent, then straight to the website (if
- * its session has lapsed, the website sends the person to the app's sign-in).
- * Unreachable: the offline screen, which knows whether this phone can sell.
+ * Reachable: anything rung offline is sent, then -- on the till -- to the
+ * app's own sign-in, which leads to its till; on any other phone straight to
+ * the website (if its session has lapsed, the website sends the person to the
+ * app's sign-in). Unreachable: the offline screen, which knows whether this
+ * phone can sell.
  */
 export function StartScreen() {
-  const { device, t, recheck, go, leaveFor } = useApp();
+  const { device, t, recheck, go, leaveFor, session } = useApp();
   const [phase, setPhase] = useState<"checking" | "sending" | "opening">("checking");
   const name = readSnapshot()?.data.settings.businessName || device?.businessName;
 
@@ -36,6 +38,10 @@ export function StartScreen() {
         ]);
       }
       if (cancelled) return;
+      if (device.role === "till") {
+        go(session ? "/till" : "/login", { replace: true });
+        return;
+      }
       setPhase("opening");
       leaveFor(`${device.serverUrl}/`);
     })();

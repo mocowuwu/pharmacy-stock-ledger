@@ -100,10 +100,10 @@ export function QueueScreen() {
               <button key={h.clientId} className="list-row" onClick={() => go(`/receipt/${encodeURIComponent(h.clientId)}`)}>
                 <span className="body">
                   <span className="title">
-                    <span className="mono">{h.saleNumber ?? h.offlineNumber}</span>
+                    <span className="mono">{h.saleNumber ?? h.offlineNumber ?? "—"}</span>
                   </span>
                   <span className="meta">
-                    {h.saleNumber ? <span className="mono">{h.offlineNumber}</span> : null}
+                    {h.saleNumber && h.offlineNumber ? <span className="mono">{h.offlineNumber}</span> : null}
                     <span>{formatMoment(h.receipt.soldAt, locale, tz)}</span>
                   </span>
                 </span>

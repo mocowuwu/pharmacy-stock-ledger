@@ -49,8 +49,14 @@ export type ApiError = {
     | "device_revoked" // the owner removed this device; set it up again
     | "unauthorized" // missing or unknown device token
     | "not_till" // a management device asked for till data
+    | "session_ended" // the till's online sign-in is no longer valid; sign in again
+    | "refused" // the server would not book this sale; see `code`
     | "bad_request";
   minutes?: number;
+  /** With "refused": why, e.g. `insufficient_stock`, `price_changed`, `forbidden`. */
+  code?: string;
+  /** With "refused": what the code is about, e.g. `{ item, short, blockedByExpiry }`. */
+  detail?: Record<string, unknown>;
 };
 
 /* -------------------------------------------------------- GET /api/device/ping */
@@ -106,6 +112,14 @@ export type LoginResponse = {
    * signed in to the website.
    */
   handoffCode: string;
+  /**
+   * Till devices only, for someone who may sell and is not on a temporary
+   * password: a session token for selling through `/api/device/sale`. Keep it
+   * in memory only -- a restart signs the cashier out -- and send it as
+   * `X-Till-Session`. It is an ordinary session: it ends when the account is
+   * suspended or its password reset, and shows among the account's sessions.
+   */
+  tillSession?: string;
 };
 
 /* --------------------------------------------------- POST /api/device/snapshot */
@@ -210,3 +224,48 @@ export type SyncResult = {
 };
 
 export type SyncResponse = { results: SyncResult[] };
+
+/* ------------------------------------------------------- POST /api/device/sale */
+
+/**
+ * A sale the till rings while it can reach the server: booked at once, against
+ * the stock as it is now, with its real number on the receipt. Needs both the
+ * device token and the cashier's `tillSession`. If the answer never arrives
+ * the app queues the same sale offline with the same `clientId`, and the
+ * server books it once.
+ */
+export type TillSaleRequest = {
+  clientId: string;
+  lines: Array<{ itemId: string; qty: number; unitPrice: number }>;
+  discount: number;
+  paymentMethod: PaymentMethod;
+  tendered: number | null;
+  notes: string | null;
+  /** What the app is about to charge; a sale that would book at any other total is refused. */
+  total: number;
+};
+
+export type TillSaleResponse = {
+  /** `duplicate`: this clientId was booked before; the body describes that sale. */
+  status: "posted" | "duplicate";
+  saleNumber: string;
+  /** ISO. */
+  soldAt: string;
+  subtotal: number;
+  discount: number;
+  taxAmount: number;
+  taxMode: "inclusive" | "exclusive" | null;
+  taxRateBps: number | null;
+  total: number;
+  tendered: number | null;
+  change: number | null;
+  /** One per batch the units left from, in the order they were booked. */
+  lines: Array<{
+    itemId: string;
+    batchId: string;
+    lotNumber: string | null;
+    expiryDate: string;
+    qty: number;
+    unitPrice: number;
+  }>;
+};

@@ -27,6 +27,7 @@ export const MODULES = [
   "counts",
   "dispose",
   "import",
+  "panel",
 ] as const;
 
 export type ModuleKey = (typeof MODULES)[number];
@@ -42,6 +43,7 @@ export const MODULE_SETTING = {
   counts: "countsEnabled",
   dispose: "disposeEnabled",
   import: "importEnabled",
+  panel: "panelEnabled",
 } as const satisfies Record<ModuleKey, string>;
 
 export type ModuleFlags = Record<ModuleKey, boolean>;
@@ -57,6 +59,7 @@ export function moduleFlags(settings: {
   countsEnabled: boolean;
   disposeEnabled: boolean;
   importEnabled: boolean;
+  panelEnabled: boolean;
 }): ModuleFlags {
   return {
     returns: settings.returnsEnabled,
@@ -68,6 +71,7 @@ export function moduleFlags(settings: {
     counts: settings.countsEnabled,
     dispose: settings.disposeEnabled,
     import: settings.importEnabled,
+    panel: settings.panelEnabled,
   };
 }
 
@@ -83,6 +87,7 @@ export const MODULE_NAV: Partial<Record<ModuleKey, readonly string[]>> = {
   categories: ["categories"],
   counts: ["counts"],
   dispose: ["dispose"],
+  panel: ["panel"],
 };
 
 /**

@@ -110,6 +110,13 @@ export const DEVICE_ROLES = ["till", "management"] as const;
  */
 export const OFFLINE_REVIEW_KINDS = ["not_posted", "flagged"] as const;
 
+/**
+ * Where a Panel entry stands. `approved` counts toward the money; `pending`
+ * waits for someone above the person who recorded it, and counts for nothing
+ * yet; `rejected` was refused and counts for nothing, ever.
+ */
+export const PANEL_STATUSES = ["approved", "pending", "rejected"] as const;
+
 export const RESTRICTED_DRUG_CLASSES = [
   "keras",
   "owa",

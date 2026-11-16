@@ -9,3 +9,5 @@ export * from "./history";
 export * from "./alerts";
 export * from "./audit";
 export * from "./settings";
+export * from "./panel";
+export * from "./dashboard";

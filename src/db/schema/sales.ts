@@ -66,11 +66,14 @@ export const sales = pgTable(
     notes: text("notes"),
 
     /*
-     * Set only on a sale rung on the Android till while the server was
-     * unreachable. The customer's receipt carries the temporary number; the
-     * real one is allocated when the phone syncs, and this is how the two are
-     * matched. `device_id` has no foreign key here only to keep the schema
-     * files free of an import cycle -- the migration adds it.
+     * Set on every sale rung on the Android till: `offline_client_id` is the
+     * phone's own id for the sale (a resend books it once) and `device_id` the
+     * phone. `offline_number` only when the till was offline: the customer's
+     * receipt carries that temporary number, the real one is allocated when
+     * the phone syncs, and this is how the two are matched. A sale the till
+     * rang online has its real number on the receipt and no offline number.
+     * `device_id` has no foreign key here only to keep the schema files free
+     * of an import cycle -- the migration adds it.
      */
     offlineClientId: uuid("offline_client_id"),
     offlineNumber: text("offline_number"),
@@ -83,7 +86,7 @@ export const sales = pgTable(
     uniqueIndex("sales_offline_client_idx").on(t.offlineClientId),
     check(
       "sales_offline_is_complete",
-      sql`(${t.offlineClientId} is null) = (${t.offlineNumber} is null) and (${t.offlineClientId} is null) = (${t.deviceId} is null)`,
+      sql`(${t.offlineClientId} is null) = (${t.deviceId} is null) and (${t.offlineNumber} is null or ${t.offlineClientId} is not null)`,
     ),
     index("sales_sold_at_idx").on(t.soldAt),
     index("sales_cashier_idx").on(t.cashierId),

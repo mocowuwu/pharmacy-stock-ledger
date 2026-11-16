@@ -25,6 +25,7 @@ const TEXT = {
     gross: "Kotor",
     refunds: "Retur",
     sales: "transaksi",
+    panel: "termasuk Panel Apotek",
     critical: "Perlu tindakan hari ini",
     expiring: "Segera kedaluwarsa",
     outOfStock: "Stok habis",
@@ -45,6 +46,7 @@ const TEXT = {
     gross: "Gross",
     refunds: "Refunded",
     sales: "sales",
+    panel: "including Panel Apotek",
     critical: "Needs attention today",
     expiring: "Expiring soon",
     outOfStock: "Out of stock",
@@ -87,6 +89,7 @@ export function renderDigestText(data: DigestData, locale: DigestLocale): string
   lines.push(
     `${t.takings}: ${formatMoney(data.takings.net)} (${data.takings.sales} ${t.sales})`,
   );
+  if (data.takings.panel > 0) lines.push(`  ${t.panel} ${formatMoney(data.takings.panel)}`);
   if (data.takings.refunds > 0) {
     lines.push(`  ${t.gross} ${formatMoney(data.takings.gross)} − ${t.refunds} ${formatMoney(data.takings.refunds)}`);
   }
@@ -151,6 +154,8 @@ export function renderDigestHtml(data: DigestData, locale: DigestLocale): string
         <div style="margin-top:4px;font:600 30px/1.2 -apple-system,Segoe UI,Roboto,sans-serif;color:${INK}">${escape(formatMoney(data.takings.net))}</div>
         <div style="margin-top:4px;font:400 13px/1.4 -apple-system,Segoe UI,Roboto,sans-serif;color:${MUTED}">
           ${data.takings.sales} ${escape(t.sales)}${
+            data.takings.panel > 0 ? ` · ${escape(t.panel)} ${escape(formatMoney(data.takings.panel))}` : ""
+          }${
             data.takings.refunds > 0
               ? ` · ${escape(t.gross)} ${escape(formatMoney(data.takings.gross))} − ${escape(t.refunds)} ${escape(formatMoney(data.takings.refunds))}`
               : ""

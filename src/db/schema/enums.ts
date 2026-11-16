@@ -9,6 +9,7 @@ import {
   HISTORY_IMPORT_STATUSES,
   MOVEMENT_TYPES,
   OFFLINE_REVIEW_KINDS,
+  PANEL_STATUSES,
   PAYMENT_METHODS,
 } from "@/lib/catalogue/enums";
 
@@ -70,6 +71,8 @@ export const alertStatus = pgEnum("alert_status", [
 
 /** Whether the stored sale price already contains PPN. */
 export const taxMode = pgEnum("tax_mode", ["inclusive", "exclusive"]);
+
+export const panelStatus = pgEnum("panel_status", PANEL_STATUSES);
 
 /** Whether an imported block of past sales still counts in the reports. */
 export const historyImportStatus = pgEnum("history_import_status", HISTORY_IMPORT_STATUSES);

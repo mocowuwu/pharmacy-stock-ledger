@@ -13,7 +13,7 @@ import type { Locale } from "@/i18n/config";
 import { KpiTile, Panel, Statement, TableHeading, type StatementLine } from "../_ui/Figures";
 import { DataTable } from "../_ui/DataTable";
 import { HourChart } from "../_ui/HourChart";
-import { productName, tableLabels } from "../_ui/labels";
+import { notInCatalogueTag, productName, tableLabels } from "../_ui/labels";
 
 /**
  * The sales report, laid out the way a back office reads one: the headline
@@ -35,6 +35,7 @@ export async function SalesReport({
   const previous = `${formatDate(data.previousRange.from, locale)} — ${formatDate(data.previousRange.to, locale)}`;
   const versus = (value: string) => t("reports.compare.versus", { value });
   const canImport = session ? can(session.grant, "sales.import_history") : false;
+  const canSeePanel = session ? can(session.grant, "panel.view") : false;
 
   const hasTax = s.tax > 0 || s.refundTax > 0;
   const statement: StatementLine[] = [
@@ -131,6 +132,23 @@ export async function SalesReport({
           {canImport && (
             <Link href="/reports/import" className="underline print:hidden">
               {t("reports.history.manage")}
+            </Link>
+          )}
+        </Alert>
+      )}
+
+      {s.panel.entries > 0 && (
+        <Alert tone="notice" className="mb-6">
+          {t("reports.panel.included", {
+            revenue: formatMoney(s.panel.revenue),
+            entries: s.panel.entries.toLocaleString("id-ID"),
+          })}{" "}
+          {canSeePanel && (
+            <Link
+              href={`/panel?from=${range.from}&to=${range.to}`}
+              className="underline print:hidden"
+            >
+              {t("reports.panel.open")}
             </Link>
           )}
         </Alert>
@@ -237,7 +255,7 @@ export async function SalesReport({
             id: row.key,
             href: row.itemId ? `/items/${row.itemId}` : undefined,
             sub: row.code || undefined,
-            tag: row.itemId ? undefined : t("reports.history.notInCatalogue"),
+            tag: notInCatalogueTag(row, t),
             cells: {
               name: productName(row),
               abc: row.abc,
@@ -300,10 +318,10 @@ export async function SalesReport({
               { key: "share", label: t("reports.table.share"), kind: "share" },
             ]}
             rows={data.byCashier.map((row, index) => ({
-              id: row.cashierId ?? `history-${index}`,
-              tag: row.fromHistory ? t("reports.history.tag") : undefined,
+              id: row.cashierId ?? (row.fromPanel ? "panel" : `history-${index}`),
+              tag: row.fromHistory ? t("reports.history.tag") : row.fromPanel ? t("reports.panel.tag") : undefined,
               cells: {
-                name: row.name || t("reports.history.unknownCashier"),
+                name: row.fromPanel ? t("panel.title") : row.name || t("reports.history.unknownCashier"),
                 transactions: row.transactions,
                 revenue: row.revenue,
                 share: shareBps(row.revenue, cashierTotal),

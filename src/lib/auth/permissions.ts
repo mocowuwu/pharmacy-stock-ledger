@@ -23,6 +23,10 @@ export const PERMISSION_GROUPS = {
     "stock.dispose",
     "stock.count",
     "suppliers.manage",
+    "panel.view",
+    "panel.create",
+    "panel.void",
+    "panel.approve",
   ],
   selling: [
     "sales.create",
@@ -76,6 +80,9 @@ export const SENSITIVE_PERMISSIONS: readonly Permission[] = [
   "settings.manage",
   "audit.view",
   "items.import",
+  // Deciding whether a Panel order counts is the control the approval switch
+  // exists for; held by too many people it stops being one.
+  "panel.approve",
   // Imported history lands in every revenue and margin figure, so a wrong file
   // changes what the owner reads about their own business.
   "sales.import_history",

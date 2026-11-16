@@ -6,12 +6,15 @@ import { useApp } from "./context";
 import { Capsule, Icon } from "./icons";
 
 /**
- * The only place anyone signs in. Online, it hands the person to the website
- * already signed in; on the till it also leaves behind what offline sign-in
- * needs -- which is why the website sends its own sign-in page here.
+ * The only place anyone signs in. On the till, the cashier stays in the app
+ * and goes straight to its till, which sells online while the server answers
+ * and offline when it does not; sign-in also leaves behind what offline
+ * sign-in needs -- which is why the website sends its own sign-in page here.
+ * Everyone else (and the till's menu, with `?to=web`) is handed to the
+ * website already signed in.
  */
-export function LoginScreen() {
-  const { t, device, setDevice, go, leaveFor, reachable } = useApp();
+export function LoginScreen({ website = false }: { website?: boolean }) {
+  const { t, device, setDevice, setSession, go, leaveFor, reachable } = useApp();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
@@ -28,9 +31,14 @@ export function LoginScreen() {
     setError(null);
     setUnreachable(false);
     setBusy("signing");
-    const result = await onlineSignIn(device, username, password, () => setBusy("preparing"));
+    const result = await onlineSignIn(device, username, password, () => setBusy("preparing"), { website });
     if (result.ok) {
-      leaveFor(result.url);
+      if (result.till) {
+        setSession(result.till);
+        go("/till", { replace: true });
+      } else {
+        leaveFor(result.url);
+      }
       return;
     }
     setBusy(null);
@@ -72,7 +80,7 @@ export function LoginScreen() {
             <Capsule size={40} />
           </span>
           <h2>{businessName || t("app.name")}</h2>
-          <p>{t("login.intro")}</p>
+          <p>{device.role === "till" && !website ? t("login.introTill") : t("login.intro")}</p>
         </div>
 
         {offline ? (

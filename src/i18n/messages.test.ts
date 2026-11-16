@@ -84,4 +84,16 @@ describe("permission catalogue", () => {
       expect(p, p).toMatch(/^[a-z_]+\.[a-z_]+$/u);
     }
   });
+
+  it("labels every permission where the account screen looks for it", () => {
+    // The picker renders `permission.<area>.<action>`. A label filed under the
+    // wrong area (the panel's once sat under `stock`) shows up as a raw key.
+    for (const [locale, tree] of [["id", id], ["en", en]] as const) {
+      const labels = (tree as unknown as { permission: Record<string, Record<string, string>> }).permission;
+      for (const p of Object.values(PERMISSION_GROUPS).flat()) {
+        const [area, action] = p.split(".");
+        expect(labels[area]?.[action], `${locale}: permission.${p}`).toBeTruthy();
+      }
+    }
+  });
 });

@@ -115,6 +115,13 @@ export const TOUR: Record<string, TourStop[]> = {
     { id: "queue", selectors: LIST },
     { id: "history", selectors: ["main div.mt-8"] },
   ],
+  panel: [
+    { id: "range", selectors: ['main form[method="get"]'] },
+    { id: "totals", selectors: ['[data-tour="panel-totals"]'] },
+    { id: "form", selectors: ['[data-tour="panel-form"]'] },
+    { id: "list", selectors: ['[data-tour="panel-list"]'] },
+    { id: "export", selectors: ['[data-tour="page-actions"]'] },
+  ],
   counts: [
     { id: "start", selectors: ['[data-tour="page-actions"]'] },
     { id: "list", selectors: LIST },

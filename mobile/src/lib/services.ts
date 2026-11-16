@@ -2,17 +2,19 @@
  * The app's operations: the pure rules in `pass`, `signin`, `till` and `sync`,
  * joined to the network and the files.
  */
-import type { DeviceUser, LoginResponse } from "@/lib/offline/contract";
+import type { DeviceUser, LoginResponse, PaymentMethod } from "@/lib/offline/contract";
 import { native } from "../native";
-import type { DeviceFile, QueueEntry, SnapshotFile, StoredUser } from "../storage-format";
+import { HISTORY_LIMIT, type DeviceFile, type QueueEntry, type SnapshotFile, type StoredUser } from "../storage-format";
 import {
   ApiFailure,
   fetchSnapshot,
   handoffUrl,
   login,
   postSync,
+  postTillSale,
   Unreachable,
 } from "./api";
+import { onlineHistoryEntry, onlineReceipt, recordOnlineUsage, tillSaleRequest } from "./online";
 import { checkPass, raiseHighWater, type Clock, type PassCheck } from "./pass";
 import {
   checkVerifier,
@@ -28,7 +30,7 @@ import {
 } from "./signin";
 import * as store from "./store";
 import { applySyncResults, SYNC_BATCH } from "./sync";
-import { buildSale, type SaleInput, type SaleRefusal } from "./till";
+import { buildSale, type CartLine, type SaleInput, type SaleRefusal } from "./till";
 
 export function clock(): Clock {
   const n = native();
@@ -81,6 +83,23 @@ export function applySnapshotIfNew(): void {
     // keeps the till locked.
     wallHighWater: snapshot.receivedWall,
   });
+}
+
+/**
+ * How often the till takes a fresh copy while the server answers. The website
+ * used to do this while it was open; now the till is the app's own screen, so
+ * the app does it. Keeps prices current for online sales and the pass full for
+ * when the server drops out.
+ */
+export const SNAPSHOT_REFRESH_MS = 15 * 60_000;
+
+/** Whether the till's copy is due for a refresh (missing, from before a reboot, or older than the interval). */
+export function snapshotDue(): boolean {
+  const snapshot = store.readSnapshot();
+  if (!snapshot) return true;
+  const c = clock();
+  if (c.bootCount !== snapshot.bootCount) return true;
+  return c.elapsed - snapshot.receivedElapsed > SNAPSHOT_REFRESH_MS;
 }
 
 /** Fetches a fresh snapshot and pass. Till devices only; management devices never keep one. */
@@ -149,10 +168,91 @@ async function runSync(device: DeviceFile): Promise<SyncOutcome> {
   }
 }
 
+/* ---------------------------------------------------------- live session */
+
+/**
+ * What lets the till sell online: the cashier's till session from the
+ * server. Memory only -- a restart signs the cashier out, as it always has.
+ *
+ * Someone who signed in offline has no session yet. For them, and only until
+ * the server is back and one sign-in has been tried, the password they typed
+ * is kept here too, so the till can go online without asking them again. It
+ * never touches the disk, and it is dropped after the first attempt either way
+ * -- a password that has since changed must not be retried into a lock-out.
+ */
+type Live = { userId: string; token: string | null; password: string | null };
+let live: Live | null = null;
+
+export function setLive(next: Live | null): void {
+  live = next;
+}
+
+/** The till session for this cashier, if the till can sell online for them. */
+export function liveToken(userId: string): string | null {
+  return live && live.userId === userId ? live.token : null;
+}
+
+/** Whether the till could still go online for this cashier without asking them to sign in. */
+export function canResume(userId: string): boolean {
+  return !!live && live.userId === userId && !live.token && !!live.password;
+}
+
+let resuming: Promise<boolean> | null = null;
+
+/**
+ * Signs the offline cashier in online, once the server is back, with the
+ * password they gave offline. True when the till can now sell online.
+ */
+export function resumeOnline(device: DeviceFile, cashier: StoredUser): Promise<boolean> {
+  if (!resuming) {
+    resuming = runResume(device, cashier).finally(() => {
+      resuming = null;
+    });
+  }
+  return resuming;
+}
+
+async function runResume(device: DeviceFile, cashier: StoredUser): Promise<boolean> {
+  if (!live || live.userId !== cashier.id || live.token || !live.password) return false;
+  const password = live.password;
+  let response: LoginResponse;
+  try {
+    response = await login(
+      device.serverUrl,
+      {
+        deviceId: device.deviceId,
+        deviceName: device.deviceName,
+        role: device.role,
+        username: cashier.username,
+        password,
+        appVersion: String(native().appVersion()),
+      },
+      device.deviceToken,
+    );
+  } catch (e) {
+    // Not there after all: try again on the next tick. Refused: never again.
+    if (!(e instanceof Unreachable) && live?.userId === cashier.id) live = { ...live, password: null };
+    return false;
+  }
+  if (response.user.id !== cashier.id || !response.tillSession) {
+    if (live?.userId === cashier.id) live = { ...live, password: null };
+    return false;
+  }
+  const verifier = response.user.mustChangePassword ? null : await makeVerifier(password);
+  store.writeUsers(rememberUser(store.readUsers(), response.user, response.serverTime, verifier));
+  if (response.deviceToken) store.writeDevice({ ...device, deviceToken: response.deviceToken });
+  live = { userId: cashier.id, token: response.tillSession, password: null };
+  return true;
+}
+
 /* --------------------------------------------------------------- sign in */
 
 export type OnlineSignIn =
-  | { ok: true; url: string; user: DeviceUser }
+  /**
+   * `till` set: stay in the app and sell; the till session is already live.
+   * Otherwise open `url`, the website, already signed in.
+   */
+  | { ok: true; url: string; user: DeviceUser; till: StoredUser | null }
   | {
       ok: false;
       problem: "invalid" | "locked" | "suspended" | "revoked" | "unreachable" | "error";
@@ -181,6 +281,8 @@ export async function onlineSignIn(
   username: string,
   password: string,
   onPreparing?: () => void,
+  /** The person asked for the website, not the till. */
+  options: { website?: boolean } = {},
 ): Promise<OnlineSignIn> {
   let device = deviceIn;
   const body = {
@@ -242,6 +344,18 @@ export async function onlineSignIn(
     await syncQueue(device).catch(() => undefined);
   }
 
+  // The till's cashier stays in the app. It needs a usable copy to sell from
+  // (the catalogue, and the pass for when the server drops out); on a phone
+  // that could not fetch one, the website's till will do.
+  if (device.role === "till" && response.tillSession && !options.website) {
+    const cashier = store.readUsers().users.find((u) => u.id === response.user.id) ?? null;
+    applySnapshotIfNew();
+    if (cashier && currentPass().check.ok) {
+      live = { userId: cashier.id, token: response.tillSession, password: null };
+      return { ok: true, url: "", user: response.user, till: cashier };
+    }
+  }
+
   if (Date.now() - started > HANDOFF_FRESH_MS) {
     try {
       response = await login(device.serverUrl, body, device.deviceToken);
@@ -250,7 +364,12 @@ export async function onlineSignIn(
     }
   }
 
-  return { ok: true, url: handoffUrl(device.serverUrl, response.handoffCode), user: response.user };
+  return {
+    ok: true,
+    url: handoffUrl(device.serverUrl, response.handoffCode, options.website ? "/" : undefined),
+    user: response.user,
+    till: null,
+  };
 }
 
 export type OfflineSignIn =
@@ -303,7 +422,10 @@ export type RecordedSale =
  * twice, then the queue -- before the caller is allowed to show a receipt.
  */
 export function recordSale(
-  input: Omit<SaleInput, "snapshot" | "state" | "queue" | "now" | "elapsed" | "wall" | "clientId">,
+  input: Omit<SaleInput, "snapshot" | "state" | "queue" | "now" | "elapsed" | "wall" | "clientId"> & {
+    /** Given when an online attempt came first, so the server books the two as one. */
+    clientId?: string;
+  },
 ): RecordedSale {
   applySnapshotIfNew();
   const snapshot = store.readSnapshot();
@@ -321,7 +443,7 @@ export function recordSale(
     now: check.now,
     elapsed: c.elapsed,
     wall: c.wall,
-    clientId: crypto.randomUUID(),
+    clientId: input.clientId ?? crypto.randomUUID(),
   });
   if (!outcome.ok) return outcome;
 
@@ -332,4 +454,66 @@ export function recordSale(
     return { ok: false, refusal: { code: "save_failed" } };
   }
   return { ok: true, entry: outcome.entry };
+}
+
+export type OnlineSale =
+  | { kind: "sold" }
+  /** The server would not book it. Nothing was sold; say why and let the cashier fix the cart. */
+  | { kind: "refused"; code: string; detail?: Record<string, unknown> }
+  /** The cashier's till session is no longer valid -- suspended, reset, or simply expired. */
+  | { kind: "session_ended" }
+  /** No answer, or no usable one: keep the sale on the phone instead, under the same id. */
+  | { kind: "offline" };
+
+/**
+ * Rings the sale on the server. On "sold" the receipt is on disk in the
+ * history, with the server's number, before the caller shows it.
+ */
+export async function sellOnline(
+  device: DeviceFile,
+  cashier: StoredUser,
+  input: {
+    cart: readonly CartLine[];
+    discount: number;
+    paymentMethod: PaymentMethod;
+    tendered: number | null;
+    notes: string | null;
+    clientId: string;
+  },
+): Promise<OnlineSale> {
+  const token = liveToken(cashier.id);
+  const snapshot = store.readSnapshot();
+  if (!token || !device.deviceToken || !snapshot) return { kind: "offline" };
+
+  let response;
+  try {
+    response = await postTillSale(device.serverUrl, tillSaleRequest(snapshot, input), device.deviceToken, token);
+  } catch (e) {
+    if (e instanceof ApiFailure) {
+      if (e.status === 409 && e.body?.error === "refused") {
+        return { kind: "refused", code: e.body.code ?? "error", detail: e.body.detail };
+      }
+      if (e.body?.error === "session_ended") {
+        if (live?.userId === cashier.id) live = { ...live, token: null };
+        return { kind: "session_ended" };
+      }
+      // A server error may have come after the sale was booked; the offline
+      // copy carries the same id, so the sync finds it rather than booking it twice.
+      if (e.status >= 500) return { kind: "offline" };
+      return { kind: "refused", code: e.body?.error ?? "error" };
+    }
+    return { kind: "offline" };
+  }
+
+  const receipt = onlineReceipt(snapshot, response, cashier.fullName, input.paymentMethod);
+  try {
+    const history = store.readHistory();
+    store.writeHistory({
+      sales: [onlineHistoryEntry(input.clientId, receipt, Date.now()), ...history.sales].slice(0, HISTORY_LIMIT),
+    });
+    store.writeState(recordOnlineUsage(store.readState(), snapshot, response.lines));
+  } catch {
+    // Booked on the server either way; the receipt just could not be kept for reprinting.
+  }
+  return { kind: "sold" };
 }

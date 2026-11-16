@@ -2,6 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import type { Database } from "@/db/client";
 import { alerts, batches, disposals, items, returns, sales } from "@/db/schema";
 import { addDays } from "@/lib/format/date";
+import { panelTakingsByDay } from "@/lib/panel/amounts";
 
 /**
  * What goes in the morning email.
@@ -21,7 +22,12 @@ export type DigestData = {
   /** The day being reported on -- yesterday, in the pharmacy's timezone. */
   on: string;
   business: string;
-  takings: { net: number; gross: number; refunds: number; sales: number };
+  /**
+   * `gross` and `net` include what the Panel took in that day (`panel`, which is
+   * what the doctor paid, PPN on top and all); `sales` counts till baskets only,
+   * because a doctor's order is not one.
+   */
+  takings: { net: number; gross: number; refunds: number; sales: number; panel: number };
   critical: Array<{ type: string; itemName: string; detail: string }>;
   expiring: Array<{ itemName: string; lotNumber: string | null; expiryDate: string; qty: number }>;
   outOfStock: Array<{ itemName: string; code: string }>;
@@ -122,7 +128,11 @@ export async function buildDigest(
   const name = (row: { itemName: string; strength?: string | null }) =>
     `${row.itemName}${row.strength ? ` ${row.strength}` : ""}`;
 
-  const gross = Number(sold?.total ?? 0);
+  // Only what has been approved: a pending order is nobody's money yet.
+  const panel = (await panelTakingsByDay(tx, on, on)).get(on);
+  const panelTaken = panel?.paid ?? 0;
+
+  const gross = Number(sold?.total ?? 0) + panelTaken;
   const refunds = Number(refunded?.total ?? 0);
 
   const data: DigestData = {
@@ -133,6 +143,7 @@ export async function buildDigest(
       refunds,
       net: gross - refunds,
       sales: sold?.count ?? 0,
+      panel: panelTaken,
     },
     critical: criticalRows.map((row) => ({
       type: row.type,
@@ -156,7 +167,8 @@ export async function buildDigest(
     data.critical.length === 0 &&
     data.expiring.length === 0 &&
     data.outOfStock.length === 0 &&
-    data.takings.sales === 0;
+    data.takings.sales === 0 &&
+    data.takings.panel === 0;
 
   return data;
 }

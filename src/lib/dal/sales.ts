@@ -5,6 +5,7 @@ import { getDb } from "@/db";
 import { batches, items, returns, returnLines, sales, saleLines, users } from "@/db/schema";
 import { assertPermission } from "./session";
 import { addDays, today } from "@/lib/format/date";
+import { panelTakingsByDay } from "@/lib/panel/amounts";
 import { getSettings } from "./settings";
 import { recordAudit } from "@/lib/audit";
 import {
@@ -160,9 +161,20 @@ export async function todaysTakings() {
           = (now() at time zone ${timezone})::date`,
     );
 
+  // What the Panel took in today, approved only. It is takings but not a basket,
+  // so it raises the total and leaves the transaction count alone.
+  const day = today();
+  const panelPaid = (await panelTakingsByDay(db, day, day)).get(day)?.paid ?? 0;
+
   const gross = Number(sold?.total ?? 0);
   const refunds = Number(refunded?.total ?? 0);
-  return { total: gross - refunds, gross, refunds, count: sold?.count ?? 0 };
+  return {
+    total: gross - refunds + panelPaid,
+    gross,
+    refunds,
+    count: sold?.count ?? 0,
+    panel: panelPaid,
+  };
 }
 
 /**
@@ -195,12 +207,14 @@ export async function dailyTakings(days = 30) {
     .groupBy(sql`1`);
 
   const byDay = new Map(rows.map((r) => [r.day, { total: Number(r.total), count: r.count }]));
+  const panel = await panelTakingsByDay(db, addDays(today(), -(days - 1)), today());
   const series: Array<{ day: string; total: number; count: number }> = [];
 
   for (let i = days - 1; i >= 0; i--) {
     const day = addDays(today(), -i);
     const hit = byDay.get(day);
-    series.push({ day, total: hit?.total ?? 0, count: hit?.count ?? 0 });
+    // The Panel adds to the day's takings, never to its basket count.
+    series.push({ day, total: (hit?.total ?? 0) + (panel.get(day)?.paid ?? 0), count: hit?.count ?? 0 });
   }
   return series;
 }

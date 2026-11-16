@@ -56,6 +56,9 @@ export const getSettings = cache(async () => {
       countsEnabled: true,
       disposeEnabled: true,
       importEnabled: false,
+      panelEnabled: false,
+      panelTaxDefault: false,
+      panelApprovalRequired: false,
       businessTagline: null,
       digestEnabled: false,
       digestEmail: null,
@@ -106,6 +109,9 @@ export type SettingsInput = {
   countsEnabled: boolean;
   disposeEnabled: boolean;
   importEnabled: boolean;
+  panelEnabled: boolean;
+  panelTaxDefault: boolean;
+  panelApprovalRequired: boolean;
   digestEnabled: boolean;
   digestEmail: string | null;
   digestHour: number;
@@ -174,6 +180,9 @@ export async function updateSettings(input: SettingsInput) {
       countsEnabled: input.countsEnabled,
       disposeEnabled: input.disposeEnabled,
       importEnabled: input.importEnabled,
+      panelEnabled: input.panelEnabled,
+      panelTaxDefault: input.panelTaxDefault,
+      panelApprovalRequired: input.panelApprovalRequired,
       digestEnabled: input.digestEnabled,
       digestEmail: input.digestEmail?.trim() || null,
       digestHour: input.digestHour,

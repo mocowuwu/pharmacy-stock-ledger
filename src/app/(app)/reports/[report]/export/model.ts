@@ -13,6 +13,7 @@ import {
 import type { Preset } from "@/lib/reports/catalogue";
 import { shareBps } from "@/lib/reports/analysis";
 import { formatMoney } from "@/lib/format/money";
+import type { ExportModel } from "@/lib/reports/export-file";
 
 /**
  * What an export contains, independent of the file format.
@@ -25,29 +26,9 @@ import { formatMoney } from "@/lib/format/money";
  */
 
 type Translate = Awaited<ReturnType<typeof getTranslations>>;
-type Value = string | number | null;
 
-export type ColumnFormat = "text" | "int" | "money" | "percent";
-
-export type ExportTable = {
-  /** Sheet name in the workbook. */
-  title: string;
-  columns: Array<{ label: string; format?: ColumnFormat; width?: number }>;
-  rows: Value[][];
-  totals?: Value[];
-};
-
-export type ExportModel = {
-  /** File name stem, e.g. "penjualan". */
-  name: string;
-  /** Label/value lines for the summary sheet, with the period before where it compares. */
-  summary: Array<{ label: string; value: number; format: ColumnFormat; previous?: number | null }>;
-  tables: ExportTable[];
-  /** Plain sentences worth keeping with the figures. */
-  notes: string[];
-  compares: boolean;
-  previousRange?: { from: string; to: string };
-};
+// The description itself lives with the code that writes it as a file.
+export type { ColumnFormat, ExportModel, ExportTable } from "@/lib/reports/export-file";
 
 const product = (row: { name: string; strength: string | null }) =>
   `${row.name}${row.strength ? ` ${row.strength}` : ""}`;
@@ -84,6 +65,14 @@ export async function buildExportModel(
         ],
         notes: [
           t("reports.statement.note"),
+          ...(s.panel.entries > 0
+            ? [
+                t("reports.panel.included", {
+                  revenue: formatMoney(s.panel.revenue),
+                  entries: s.panel.entries.toLocaleString("id-ID"),
+                }),
+              ]
+            : []),
           ...(s.history.lines > 0
             ? [
                 t("reports.history.included", {
@@ -190,7 +179,9 @@ export async function buildExportModel(
               { label: t("reports.sales.takings"), format: "money", width: 16 },
             ],
             rows: data.byCashier.map((row) => [
-              `${row.name || t("reports.history.unknownCashier")}${row.fromHistory ? ` (${t("reports.history.tag")})` : ""}`,
+              row.fromPanel
+                ? `${t("panel.title")} (${t("reports.panel.tag")})`
+                : `${row.name || t("reports.history.unknownCashier")}${row.fromHistory ? ` (${t("reports.history.tag")})` : ""}`,
               row.transactions,
               row.revenue,
             ]),
