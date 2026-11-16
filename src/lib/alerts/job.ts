@@ -1,10 +1,12 @@
 import { and, eq, gt, inArray, lt, ne, sql } from "drizzle-orm";
 import type { Database } from "@/db/client";
 import { alerts, batches, items, settings, stockMovements } from "@/db/schema";
-import { adoptPharmacyTimezone, pharmacyTimezone, today } from "@/lib/format/date";
+import { addDays, adoptPharmacyTimezone, pharmacyTimezone, today } from "@/lib/format/date";
 import {
   computeAlerts,
   DEFAULT_THRESHOLDS,
+  resolveAlertRules,
+  SALES_RATE_WINDOW_DAYS,
   type ComputedAlert,
 } from "./rules";
 
@@ -72,8 +74,11 @@ export async function runAlertJob(
         expiringNoticeDays: config.expiringNoticeDays,
         deadStockNoSaleDays: config.deadStockNoSaleDays,
         deadStockExpiryDays: config.deadStockExpiryDays,
+        lowStockDefaultPoint: config.lowStockDefaultPoint,
+        lowStockCoverDays: config.lowStockCoverDays,
       }
     : DEFAULT_THRESHOLDS;
+  const rules = resolveAlertRules(config?.alertRules);
 
   const itemRows = await db
     .select({
@@ -110,11 +115,38 @@ export async function runAlertJob(
 
   const lastSoldByItem = new Map(lastSales.map((r) => [r.itemId, r.lastSoldAt]));
 
+  // How fast each item has been selling, for the days-of-cover rule. A void
+  // puts its units back, so it comes back off the rate too. Only asked for
+  // when the rule is on: it is the one query here that scans a month of ledger.
+  const soldByItem = new Map<string, number>();
+  if (thresholds.lowStockCoverDays > 0 && rules.low_stock.enabled) {
+    const since = addDays(on, -(SALES_RATE_WINDOW_DAYS - 1));
+    const rates = await db
+      .select({
+        itemId: stockMovements.itemId,
+        sold: sql<number>`coalesce(-sum(${stockMovements.qtyDelta}), 0)::int`,
+      })
+      .from(stockMovements)
+      .where(
+        and(
+          inArray(stockMovements.type, ["sale", "sale_void"]),
+          sql`(${stockMovements.createdAt} at time zone ${pharmacyTimezone()})::date between ${since} and ${on}`,
+        ),
+      )
+      .groupBy(stockMovements.itemId);
+    for (const row of rates) soldByItem.set(row.itemId, Math.max(0, row.sold));
+  }
+
   const computed = computeAlerts({
     today: on,
-    items: itemRows.map((i) => ({ ...i, lastSoldOn: lastSoldByItem.get(i.id) ?? null })),
+    items: itemRows.map((i) => ({
+      ...i,
+      lastSoldOn: lastSoldByItem.get(i.id) ?? null,
+      soldRecently: soldByItem.get(i.id) ?? 0,
+    })),
     batches: batchRows,
     thresholds,
+    rules,
   });
 
   const existing = await db

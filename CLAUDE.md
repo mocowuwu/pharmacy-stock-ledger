@@ -49,6 +49,26 @@ relax one without saying so explicitly.
 - **Every write carries a user id.** No system actions, no shared logins.
 - **Critical alerts cannot be snoozed.** Expired stock stays on screen until it
   is off the shelf. `canSnooze` in `src/lib/alerts/rules.ts` is the gate.
+- **Two alert rules are facts; four are the pharmacy's to set.** Expired stock
+  on the shelf and an empty shelf always fire, always critical. What counts as
+  expiring urgently or soon, as low, as dead stock -- the windows, whether each
+  rule is on, and whether it is graded warning or notice -- is set on
+  `/alerts/rules` by whoever holds `alerts.configure`, a permission of its own:
+  not `settings.manage`, and not the `alerts.manage` that marks an alert as
+  handled. A configurable rule can never be graded critical, and nothing stored
+  can name a critical rule: reading goes through `resolveAlertRules`, saving
+  through `refusalToSaveAlertRules`, and `canSnooze` decides by rule, not by
+  the severity on the row. A switched-off expiry rule hands its batches to the
+  next rule out rather than dropping them. The values live on the settings row
+  (`alert_rules`, null meaning the defaults), but `updateSettings` never writes
+  them -- `saveAlertConfig` in `src/lib/alerts/config.ts` does, and the save
+  reruns the alert job so the list reflects it at once.
+- **"Low" has one definition, the alert job's.** An item is low at or below its
+  own minimum, or the pharmacy's default minimum when it has none
+  (`lowStockDefaultPoint`, 0 = off), or when the shelf would not last
+  `lowStockCoverDays` at the rate the ledger shows it sold over the last 30
+  days. The dashboard's stock-health widget counts live alerts instead of
+  working "low" out again, so the two cannot disagree.
 - **An `expired` batch status is sticky.** Without that, any later movement
   would flip the batch back to `active` and put expired stock on sale again.
 - **Sales go through `commitSale`** in `src/lib/stock/sale.ts`, which allocates
@@ -370,6 +390,23 @@ are at least 44px tall, a long form's Save is sticky to the bottom of the
 screen, and an outcome shown at the top of a long form is scrolled into view
 after Save. Optional fields fold away. `src/app/(app)/panel/` is the worked
 example (`PanelList`, `PanelForm`, `PanelEntry`).
+
+**The dashboard is a catalogue of widgets, and a layout is never a grant.**
+`src/lib/dashboard/widgets.ts` lists each widget with the permission it needs
+and whether it takes a whole row or half of one; `layoutSpans` pairs the halves
+and widens one left without a partner, so a cashier's dashboard does not look
+like the owner's with holes in it. The page (`src/app/(app)/page.tsx`) fetches
+only what the visible widgets need. The permission follows the reports split:
+what the till already shows a cashier needs `sales.create`, who sold what and
+how it was paid needs `reports.sales`, and the one widget with cost prices in
+it (`money_overview`) needs `reports.financial`. The stock widgets carry batch
+and item counts, never a value, which is why they sit behind `alerts.view`.
+An account the owner has arranged keeps the list it was given: a widget added
+in a later version reaches it only when the owner adds it. "Today against
+yesterday" compares the till by the same time of day (`tillTakingsOn` with
+`until`) -- against a whole day, every morning looks like a collapse. The
+expiry calendar's bands are the alert rules' own windows and colours, and its
+neutral band is `--mark-quiet`, validated against the notice blue in both themes.
 
 ## Visual language
 

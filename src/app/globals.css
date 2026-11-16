@@ -37,6 +37,11 @@
   --warning-soft: #fdf2de;
   --notice: #1f6fb2;
   --notice-soft: #e7f1fa;
+  /* The band of a chart that is not a status: "nothing to do here yet".
+     A neutral far enough from the notice blue to be told apart beside it
+     (checked with the dataviz validator, both themes); it is too pale to
+     stand alone, so it always ships with a legend and a tooltip. */
+  --mark-quiet: #c5c0d6;
 
   /* The sidebar keeps its own scale: dark in both themes, like the reference. */
   --sidebar: #221c33;
@@ -67,6 +72,7 @@
     --warning-soft: #262214;
     --notice: #4e97d8;
     --notice-soft: #14202e;
+    --mark-quiet: #453d5c;
 
     --sidebar: #191527;
     --sidebar-ink: #edeaf6;
@@ -96,6 +102,7 @@
   --warning-soft: #262214;
   --notice: #4e97d8;
   --notice-soft: #14202e;
+  --mark-quiet: #453d5c;
 
   --sidebar: #191527;
   --sidebar-ink: #edeaf6;
@@ -164,6 +171,7 @@
   --color-warning-soft: var(--warning-soft);
   --color-notice: var(--notice);
   --color-notice-soft: var(--notice-soft);
+  --color-mark-quiet: var(--mark-quiet);
   --color-sidebar: var(--sidebar);
   --color-sidebar-ink: var(--sidebar-ink);
   --color-sidebar-muted: var(--sidebar-muted);

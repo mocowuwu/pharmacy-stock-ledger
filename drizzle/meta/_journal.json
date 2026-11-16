@@ -99,6 +99,13 @@
       "when": 1794541299695,
       "tag": "0013_till_online_sales",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794814909999,
+      "tag": "0014_alert_rules",
+      "breakpoints": true
     }
   ]
 }

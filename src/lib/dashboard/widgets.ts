@@ -16,24 +16,105 @@ export const WIDGETS = [
   "panel_waiting",
   "alerts_summary",
   "takings_today",
+  "sales_period",
   "sales_chart",
+  "busy_hours",
+  "top_products",
+  "payment_mix",
+  "cashier_sales",
+  "expiry_calendar",
+  "stock_health",
+  "alerts_worklist",
+  "recent_sales",
+  "money_overview",
   "catalogue_counts",
 ] as const;
 
 export type WidgetKey = (typeof WIDGETS)[number];
 
-/** The permission an account needs for the widget to render for it. */
+/**
+ * The permission an account needs for the widget to render for it.
+ *
+ * The split follows the reports: what the till already shows a cashier
+ * (today's takings, the daily line, their own receipts) needs `sales.create`;
+ * who sold what and how it was paid needs `reports.sales`; anything with a
+ * cost price in it needs `reports.financial`.
+ */
 export const WIDGET_PERMISSION: Record<WidgetKey, Permission> = {
   panel_waiting: "panel.approve",
   alerts_summary: "alerts.view",
   takings_today: "sales.create",
+  sales_period: "sales.create",
   sales_chart: "sales.create",
+  busy_hours: "reports.sales",
+  top_products: "reports.sales",
+  payment_mix: "reports.sales",
+  cashier_sales: "reports.sales",
+  expiry_calendar: "alerts.view",
+  stock_health: "alerts.view",
+  alerts_worklist: "alerts.view",
+  recent_sales: "sales.create",
+  money_overview: "reports.financial",
   catalogue_counts: "items.view",
 };
 
 /**
- * What an account sees until the owner sets its dashboard: everything, in the
- * order the single shared dashboard always had, filtered by permission.
+ * How much of the row a widget takes where the dashboard is wide enough for
+ * two columns. Below that every widget is a full row, whatever it says here.
+ */
+export const WIDGET_SIZE: Record<WidgetKey, "full" | "half"> = {
+  panel_waiting: "full",
+  alerts_summary: "full",
+  takings_today: "full",
+  sales_period: "full",
+  sales_chart: "full",
+  busy_hours: "half",
+  top_products: "half",
+  payment_mix: "half",
+  cashier_sales: "half",
+  expiry_calendar: "half",
+  stock_health: "half",
+  alerts_worklist: "half",
+  recent_sales: "half",
+  money_overview: "full",
+  catalogue_counts: "full",
+};
+
+/**
+ * Lays the visible widgets out in rows of two halves or one full.
+ *
+ * A half with no partner -- the next widget is full-width, or there is none --
+ * is widened to the whole row instead of sitting beside a hole. Worked out
+ * here rather than left to the grid, because which widgets survive depends on
+ * the account's permissions and a cashier's dashboard must not look like the
+ * owner's with pieces missing.
+ */
+export function layoutSpans(layout: readonly WidgetKey[]): Array<{ key: WidgetKey; wide: boolean }> {
+  const placed: Array<{ key: WidgetKey; wide: boolean }> = [];
+  let pending: number | null = null;
+
+  for (const key of layout) {
+    if (WIDGET_SIZE[key] === "full") {
+      if (pending !== null) placed[pending]!.wide = true;
+      pending = null;
+      placed.push({ key, wide: true });
+    } else if (pending === null) {
+      pending = placed.length;
+      placed.push({ key, wide: false });
+    } else {
+      pending = null;
+      placed.push({ key, wide: false });
+    }
+  }
+  if (pending !== null) placed[pending]!.wide = true;
+  return placed;
+}
+
+/**
+ * What an account sees until the owner sets its dashboard: everything, in this
+ * order, filtered by permission. An account the owner has arranged keeps the
+ * list it was given -- a widget added in a later version appears there only
+ * when the owner adds it.
  */
 export const DEFAULT_LAYOUT: readonly WidgetKey[] = WIDGETS;
 

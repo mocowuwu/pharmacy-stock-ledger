@@ -71,13 +71,15 @@
       "settings": "Nama apotek, pajak, fitur",
       "app": "Pasang aplikasi apotek di HP",
       "panel": "Catat pesanan obat untuk dokter",
-      "dashboards": "Atur apa yang tampil di beranda tiap akun."
+      "dashboards": "Atur apa yang tampil di beranda tiap akun.",
+      "alertRules": "Atur apa yang dihitung mendesak, menipis, atau tidak bergerak."
     },
     "openMenu": "Buka menu",
     "closeMenu": "Tutup menu",
     "collapse": "Ciutkan menu",
     "expand": "Lebarkan menu",
-    "dashboards": "Beranda Akun"
+    "dashboards": "Beranda Akun",
+    "alertRules": "Aturan Peringatan"
   },
   "auth": {
     "signIn": "Masuk",
@@ -310,7 +312,7 @@
     "cannot_suspend_self": "Anda tidak bisa menangguhkan akun Anda sendiri.",
     "cannot_manage_owner": "Hanya pemilik yang bisa mengubah akun pemilik.",
     "invalid_days": "Masukkan jumlah hari bulat antara 1 dan 3650.",
-    "urgent_window_too_wide": "Jendela merah harus lebih pendek daripada jendela kuning.",
+    "urgent_window_too_wide": "Batas \"Segera kedaluwarsa\" harus lebih pendek daripada batas \"Mendekati kedaluwarsa\".",
     "digest_email_required": "Isi alamat tujuan email harian.",
     "invalid_rate": "Masukkan tarif antara 0 dan 100%.",
     "invalid_date": "Tanggal itu tidak valid.",
@@ -344,7 +346,11 @@
     "already_rejected": "Entri itu sudah ditolak.",
     "unknown_widget": "Widget itu tidak ada.",
     "duplicate_widget": "Ada widget yang terdaftar dua kali.",
-    "not_owner": "Hanya pemilik yang dapat mengatur beranda."
+    "not_owner": "Hanya pemilik yang dapat mengatur beranda.",
+    "dead_stock_window_too_narrow": "Batas kedaluwarsa pada \"Stok tidak bergerak\" harus lebih panjang daripada batas peringatan kedaluwarsa. Kalau tidak, aturan itu tidak akan pernah muncul.",
+    "invalid_low_stock_point": "Batas minimum bawaan harus angka bulat antara 0 dan 100.000.",
+    "invalid_cover_days": "Jumlah hari persediaan harus angka bulat antara 0 dan 365.",
+    "invalid_alert_rule": "Aturan peringatan tidak lengkap. Muat ulang halaman lalu coba lagi."
   },
   "itemsImport": {
     "title": "Impor Katalog",
@@ -669,20 +675,72 @@
     "openItem": "Lihat barang",
     "criticalTile": "Kritis",
     "warningTile": "Perhatian",
-    "noticeTile": "Informasi"
+    "noticeTile": "Informasi",
+    "rules": "Atur aturan",
+    "daysOfCover": "Cukup untuk sekitar {days} hari"
   },
   "dashboard": {
-    "summary": "Ringkasan Stok",
-    "salesSection": "Penjualan",
+    "summary": "Yang perlu ditangani",
     "last30Days": "30 hari terakhir",
     "noSalesYet": "Belum ada penjualan pada periode ini.",
     "catalogue": "Katalog",
     "takingsToday": "Penjualan hari ini",
-    "transactionsToday": "{count} transaksi",
     "panelPending": "{count} pesanan Panel Apotek menunggu persetujuan Anda.",
     "panelPendingOpen": "Lihat",
-    "includesPanel": "termasuk Panel Apotek {amount}",
-    "emptyLayout": "Belum ada yang ditambahkan ke beranda Anda. Pemilik yang menentukan isinya."
+    "emptyLayout": "Belum ada yang ditambahkan ke beranda Anda. Pemilik yang menentukan isinya.",
+    "previous30Days": "30 hari sebelumnya",
+    "seeAll": "Lihat semua",
+    "noYesterday": "belum ada penjualan kemarin pada jam yang sama",
+    "vsYesterday": "dari {amount} kemarin pada jam yang sama",
+    "panelToday": "Panel Apotek",
+    "period": "Penjualan terkini",
+    "takings7": "7 hari terakhir",
+    "takings30": "30 hari terakhir",
+    "chartNote": "30 hari terakhir dibandingkan dengan 30 hari sebelumnya.",
+    "busyNote": "Jumlah transaksi kasir per jam, 30 hari terakhir.",
+    "topProducts": "Barang terlaris",
+    "topProductsNote": "Menurut penjualan bersih, 30 hari terakhir.",
+    "unitsSold": "{qty} {unit} terjual",
+    "paymentMix": "Cara bayar",
+    "paymentMixNote": "Uang yang masuk per cara bayar, 30 hari terakhir.",
+    "transactionsCount": "{count} transaksi",
+    "expiry": {
+      "title": "Kalender kedaluwarsa",
+      "note": "Jumlah bets yang kedaluwarsa tiap bulan, 12 bulan ke depan.",
+      "empty": "Tidak ada bets berisi stok yang kedaluwarsa dalam 12 bulan ke depan.",
+      "beyond": "{count} bets lain kedaluwarsa setelah itu.",
+      "pastShort": "Lewat",
+      "band": {
+        "expired": "Sudah kedaluwarsa",
+        "urgent": "Dalam {days} hari",
+        "notice": "Dalam {days} hari",
+        "later": "Lebih lama"
+      },
+      "nothing": "Tidak ada bets",
+      "batches": "{count} bets",
+      "units": "{count} satuan",
+      "month": "Bulan"
+    },
+    "health": {
+      "title": "Kondisi stok",
+      "note": "{count} barang aktif di katalog.",
+      "healthy": "Stok aman"
+    },
+    "worklist": {
+      "title": "Paling mendesak",
+      "note": "{count} peringatan aktif. Yang paling mendesak di atas."
+    },
+    "recent": {
+      "title": "Penjualan terakhir",
+      "all": "Semua kasir.",
+      "own": "Penjualan Anda sendiri."
+    },
+    "money": {
+      "title": "Laba dan nilai stok",
+      "marginRate": "Margin",
+      "atRisk": "Nilai stok berisiko",
+      "atRiskHint": "Kedaluwarsa atau habis masa dalam 30 hari. Sudah kedaluwarsa: {expired}. Dimusnahkan 30 hari terakhir: {loss}."
+    }
   },
   "returns": {
     "title": "Retur",
@@ -1137,12 +1195,7 @@
     "noTaxRates": "Belum ada tarif tercatat.",
     "taxRateHistoryHint": "Tarif lama disimpan, tidak pernah diubah: struk yang dicetak ulang dari tahun lalu harus tetap menampilkan tarif yang berlaku saat itu.",
     "noEffectiveRate": "PPN menyala tetapi tidak ada tarif yang berlaku hari ini, jadi penjualan tercatat tanpa PPN sama sekali. Tambahkan tarif di bawah.",
-    "alerts": "Ambang peringatan",
-    "alertsHint": "Dalam hari. Stok kedaluwarsa dan stok habis bukan ambang — itu fakta, dan selalu memicu peringatan.",
-    "expiringUrgent": "Segera kedaluwarsa (merah)",
-    "expiringNotice": "Mendekati kedaluwarsa (kuning)",
-    "deadStockNoSale": "Tidak terjual selama",
-    "deadStockExpiry": "dan kedaluwarsa dalam",
+    "alerts": "Aturan peringatan",
     "returns": "Retur",
     "allowRestock": "Izinkan stok bersegel kembali ke rak",
     "allowRestockHint": "Hanya untuk obat bebas dan alat kesehatan. Obat keras, OWA, psikotropika dan narkotika selalu dikarantina, apa pun pengaturan ini.",
@@ -1189,7 +1242,9 @@
     "panelTaxDefaultHint": "Hanya berlaku bila apotek menarik PPN (pengaturan PPN di atas) dan ada tarif yang berlaku. Setiap pesanan tetap bisa dinyalakan atau dimatikan di formulirnya.",
     "panelApproval": "Pesanan Panel perlu disetujui",
     "panelApprovalHint": "Pesanan dari siapa pun selain pemilik menunggu keputusan akun yang punya hak menyetujui. Selama menunggu, pesanan belum dihitung di laporan, dashboard, maupun ringkasan harian.",
-    "panelTaxNeedsTax": "PPN apotek sedang mati, jadi pesanan Panel tidak membawa PPN. Nyalakan \"Tarik PPN\" di bagian PPN agar pengaturan ini berlaku."
+    "panelTaxNeedsTax": "PPN apotek sedang mati, jadi pesanan Panel tidak membawa PPN. Nyalakan \"Tarik PPN\" di bagian PPN agar pengaturan ini berlaku.",
+    "alertsMoved": "Kapan obat dianggap segera kedaluwarsa, stok menipis, atau tidak bergerak sekarang diatur di layarnya sendiri. Pemilik bisa memberi izin itu kepada staf lewat menu Akun.",
+    "alertsOpen": "Buka aturan peringatan"
   },
   "permission": {
     "items": {
@@ -1224,7 +1279,8 @@
     },
     "alerts": {
       "view": "Melihat peringatan",
-      "manage": "Menandai dan menunda peringatan"
+      "manage": "Menandai dan menunda peringatan",
+      "configure": "Mengatur aturan peringatan (apa yang dihitung mendesak)"
     },
     "reports": {
       "sales": "Melihat laporan penjualan",
@@ -1293,7 +1349,8 @@
       "settings": "Nama apotek, pajak, struk, dan fitur mana saja yang dipakai.",
       "app": "Apotek di HP, termasuk kasir cadangan yang tetap bisa menjual saat server mati.",
       "panel": "Untuk obat yang dipesankan apotek atas nama dokter.",
-      "dashboards": "Atur apa yang tampil di beranda tiap akun."
+      "dashboards": "Atur apa yang tampil di beranda tiap akun.",
+      "alertRules": "Tempat mengatur kapan sebuah peringatan muncul: berapa hari sebelum kedaluwarsa, dan kapan stok dianggap menipis."
     },
     "outro": {
       "title": "Sekian semuanya",
@@ -1660,9 +1717,9 @@
             "title": "Layar pertama",
             "steps": {
               "1": "Setelah masuk, Anda tiba di Beranda.",
-              "2": "Empat angka di atas perlu dicek setiap pagi: obat kedaluwarsa yang masih di rak, obat yang habis, obat yang segera kedaluwarsa, dan obat yang stoknya menipis.",
-              "3": "Di bawahnya ada omzet hari ini, grafik 30 hari terakhir, dan jumlah isi katalog.",
-              "4": "Klik salah satu angka untuk membuka peringatan atau daftar di baliknya.",
+              "2": "Kotak-kotak di atas perlu dicek setiap pagi: obat kedaluwarsa yang masih di rak, obat yang habis, obat yang segera kedaluwarsa, dan obat yang stoknya menipis.",
+              "3": "Di bawahnya ada penjualan hari ini dibandingkan kemarin, grafik 30 hari, jam ramai, barang terlaris, kalender kedaluwarsa dan kondisi stok.",
+              "4": "Klik salah satu angka atau baris untuk membuka peringatan atau daftar di baliknya.",
               "5": "Pemilik yang menentukan isi beranda tiap akun. Jika ada bagian yang Anda cari tidak muncul, tanyakan kepada pemilik."
             }
           },
@@ -2127,15 +2184,15 @@
             "steps": {
               "1": "Stok kedaluwarsa di rak (merah): sebuah bets sudah lewat tanggal kedaluwarsa dan masih ada isinya. Kasir sudah menolaknya; obatnya tetap harus diturunkan dari rak.",
               "2": "Stok habis (merah): tidak ada lagi yang bisa dijual.",
-              "3": "Segera kedaluwarsa (merah) dan Mendekati kedaluwarsa (kuning): sebuah bets hampir kedaluwarsa. Seberapa dekat diatur di Pengaturan.",
-              "4": "Stok menipis (kuning): sama dengan atau di bawah batas stok minimum barang itu.",
+              "3": "Segera kedaluwarsa (kuning) dan Mendekati kedaluwarsa (biru): sebuah bets hampir kedaluwarsa. Seberapa dekat diatur di Aturan Peringatan.",
+              "4": "Stok menipis (kuning): sama dengan atau di bawah batas stok minimum barang itu, atau tinggal cukup untuk beberapa hari penjualan bila aturan itu dinyalakan.",
               "5": "Stok tidak bergerak: lama tidak terjual dan menuju kedaluwarsa."
             }
           },
           "routine": {
             "title": "Setiap pagi",
             "steps": {
-              "1": "Lihat angka di samping Peringatan pada menu, atau empat angka di Beranda.",
+              "1": "Lihat angka di samping Peringatan pada menu, atau kotak-kotak \"Yang perlu ditangani\" di Beranda.",
               "2": "Buka Peringatan. Yang paling mendesak selalu di atas.",
               "3": "Turunkan dulu stok kedaluwarsa dari rak, dan sisihkan untuk dimusnahkan.",
               "4": "Obat yang mendekati kedaluwarsa dipindah ke depan rak supaya terjual lebih dulu.",
@@ -2150,6 +2207,18 @@
               "2": "Tunda menyembunyikannya beberapa hari, misalnya selama pesanan sedang dikirim.",
               "3": "Lihat barang membuka obatnya, lengkap dengan bets dan tanggal kedaluwarsanya."
             }
+          },
+          "rules": {
+            "title": "Mengatur apa yang dihitung mendesak",
+            "steps": {
+              "1": "Buka Aturan Peringatan dari menu, atau tekan Atur aturan di layar Peringatan.",
+              "2": "Untuk tiap aturan, isi batasnya: berapa hari sebelum kedaluwarsa, berapa lama tanpa penjualan.",
+              "3": "Pilih tingkatnya: Perhatian (kuning) tampil di atas, Informasi (biru) di bawah. Aturan yang tidak dipakai bisa dimatikan.",
+              "4": "Pada Stok menipis, isi batas minimum bawaan untuk barang yang belum punya batas sendiri, dan jumlah hari persediaan bila ingin barang laris diperingatkan lebih awal.",
+              "5": "Tekan Simpan aturan. Daftar peringatan langsung dihitung ulang."
+            },
+            "tip": "Garis berwarna di atas menunjukkan siapa yang memberi tahu menurut sisa hari, dan berubah sambil Anda mengetik.",
+            "warn": "Stok kedaluwarsa dan stok habis tidak ada di sini: keduanya selalu menyala dan selalu merah. Hanya akun yang diberi izin \"Mengatur aturan peringatan\" yang bisa membuka layar ini."
           },
           "critical": {
             "title": "Peringatan merah tidak bisa ditunda",
@@ -2948,14 +3017,88 @@
     "widget": {
       "panel_waiting": "Pesanan Panel menunggu",
       "panel_waitingHint": "Pemberitahuan saat pesanan Panel Apotek menunggu persetujuan akun ini.",
-      "alerts_summary": "Ringkasan stok",
-      "alerts_summaryHint": "Kedaluwarsa, stok habis, segera kedaluwarsa dan stok menipis; tiap kotak membuka daftarnya.",
+      "alerts_summary": "Yang perlu ditangani",
+      "alerts_summaryHint": "Satu kotak untuk tiap jenis peringatan yang menyala; tiap kotak membuka daftarnya.",
       "takings_today": "Penjualan hari ini",
-      "takings_todayHint": "Total hari ini dan jumlah transaksi.",
+      "takings_todayHint": "Total hari ini dibandingkan kemarin pada jam yang sama, jumlah transaksi dan rata-ratanya.",
       "sales_chart": "Grafik penjualan",
-      "sales_chartHint": "Penjualan 30 hari terakhir.",
+      "sales_chartHint": "Penjualan harian 30 hari terakhir di atas 30 hari sebelumnya.",
       "catalogue_counts": "Katalog",
-      "catalogue_countsHint": "Jumlah barang, kategori dan pemasok."
+      "catalogue_countsHint": "Jumlah barang, kategori dan pemasok.",
+      "sales_period": "Penjualan terkini",
+      "sales_periodHint": "7 dan 30 hari terakhir, dibandingkan dengan periode sebelumnya.",
+      "busy_hours": "Jam ramai",
+      "busy_hoursHint": "Jam berapa kasir paling sibuk.",
+      "top_products": "Barang terlaris",
+      "top_productsHint": "Enam barang dengan penjualan bersih terbesar.",
+      "payment_mix": "Cara bayar",
+      "payment_mixHint": "Tunai, QRIS, kartu dan transfer, menurut uang yang masuk.",
+      "cashier_sales": "Penjualan per kasir",
+      "cashier_salesHint": "Siapa yang melayani berapa banyak.",
+      "expiry_calendar": "Kalender kedaluwarsa",
+      "expiry_calendarHint": "Jumlah bets yang kedaluwarsa tiap bulan, setahun ke depan.",
+      "stock_health": "Kondisi stok",
+      "stock_healthHint": "Berapa barang yang aman, menipis, dan habis.",
+      "alerts_worklist": "Paling mendesak",
+      "alerts_worklistHint": "Enam peringatan teratas, langsung di beranda.",
+      "recent_sales": "Penjualan terakhir",
+      "recent_salesHint": "Enam struk terakhir. Kasir tanpa izin melihat semua hanya melihat miliknya.",
+      "money_overview": "Laba dan nilai stok",
+      "money_overviewHint": "Laba kotor, margin, nilai stok dan nilai yang berisiko kedaluwarsa. Memuat harga modal."
+    }
+  },
+  "alertRules": {
+    "title": "Aturan Peringatan",
+    "subtitle": "Tentukan sendiri apa yang dihitung mendesak, mendekati, menipis, atau tidak bergerak di apotek ini.",
+    "back": "Kembali ke peringatan",
+    "saved": "Aturan disimpan dan daftar peringatan dihitung ulang: sekarang ada {count} peringatan.",
+    "openList": "Lihat daftarnya",
+    "always": "Selalu menyala",
+    "alwaysNote": "Dua peringatan ini adalah fakta, bukan batas. Keduanya tidak bisa dimatikan, diturunkan tingkatnya, atau ditunda oleh siapa pun.",
+    "fixed": {
+      "expired_stock": "Sebuah bets sudah lewat tanggal kedaluwarsa dan masih ada isinya di rak.",
+      "out_of_stock": "Tidak ada lagi stok yang bisa dijual untuk barang itu."
+    },
+    "yours": "Yang bisa Anda atur",
+    "off": "Mati",
+    "level": "Tingkat",
+    "levelHint": {
+      "warning": "Kuning, tampil di atas",
+      "notice": "Biru, tampil di bawah"
+    },
+    "strip": {
+      "title": "Siapa yang memberi tahu, menurut sisa hari",
+      "note": "Setiap bets hanya memicu satu peringatan kedaluwarsa: yang paling dekat dengan tanggalnya.",
+      "none": "Semua aturan kedaluwarsa dimatikan. Hanya stok yang sudah kedaluwarsa yang akan diperingatkan.",
+      "range": "{from}–{to} hari",
+      "beyond": "Lebih dari {days} hari",
+      "quiet": "Belum ada peringatan",
+      "deadIf": "Stok tidak bergerak, hanya bila tidak terjual {days} hari"
+    },
+    "rule": {
+      "expiring_urgent": "Bets yang hampir kedaluwarsa dan harus segera dijual, dikembalikan, atau disisihkan.",
+      "expiring_notice": "Bets yang masih punya waktu, tetapi sudah perlu dipindah ke depan rak.",
+      "low_stock": "Barang yang sisa stoknya sudah sama dengan atau di bawah batas minimumnya.",
+      "dead_stock": "Barang yang lama tidak terjual sementara betsnya menuju kedaluwarsa."
+    },
+    "within": "Kedaluwarsa dalam",
+    "days": "hari",
+    "units": "satuan",
+    "defaultPoint": "Batas minimum bawaan",
+    "defaultPointHint": "Dipakai untuk barang yang batas minimumnya belum diisi. Isi 0 agar barang seperti itu tidak ikut diperingatkan.",
+    "cover": "Juga menipis bila stok cukup untuk kurang dari",
+    "coverHint": "Dihitung dari penjualan 30 hari terakhir. Barang yang laris akan diperingatkan lebih awal, walau masih di atas batas minimumnya. Isi 0 untuk mematikan.",
+    "notSoldFor": "Tidak terjual selama",
+    "andExpiresWithin": "dan kedaluwarsa dalam",
+    "save": "Simpan aturan",
+    "saving": "Menyimpan...",
+    "field": {
+      "expiringUrgentDays": "Hari untuk segera kedaluwarsa",
+      "expiringNoticeDays": "Hari untuk mendekati kedaluwarsa",
+      "deadStockNoSaleDays": "Hari tanpa penjualan",
+      "deadStockExpiryDays": "Hari menuju kedaluwarsa untuk stok tidak bergerak",
+      "lowStockDefaultPoint": "Batas minimum bawaan",
+      "lowStockCoverDays": "Hari persediaan"
     }
   }
 }

@@ -47,6 +47,9 @@ export const getSettings = cache(async () => {
       expiringNoticeDays: 90,
       deadStockNoSaleDays: 90,
       deadStockExpiryDays: 180,
+      lowStockDefaultPoint: 0,
+      lowStockCoverDays: 0,
+      alertRules: null,
       allowReturnRestock: false,
       returnsEnabled: true,
       barcodesEnabled: true,
@@ -96,10 +99,6 @@ export type SettingsInput = {
   timezone: string;
   taxEnabled: boolean;
   taxMode: "inclusive" | "exclusive";
-  expiringUrgentDays: number;
-  expiringNoticeDays: number;
-  deadStockNoSaleDays: number;
-  deadStockExpiryDays: number;
   allowReturnRestock: boolean;
   returnsEnabled: boolean;
   barcodesEnabled: boolean;
@@ -129,12 +128,10 @@ export type SettingsInput = {
 };
 
 /**
- * Writes the settings row.
- *
- * The thresholds are checked against each other rather than only for sanity:
- * an "expiring soon" window wider than the "expiring notice" window would make
- * the urgent alert fire after the gentle one, which reads as the system being
- * broken rather than as a misconfiguration.
+ * Writes the settings row -- all of it except the alert rules, which are
+ * `updateAlertRules` in `./alerts.ts` behind `alerts.configure`. This function
+ * never touches those columns, so saving the pharmacy's name cannot quietly
+ * put the thresholds back.
  */
 export async function updateSettings(input: SettingsInput) {
   const session = await assertPermission("settings.manage");
@@ -167,10 +164,6 @@ export async function updateSettings(input: SettingsInput) {
       timezone: input.timezone,
       taxEnabled: input.taxEnabled,
       taxMode: input.taxMode,
-      expiringUrgentDays: input.expiringUrgentDays,
-      expiringNoticeDays: input.expiringNoticeDays,
-      deadStockNoSaleDays: input.deadStockNoSaleDays,
-      deadStockExpiryDays: input.deadStockExpiryDays,
       allowReturnRestock: input.allowReturnRestock,
       returnsEnabled: input.returnsEnabled,
       barcodesEnabled: input.barcodesEnabled,

@@ -40,14 +40,22 @@ export default async function AlertsPage({ searchParams }: PageProps<"/alerts">)
         title={t("alerts.title")}
         subtitle={t("alerts.subtitle")}
         actions={
-          <form action={refresh}>
-            <button
-              type="submit"
-              className={buttonSecondarySmall}
-            >
-              {t("alerts.refresh")}
-            </button>
-          </form>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* A courtesy: the rules screen checks `alerts.configure` itself. */}
+            {can(session.grant, "alerts.configure") && (
+              <Link href="/alerts/rules" className={buttonSecondarySmall}>
+                {t("alerts.rules")}
+              </Link>
+            )}
+            <form action={refresh}>
+              <button
+                type="submit"
+                className={buttonSecondarySmall}
+              >
+                {t("alerts.refresh")}
+              </button>
+            </form>
+          </div>
         }
       />
 
@@ -131,6 +139,12 @@ export default async function AlertsPage({ searchParams }: PageProps<"/alerts">)
                           {typeof context.reorderPoint === "number"
                             ? ` / ${context.reorderPoint}`
                             : ""}
+                        </span>
+                      )}
+
+                      {typeof context.daysOfCover === "number" && (
+                        <span className="tabular">
+                          {t("alerts.daysOfCover", { days: context.daysOfCover })}
                         </span>
                       )}
 

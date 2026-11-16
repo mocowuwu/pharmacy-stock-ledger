@@ -89,42 +89,22 @@ export function permissionsToStore(
   return target.isOwner ? [] : cleanPermissions(requested);
 }
 
-export type ThresholdRefusal =
-  | "invalid_days"
-  | "urgent_window_too_wide"
-  | "digest_email_required"
-  | "name_required";
+export type SettingsRefusal = "digest_email_required" | "name_required";
 
 /**
  * Checks the settings that can contradict each other.
  *
- * The window check is the one that matters: an urgent threshold wider than the
- * notice threshold would fire the red alert *after* the amber one, which reads
- * as the system being broken rather than as a setting being wrong.
+ * The alert thresholds used to be checked here. They are their own screen now,
+ * behind their own permission, and `refusalToSaveAlertRules` in
+ * `src/lib/alerts/rules.ts` checks them.
  */
 export function refusalToSaveSettings(input: {
   businessName: string;
-  expiringUrgentDays: number;
-  expiringNoticeDays: number;
-  deadStockNoSaleDays: number;
-  deadStockExpiryDays: number;
   digestEnabled: boolean;
   digestEmail?: string | null;
-}): ThresholdRefusal | null {
+}): SettingsRefusal | null {
   if (!input.businessName.trim()) return "name_required";
 
-  const days = [
-    input.expiringUrgentDays,
-    input.expiringNoticeDays,
-    input.deadStockNoSaleDays,
-    input.deadStockExpiryDays,
-  ];
-  if (days.some((value) => !Number.isInteger(value) || value < 1 || value > 3_650)) {
-    return "invalid_days";
-  }
-  if (input.expiringUrgentDays >= input.expiringNoticeDays) {
-    return "urgent_window_too_wide";
-  }
   if (input.digestEnabled && !input.digestEmail?.trim()) {
     return "digest_email_required";
   }

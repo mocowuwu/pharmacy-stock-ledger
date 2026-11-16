@@ -108,38 +108,16 @@ describe("permissions", () => {
 });
 
 describe("settings", () => {
+  // The alert thresholds are no longer part of this check: they have their
+  // own screen and permission, and `tests/alert-rules.test.ts` covers them.
   const base = {
     businessName: "Apotek Klinik",
-    expiringUrgentDays: 30,
-    expiringNoticeDays: 90,
-    deadStockNoSaleDays: 90,
-    deadStockExpiryDays: 180,
     digestEnabled: false,
     digestEmail: null,
   };
 
   it("accepts a sensible set", () => {
     expect(refusalToSaveSettings(base)).toBeNull();
-  });
-
-  it("refuses an urgent window wider than the notice window", () => {
-    // Otherwise the red alert fires after the amber one, which reads as the
-    // system being broken rather than as a setting being wrong.
-    expect(
-      refusalToSaveSettings({ ...base, expiringUrgentDays: 120 }),
-    ).toBe("urgent_window_too_wide");
-    expect(
-      refusalToSaveSettings({ ...base, expiringUrgentDays: 90 }),
-    ).toBe("urgent_window_too_wide");
-  });
-
-  it("refuses thresholds that are not whole days", () => {
-    expect(refusalToSaveSettings({ ...base, expiringUrgentDays: 0 })).toBe(
-      "invalid_days",
-    );
-    expect(refusalToSaveSettings({ ...base, deadStockExpiryDays: 7.5 })).toBe(
-      "invalid_days",
-    );
   });
 
   it("refuses a digest with nowhere to send it", () => {

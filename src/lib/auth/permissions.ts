@@ -38,7 +38,7 @@ export const PERMISSION_GROUPS = {
     "sales.view_all",
     "sales.import_history",
   ],
-  alerts: ["alerts.view", "alerts.manage"],
+  alerts: ["alerts.view", "alerts.manage", "alerts.configure"],
   administration: [
     "reports.sales",
     "reports.financial",
@@ -86,6 +86,9 @@ export const SENSITIVE_PERMISSIONS: readonly Permission[] = [
   // Imported history lands in every revenue and margin figure, so a wrong file
   // changes what the owner reads about their own business.
   "sales.import_history",
+  // Whoever sets what counts as urgent decides what everyone else is told to
+  // look at; a rule switched off is a warning nobody receives.
+  "alerts.configure",
 ];
 
 /**
