@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/lib/dal/session";
+import { can } from "@/lib/auth/permissions";
 import {
   effectiveTaxRate,
   getSettings,
@@ -288,42 +289,17 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
           )}
         </section>
 
+        {/* The thresholds lived here once. They are their own screen now, behind
+            `alerts.configure`, so this is only the way there. */}
         <section>
           <SectionHeading>{t("settings.alerts")}</SectionHeading>
-          <p className="mb-3 -mt-1 text-sm text-muted">{t("settings.alertsHint")}</p>
-          <Card className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4">
-            <Field label={t("settings.expiringUrgent")}>
-              <input
-                name="expiringUrgentDays"
-                inputMode="numeric"
-                defaultValue={settings.expiringUrgentDays}
-                className={`${inputClass} tabular`}
-              />
-            </Field>
-            <Field label={t("settings.expiringNotice")}>
-              <input
-                name="expiringNoticeDays"
-                inputMode="numeric"
-                defaultValue={settings.expiringNoticeDays}
-                className={`${inputClass} tabular`}
-              />
-            </Field>
-            <Field label={t("settings.deadStockNoSale")}>
-              <input
-                name="deadStockNoSaleDays"
-                inputMode="numeric"
-                defaultValue={settings.deadStockNoSaleDays}
-                className={`${inputClass} tabular`}
-              />
-            </Field>
-            <Field label={t("settings.deadStockExpiry")}>
-              <input
-                name="deadStockExpiryDays"
-                inputMode="numeric"
-                defaultValue={settings.deadStockExpiryDays}
-                className={`${inputClass} tabular`}
-              />
-            </Field>
+          <Card className="flex flex-wrap items-center justify-between gap-3 p-5">
+            <p className="min-w-0 flex-1 basis-64 text-sm text-muted">{t("settings.alertsMoved")}</p>
+            {can(session.grant, "alerts.configure") && (
+              <Link href="/alerts/rules" className={buttonSecondary}>
+                {t("settings.alertsOpen")}
+              </Link>
+            )}
           </Card>
         </section>
 

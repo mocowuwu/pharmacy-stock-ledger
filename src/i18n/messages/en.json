@@ -71,13 +71,15 @@
       "settings": "Pharmacy name, tax, features",
       "app": "Put the pharmacy on your phone",
       "panel": "Record medicine ordered for doctors",
-      "dashboards": "Choose what each account sees on its dashboard."
+      "dashboards": "Choose what each account sees on its dashboard.",
+      "alertRules": "Set what counts as urgent, low or not moving."
     },
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
     "collapse": "Collapse menu",
     "expand": "Expand menu",
-    "dashboards": "Account dashboards"
+    "dashboards": "Account dashboards",
+    "alertRules": "Alert Rules"
   },
   "auth": {
     "signIn": "Sign in",
@@ -310,7 +312,7 @@
     "cannot_suspend_self": "You cannot suspend your own account.",
     "cannot_manage_owner": "Only the owner can change the owner's account.",
     "invalid_days": "Enter a whole number of days between 1 and 3650.",
-    "urgent_window_too_wide": "The red window must be shorter than the amber one.",
+    "urgent_window_too_wide": "The \"Expiring urgently\" window must be shorter than the \"Expiring soon\" window.",
     "digest_email_required": "Give an address to send the daily email to.",
     "invalid_rate": "Enter a rate between 0 and 100%.",
     "invalid_date": "That date is not valid.",
@@ -344,7 +346,11 @@
     "already_rejected": "That entry has already been rejected.",
     "unknown_widget": "That widget does not exist.",
     "duplicate_widget": "A widget was listed twice.",
-    "not_owner": "Only the owner can set dashboards."
+    "not_owner": "Only the owner can set dashboards.",
+    "dead_stock_window_too_narrow": "The expiry window for \"Dead stock\" must be longer than the expiry alert windows. Otherwise that rule would never fire.",
+    "invalid_low_stock_point": "The default minimum must be a whole number between 0 and 100,000.",
+    "invalid_cover_days": "Days of cover must be a whole number between 0 and 365.",
+    "invalid_alert_rule": "The alert rules are incomplete. Reload the page and try again."
   },
   "itemsImport": {
     "title": "Import Catalogue",
@@ -669,20 +675,72 @@
     "openItem": "View item",
     "criticalTile": "Critical",
     "warningTile": "Warning",
-    "noticeTile": "Notice"
+    "noticeTile": "Notice",
+    "rules": "Set rules",
+    "daysOfCover": "Enough for about {days} days"
   },
   "dashboard": {
-    "summary": "Stock summary",
-    "salesSection": "Sales",
+    "summary": "Needs attention",
     "last30Days": "Last 30 days",
     "noSalesYet": "No sales in this period yet.",
     "catalogue": "Catalogue",
     "takingsToday": "Takings today",
-    "transactionsToday": "{count} transactions",
     "panelPending": "{count} Panel Apotek orders are waiting for your approval.",
     "panelPendingOpen": "Review them",
-    "includesPanel": "including Panel Apotek {amount}",
-    "emptyLayout": "Nothing has been added to your dashboard yet. The owner chooses what appears here."
+    "emptyLayout": "Nothing has been added to your dashboard yet. The owner chooses what appears here.",
+    "previous30Days": "The 30 days before",
+    "seeAll": "See all",
+    "noYesterday": "no sales by this time yesterday",
+    "vsYesterday": "from {amount} by this time yesterday",
+    "panelToday": "Panel Apotek",
+    "period": "Recent sales",
+    "takings7": "Last 7 days",
+    "takings30": "Last 30 days",
+    "chartNote": "The last 30 days against the 30 days before.",
+    "busyNote": "Till transactions per hour, last 30 days.",
+    "topProducts": "Best sellers",
+    "topProductsNote": "By net sales, last 30 days.",
+    "unitsSold": "{qty} {unit} sold",
+    "paymentMix": "Payment methods",
+    "paymentMixNote": "Money taken in per payment method, last 30 days.",
+    "transactionsCount": "{count} transactions",
+    "expiry": {
+      "title": "Expiry calendar",
+      "note": "Batches expiring each month, over the next 12 months.",
+      "empty": "No batch holding stock expires in the next 12 months.",
+      "beyond": "{count} more batches expire after that.",
+      "pastShort": "Past",
+      "band": {
+        "expired": "Already expired",
+        "urgent": "Within {days} days",
+        "notice": "Within {days} days",
+        "later": "Later"
+      },
+      "nothing": "No batches",
+      "batches": "{count} batches",
+      "units": "{count} units",
+      "month": "Month"
+    },
+    "health": {
+      "title": "Stock health",
+      "note": "{count} active items in the catalogue.",
+      "healthy": "Well stocked"
+    },
+    "worklist": {
+      "title": "Most urgent",
+      "note": "{count} live alerts. The most urgent first."
+    },
+    "recent": {
+      "title": "Latest sales",
+      "all": "Every cashier.",
+      "own": "Your own sales."
+    },
+    "money": {
+      "title": "Profit and stock value",
+      "marginRate": "Margin",
+      "atRisk": "Stock value at risk",
+      "atRiskHint": "Expired or expiring within 30 days. Already expired: {expired}. Written off in the last 30 days: {loss}."
+    }
   },
   "returns": {
     "title": "Return",
@@ -1137,12 +1195,7 @@
     "noTaxRates": "No rates recorded.",
     "taxRateHistoryHint": "Old rates are kept, never edited: a receipt reprinted from last year must still show the rate that applied on the day.",
     "noEffectiveRate": "PPN is switched on but no rate covers today, so sales are being recorded with no PPN at all. Add a rate below.",
-    "alerts": "Alert thresholds",
-    "alertsHint": "In days. Expired stock and out-of-stock are not thresholds — they are facts, and they always alert.",
-    "expiringUrgent": "Expiring soon (red)",
-    "expiringNotice": "Expiring (amber)",
-    "deadStockNoSale": "No sale for",
-    "deadStockExpiry": "and expiring within",
+    "alerts": "Alert rules",
     "returns": "Returns",
     "allowRestock": "Allow sealed stock back on the shelf",
     "allowRestockHint": "Applies to over-the-counter items and devices only. Obat keras, OWA, psikotropika and narkotika are always quarantined, whatever this says.",
@@ -1189,7 +1242,9 @@
     "panelTaxDefaultHint": "Only applies once the pharmacy charges PPN (the PPN setting above) and a rate is in force. Each order can still switch it on or off on its own form.",
     "panelApproval": "Panel orders need approval",
     "panelApprovalHint": "An order recorded by anyone but the owner waits for an account with the approve permission to decide. Until then it counts toward nothing: not the reports, the dashboard or the daily digest.",
-    "panelTaxNeedsTax": "PPN is switched off for the pharmacy, so Panel orders carry none. Turn on \"Charge PPN\" in the PPN section for this to apply."
+    "panelTaxNeedsTax": "PPN is switched off for the pharmacy, so Panel orders carry none. Turn on \"Charge PPN\" in the PPN section for this to apply.",
+    "alertsMoved": "When medicine counts as expiring soon, running low or not moving is now set on its own screen. The owner can give staff that permission from Accounts.",
+    "alertsOpen": "Open alert rules"
   },
   "permission": {
     "items": {
@@ -1224,7 +1279,8 @@
     },
     "alerts": {
       "view": "See alerts",
-      "manage": "Acknowledge and snooze alerts"
+      "manage": "Acknowledge and snooze alerts",
+      "configure": "Set the alert rules (what counts as urgent)"
     },
     "reports": {
       "sales": "See sales reports",
@@ -1293,7 +1349,8 @@
       "settings": "The pharmacy's name, tax, receipts and which features are in use.",
       "app": "The pharmacy on a phone, including a backup till that keeps selling when the server is down.",
       "panel": "For medicine the pharmacy orders on a doctor's behalf.",
-      "dashboards": "Choose what each account sees on its dashboard."
+      "dashboards": "Choose what each account sees on its dashboard.",
+      "alertRules": "Where you set when an alert appears: how many days before expiry, and when stock counts as low."
     },
     "outro": {
       "title": "That's everything",
@@ -1660,9 +1717,9 @@
             "title": "The first screen",
             "steps": {
               "1": "After signing in you land on the dashboard.",
-              "2": "The four numbers at the top are the ones to check every morning: expired medicine still on the shelf, medicine that has run out, medicine expiring soon, and medicine running low.",
-              "3": "Below them are today's takings and a chart of the last 30 days, and the size of the catalogue.",
-              "4": "Click a number to open the alerts or the list behind it.",
+              "2": "The tiles at the top are the ones to check every morning: expired medicine still on the shelf, medicine that has run out, medicine expiring soon, and medicine running low.",
+              "3": "Below them are today's sales against yesterday, a 30-day chart, busy hours, best sellers, the expiry calendar and stock health.",
+              "4": "Click a number or a row to open the alerts or the list behind it.",
               "5": "The owner decides what each account's dashboard shows. If a block you expect is missing, ask the owner."
             }
           },
@@ -2127,15 +2184,15 @@
             "steps": {
               "1": "Expired stock on shelf (red): a batch has passed its expiry and still has units. The till already refuses it; it still has to come off the shelf.",
               "2": "Out of stock (red): nothing left to sell.",
-              "3": "Expiring urgently (red) and Expiring soon (amber): a batch is close to its expiry. How close is set in Settings.",
-              "4": "Low stock (amber): at or below the item's reorder point.",
+              "3": "Expiring urgently (amber) and Expiring soon (blue): a batch is close to its expiry. How close is set in Alert Rules.",
+              "4": "Low stock (amber): at or below the item's minimum, or down to a few days of sales when that rule is switched on.",
               "5": "Dead stock: has not sold for a long time and is heading for expiry."
             }
           },
           "routine": {
             "title": "Every morning",
             "steps": {
-              "1": "Look at the count next to Alerts in the menu, or the four numbers on the dashboard.",
+              "1": "Look at the count next to Alerts in the menu, or the \"Needs attention\" tiles on the dashboard.",
               "2": "Open Alerts. The most urgent are always at the top.",
               "3": "Take expired stock off the shelf first, and put it aside for disposal.",
               "4": "For medicine expiring soon, move it to the front of the shelf so it sells first.",
@@ -2150,6 +2207,18 @@
               "2": "Snooze hides it for a few days, for example while a delivery is on its way.",
               "3": "View item opens the medicine, with its batches and expiry dates."
             }
+          },
+          "rules": {
+            "title": "Setting what counts as urgent",
+            "steps": {
+              "1": "Open Alert Rules from the menu, or press Set rules on the Alerts screen.",
+              "2": "For each rule, enter its limit: how many days before expiry, how long without a sale.",
+              "3": "Choose its level: Warning (amber) is listed higher, Notice (blue) lower. A rule you do not use can be switched off.",
+              "4": "Under Low stock, enter a default minimum for items with none of their own, and days of cover if fast sellers should be flagged earlier.",
+              "5": "Press Save rules. The alert list is recalculated straight away."
+            },
+            "tip": "The coloured strip at the top shows who speaks up by days left, and changes as you type.",
+            "warn": "Expired stock and out of stock are not here: both are always on and always red. Only accounts given \"Set the alert rules\" can open this screen."
           },
           "critical": {
             "title": "Red alerts cannot be snoozed",
@@ -2948,14 +3017,88 @@
     "widget": {
       "panel_waiting": "Panel orders waiting",
       "panel_waitingHint": "A notice when Panel Apotek orders wait for this account's approval.",
-      "alerts_summary": "Stock summary",
-      "alerts_summaryHint": "Expired, out of stock, expiring soon and low stock, each opening its list.",
-      "takings_today": "Takings today",
-      "takings_todayHint": "Today's total and number of transactions.",
+      "alerts_summary": "Needs attention",
+      "alerts_summaryHint": "A tile for each alert type that is switched on; each opens its list.",
+      "takings_today": "Today's sales",
+      "takings_todayHint": "Today so far against the same time yesterday, with transactions and the average sale.",
       "sales_chart": "Sales chart",
-      "sales_chartHint": "Sales over the last 30 days.",
+      "sales_chartHint": "Daily sales for the last 30 days over the 30 days before.",
       "catalogue_counts": "Catalogue",
-      "catalogue_countsHint": "How many items, categories and suppliers there are."
+      "catalogue_countsHint": "How many items, categories and suppliers there are.",
+      "sales_period": "Recent sales",
+      "sales_periodHint": "The last 7 and 30 days, against the period before.",
+      "busy_hours": "Busy hours",
+      "busy_hoursHint": "Which hours the till is busiest.",
+      "top_products": "Best sellers",
+      "top_productsHint": "The six items with the highest net sales.",
+      "payment_mix": "Payment methods",
+      "payment_mixHint": "Cash, QRIS, card and transfer, by money taken in.",
+      "cashier_sales": "Sales by cashier",
+      "cashier_salesHint": "Who served how much.",
+      "expiry_calendar": "Expiry calendar",
+      "expiry_calendarHint": "Batches expiring each month for the year ahead.",
+      "stock_health": "Stock health",
+      "stock_healthHint": "How many items are well stocked, low and out.",
+      "alerts_worklist": "Most urgent",
+      "alerts_worklistHint": "The top six alerts, right on the dashboard.",
+      "recent_sales": "Latest sales",
+      "recent_salesHint": "The last six receipts. A cashier without view-all sees only their own.",
+      "money_overview": "Profit and stock value",
+      "money_overviewHint": "Gross profit, margin, stock value and value at risk of expiry. Contains cost prices."
+    }
+  },
+  "alertRules": {
+    "title": "Alert Rules",
+    "subtitle": "Decide what counts as urgent, approaching, low or not moving in this pharmacy.",
+    "back": "Back to alerts",
+    "saved": "Rules saved and the alert list recalculated: there are now {count} alerts.",
+    "openList": "See the list",
+    "always": "Always on",
+    "alwaysNote": "These two are facts, not thresholds. Nobody can switch them off, lower their level or snooze them.",
+    "fixed": {
+      "expired_stock": "A batch is past its expiry date and still holds stock on the shelf.",
+      "out_of_stock": "There is nothing left of the item that can be sold."
+    },
+    "yours": "What you can set",
+    "off": "Off",
+    "level": "Level",
+    "levelHint": {
+      "warning": "Amber, listed higher",
+      "notice": "Blue, listed lower"
+    },
+    "strip": {
+      "title": "Who speaks up, by days left",
+      "note": "A batch raises only one expiry alert: the one closest to its date.",
+      "none": "Every expiry rule is switched off. Only stock that has already expired will be flagged.",
+      "range": "{from}–{to} days",
+      "beyond": "More than {days} days",
+      "quiet": "No alert yet",
+      "deadIf": "Dead stock, only if not sold for {days} days"
+    },
+    "rule": {
+      "expiring_urgent": "Batches close to expiry that must be sold, returned or set aside now.",
+      "expiring_notice": "Batches with time left, but due to move to the front of the shelf.",
+      "low_stock": "Items whose stock is at or below their minimum.",
+      "dead_stock": "Items that have not sold for a long time while their batch heads for expiry."
+    },
+    "within": "Expires within",
+    "days": "days",
+    "units": "units",
+    "defaultPoint": "Default minimum",
+    "defaultPointHint": "Used for items with no minimum of their own. Enter 0 to leave such items out.",
+    "cover": "Also low when stock would last less than",
+    "coverHint": "Worked out from the last 30 days of sales. A fast seller is flagged earlier, even above its minimum. Enter 0 to switch this off.",
+    "notSoldFor": "Not sold for",
+    "andExpiresWithin": "and expires within",
+    "save": "Save rules",
+    "saving": "Saving...",
+    "field": {
+      "expiringUrgentDays": "Days for expiring urgently",
+      "expiringNoticeDays": "Days for expiring soon",
+      "deadStockNoSaleDays": "Days without a sale",
+      "deadStockExpiryDays": "Days to expiry for dead stock",
+      "lowStockDefaultPoint": "Default minimum",
+      "lowStockCoverDays": "Days of cover"
     }
   }
 }

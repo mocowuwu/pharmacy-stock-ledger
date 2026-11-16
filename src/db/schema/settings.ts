@@ -5,6 +5,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   pgTable,
   text,
   uuid,
@@ -63,6 +64,21 @@ export const settings = pgTable(
     expiringNoticeDays: integer("expiring_notice_days").notNull().default(90),
     deadStockNoSaleDays: integer("dead_stock_no_sale_days").notNull().default(90),
     deadStockExpiryDays: integer("dead_stock_expiry_days").notNull().default(180),
+    /**
+     * The minimum for an item with none of its own. 0 keeps such items out of
+     * the low-stock rule, which is how it behaved before this column existed.
+     */
+    lowStockDefaultPoint: integer("low_stock_default_point").notNull().default(0),
+    /** Low when the shelf would not last this many days at the recent rate. 0 is off. */
+    lowStockCoverDays: integer("low_stock_cover_days").notNull().default(0),
+    /**
+     * Which of the four judgement rules are on, and how each is graded
+     * (`AlertRules` in `src/lib/alerts/rules.ts`). **Null means the defaults.**
+     * The two critical rules are not in here and cannot be put in: reading goes
+     * through `resolveAlertRules`, which ignores anything it does not know.
+     * Written by `alerts.configure`, not `settings.manage`.
+     */
+    alertRules: jsonb("alert_rules").$type<Record<string, { enabled: boolean; severity: string }> | null>(),
 
     /**
      * Permits restocking returned stock for sealed OTC and devices. Restricted
@@ -164,7 +180,13 @@ export const settings = pgTable(
     updatedBy: uuid("updated_by").references(() => users.id),
     updatedAt: ts("updated_at").notNull().defaultNow(),
   },
-  (t) => [check("settings_is_singleton", sql`${t.id} = 1`)],
+  (t) => [
+    check("settings_is_singleton", sql`${t.id} = 1`),
+    check(
+      "settings_low_stock_sane",
+      sql`${t.lowStockDefaultPoint} >= 0 and ${t.lowStockCoverDays} >= 0`,
+    ),
+  ],
 );
 
 /**

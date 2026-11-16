@@ -48,6 +48,9 @@ const NAV: Array<{
   { key: "categories", href: "/categories", group: "records", permissions: ["items.view"] },
   { key: "users", href: "/users", group: "admin", permissions: ["users.manage"] },
   { key: "settings", href: "/settings", group: "admin", permissions: ["settings.manage"] },
+  // What counts as an alert. Its own permission, so the owner can hand it to a
+  // pharmacist without handing over the rest of Settings.
+  { key: "alertRules", href: "/alerts/rules", group: "admin", permissions: ["alerts.configure"] },
   // What each account's dashboard shows is the owner's call, not a permission.
   { key: "dashboards", href: "/settings/dashboards", group: "admin", permissions: [], ownerOnly: true },
   // Everyone who signs in may put the app on their phone: it gives nobody any

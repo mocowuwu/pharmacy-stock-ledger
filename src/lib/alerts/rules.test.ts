@@ -3,6 +3,12 @@ import {
   canSnooze,
   computeAlerts,
   countBySeverity,
+  daysOfCover,
+  DEFAULT_ALERT_RULES,
+  DEFAULT_THRESHOLDS,
+  refusalToSaveAlertRules,
+  resolveAlertRules,
+  type AlertRules,
   type BatchSnapshot,
   type ItemSnapshot,
 } from "./rules";
@@ -250,5 +256,210 @@ describe("severity", () => {
     expect(canSnooze("out_of_stock")).toBe(false);
     expect(canSnooze("low_stock")).toBe(true);
     expect(canSnooze("expiring_notice")).toBe(true);
+  });
+});
+
+describe("the pharmacy's own rules", () => {
+  const withRules = (
+    rules: Partial<AlertRules>,
+    items: ItemSnapshot[],
+    batches: BatchSnapshot[],
+    thresholds = {},
+  ) => computeAlerts({ today: TODAY, items, batches, rules, thresholds });
+
+  const off = { enabled: false, severity: "warning" } as const;
+
+  it("a switched-off rule raises nothing", () => {
+    const alerts = withRules({ low_stock: off }, [item()], [batch({ qtyRemaining: 50 })]);
+    expect(alerts).toEqual([]);
+  });
+
+  it("hands a batch to the next rule out rather than dropping it", () => {
+    // Ten days from expiry with "expiring urgently" off is still inside the
+    // notice window, and still worth a line.
+    const alerts = withRules(
+      { expiring_urgent: off },
+      [item()],
+      [batch({ expiryDate: addDays(TODAY, 10) })],
+    );
+    expect(alerts.map((a) => a.type)).toEqual(["expiring_notice"]);
+  });
+
+  it("lets dead stock speak for a batch no expiry rule flagged", () => {
+    const idle = item({ lastSoldOn: addDays(TODAY, -200) });
+    const soon = batch({ expiryDate: addDays(TODAY, 60) });
+    expect(withRules({}, [idle], [soon]).map((a) => a.type)).toEqual(["expiring_notice"]);
+    expect(withRules({ expiring_notice: off }, [idle], [soon]).map((a) => a.type)).toEqual([
+      "dead_stock",
+    ]);
+  });
+
+  it("grades an alert the way the rule is graded", () => {
+    const alerts = withRules(
+      { low_stock: { enabled: true, severity: "notice" } },
+      [item()],
+      [batch({ qtyRemaining: 50 })],
+    );
+    expect(alerts[0]).toMatchObject({ type: "low_stock", severity: "notice" });
+  });
+
+  it("cannot switch off, soften or reach the two critical rules", () => {
+    const stored = {
+      expired_stock: { enabled: false, severity: "notice" },
+      out_of_stock: { enabled: false, severity: "notice" },
+      low_stock: { enabled: true, severity: "critical" },
+    };
+    const rules = resolveAlertRules(stored);
+    // Unknown keys are dropped and a critical grade is not one a rule may carry.
+    expect(Object.keys(rules).sort()).toEqual(Object.keys(DEFAULT_ALERT_RULES).sort());
+    expect(rules.low_stock.severity).toBe("warning");
+
+    const alerts = computeAlerts({
+      today: TODAY,
+      items: [item({ id: "empty" }), item({ id: "old" })],
+      batches: [batch({ itemId: "old", expiryDate: addDays(TODAY, -1) })],
+      rules: stored as unknown as AlertRules,
+    });
+    expect(alerts.filter((a) => a.type === "expired_stock")).toHaveLength(1);
+    expect(alerts.filter((a) => a.type === "out_of_stock")).toHaveLength(2);
+    expect(alerts.every((a) => a.severity === "critical")).toBe(true);
+    expect(canSnooze("expired_stock")).toBe(false);
+    expect(canSnooze("out_of_stock")).toBe(false);
+  });
+
+  it("reads garbage as the defaults", () => {
+    expect(resolveAlertRules(null)).toEqual(DEFAULT_ALERT_RULES);
+    expect(resolveAlertRules("off")).toEqual(DEFAULT_ALERT_RULES);
+    expect(resolveAlertRules([{ enabled: false }])).toEqual(DEFAULT_ALERT_RULES);
+    expect(resolveAlertRules({ low_stock: { enabled: "no" } })).toEqual(DEFAULT_ALERT_RULES);
+  });
+});
+
+describe("what counts as low", () => {
+  it("an item with no minimum of its own is never low by default", () => {
+    expect(types([item({ reorderPoint: 0 })], [batch({ qtyRemaining: 3 })])).toEqual([]);
+  });
+
+  it("falls back to the default minimum, and only for items without one", () => {
+    const thresholds = { lowStockDefaultPoint: 10 };
+    const low = (reorderPoint: number, qty: number) =>
+      computeAlerts({
+        today: TODAY,
+        items: [item({ reorderPoint })],
+        batches: [batch({ qtyRemaining: qty })],
+        thresholds,
+      }).map((a) => a.type);
+
+    expect(low(0, 10)).toEqual(["low_stock"]);
+    expect(low(0, 11)).toEqual([]);
+    // Its own minimum wins, even a lower one.
+    expect(low(5, 8)).toEqual([]);
+  });
+
+  it("flags a fast seller before it reaches its minimum", () => {
+    const fast = item({ reorderPoint: 20, soldRecently: 300 }); // 10 a day
+    const alerts = computeAlerts({
+      today: TODAY,
+      items: [fast],
+      batches: [batch({ qtyRemaining: 60 })], // six days' worth
+      thresholds: { lowStockCoverDays: 7 },
+    });
+    expect(alerts[0]).toMatchObject({ type: "low_stock" });
+    expect(alerts[0].context).toMatchObject({ onHand: 60, daysOfCover: 6 });
+  });
+
+  it("the cover boundary is exact: seven days of stock is not less than seven", () => {
+    const run7 = (qty: number) =>
+      computeAlerts({
+        today: TODAY,
+        items: [item({ reorderPoint: 0, soldRecently: 300 })],
+        batches: [batch({ qtyRemaining: qty })],
+        thresholds: { lowStockCoverDays: 7 },
+      });
+    expect(run7(70)).toEqual([]);
+    expect(run7(69).map((a) => a.type)).toEqual(["low_stock"]);
+  });
+
+  it("an item that is not selling has no rate to run out at", () => {
+    expect(daysOfCover(5, 0)).toBeNull();
+    const alerts = computeAlerts({
+      today: TODAY,
+      items: [item({ reorderPoint: 0, soldRecently: 0 })],
+      batches: [batch({ qtyRemaining: 1 })],
+      thresholds: { lowStockCoverDays: 30 },
+    });
+    expect(alerts).toEqual([]);
+  });
+
+  it("says nothing about cover when the minimum is what raised it", () => {
+    const alerts = computeAlerts({
+      today: TODAY,
+      items: [item({ reorderPoint: 100, soldRecently: 30 })],
+      batches: [batch({ qtyRemaining: 90 })],
+      thresholds: { lowStockCoverDays: 7 },
+    });
+    expect(alerts[0].context.daysOfCover).toBeNull();
+  });
+});
+
+describe("saving the rules", () => {
+  const good = { thresholds: DEFAULT_THRESHOLDS, rules: DEFAULT_ALERT_RULES };
+  const withT = (over: object) => ({ ...good, thresholds: { ...DEFAULT_THRESHOLDS, ...over } });
+
+  it("accepts the defaults", () => {
+    expect(refusalToSaveAlertRules(good)).toBeNull();
+  });
+
+  it("refuses an urgent window as wide as the notice window", () => {
+    // Otherwise the urgent alert fires after the gentle one, which reads as
+    // the system being broken rather than as a setting being wrong.
+    expect(refusalToSaveAlertRules(withT({ expiringUrgentDays: 120 }))).toBe("urgent_window_too_wide");
+    expect(refusalToSaveAlertRules(withT({ expiringUrgentDays: 90 }))).toBe("urgent_window_too_wide");
+  });
+
+  it("refuses windows that are not whole days", () => {
+    expect(refusalToSaveAlertRules(withT({ expiringUrgentDays: 0 }))).toBe("invalid_days");
+    expect(refusalToSaveAlertRules(withT({ deadStockExpiryDays: 7.5 }))).toBe("invalid_days");
+  });
+
+  it("refuses a dead-stock horizon that could never fire", () => {
+    expect(refusalToSaveAlertRules(withT({ deadStockExpiryDays: 90 }))).toBe(
+      "dead_stock_window_too_narrow",
+    );
+    // With the rule off, or the notice rule off, the same number is fine.
+    const off = { enabled: false, severity: "notice" } as const;
+    expect(
+      refusalToSaveAlertRules({
+        thresholds: { ...DEFAULT_THRESHOLDS, deadStockExpiryDays: 90 },
+        rules: { ...DEFAULT_ALERT_RULES, dead_stock: off },
+      }),
+    ).toBeNull();
+    expect(
+      refusalToSaveAlertRules({
+        thresholds: { ...DEFAULT_THRESHOLDS, deadStockExpiryDays: 90 },
+        rules: { ...DEFAULT_ALERT_RULES, expiring_notice: off },
+      }),
+    ).toBeNull();
+  });
+
+  it("refuses a negative minimum and an absurd cover", () => {
+    expect(refusalToSaveAlertRules(withT({ lowStockDefaultPoint: -1 }))).toBe("invalid_low_stock_point");
+    expect(refusalToSaveAlertRules(withT({ lowStockCoverDays: 366 }))).toBe("invalid_cover_days");
+    expect(refusalToSaveAlertRules(withT({ lowStockCoverDays: 1.5 }))).toBe("invalid_cover_days");
+  });
+
+  it("refuses a critical grade, a missing rule and a rule that does not exist", () => {
+    const rules = (over: object) => ({ ...good, rules: { ...DEFAULT_ALERT_RULES, ...over } });
+    expect(refusalToSaveAlertRules(rules({ low_stock: { enabled: true, severity: "critical" } }))).toBe(
+      "invalid_alert_rule",
+    );
+    expect(refusalToSaveAlertRules(rules({ expired_stock: { enabled: false, severity: "notice" } }))).toBe(
+      "invalid_alert_rule",
+    );
+    const three = Object.fromEntries(
+      Object.entries(DEFAULT_ALERT_RULES).filter(([type]) => type !== "dead_stock"),
+    );
+    expect(refusalToSaveAlertRules({ ...good, rules: three })).toBe("invalid_alert_rule");
+    expect(refusalToSaveAlertRules({ ...good, rules: null })).toBe("invalid_alert_rule");
   });
 });

@@ -6,7 +6,8 @@ import { alerts, batches, items, users } from "@/db/schema";
 import { assertPermission } from "./session";
 import { recordAudit } from "@/lib/audit";
 import { runAlertJob } from "@/lib/alerts/job";
-import { canSnooze, type AlertSeverity, type AlertType } from "@/lib/alerts/rules";
+import { canSnooze, type AlertSeverity, type AlertType, type Thresholds } from "@/lib/alerts/rules";
+import { readAlertConfig, saveAlertConfig } from "@/lib/alerts/config";
 
 /** Alerts that should be on screen now: open, or snoozed past their snooze. */
 const LIVE = sql`${alerts.status} <> 'resolved' and (${alerts.status} <> 'snoozed' or ${alerts.snoozedUntil} is null or ${alerts.snoozedUntil} <= now())`;
@@ -16,7 +17,9 @@ const SEVERITY_ORDER = sql`case ${alerts.severity}
 
 export type AlertRow = Awaited<ReturnType<typeof listAlerts>>[number];
 
-export async function listAlerts(filter: { type?: AlertType; severity?: AlertSeverity } = {}) {
+export async function listAlerts(
+  filter: { type?: AlertType; severity?: AlertSeverity; limit?: number } = {},
+) {
   await assertPermission("alerts.view");
   const db = await getDb();
 
@@ -51,7 +54,7 @@ export async function listAlerts(filter: { type?: AlertType; severity?: AlertSev
       ),
     )
     .orderBy(SEVERITY_ORDER, asc(alerts.firstSeenAt))
-    .limit(500);
+    .limit(Math.min(Math.max(Math.trunc(filter.limit ?? 500), 1), 500));
 }
 
 /** Counts for the dashboard tiles, in one query rather than one per tile. */
@@ -170,5 +173,53 @@ export async function snoozeAlert(alertId: string, days: number) {
 export async function refreshAlerts() {
   await assertPermission("alerts.view");
   const db = await getDb();
+  return runAlertJob(db);
+}
+
+/* ---------------------------------------------------------------- the rules */
+
+/**
+ * What the pharmacy has decided counts as an alert.
+ *
+ * Reading needs `alerts.view`: the list a person is looking at makes more
+ * sense when they can see why something is on it. **Changing it needs
+ * `alerts.configure`** -- its own permission, not `settings.manage` and not
+ * `alerts.manage`. Marking an alert as handled is shop-floor work; deciding
+ * what the whole pharmacy is warned about is not, and the owner hands the two
+ * out separately.
+ */
+export async function alertConfig() {
+  await assertPermission("alerts.view");
+  return readAlertConfig(await getDb());
+}
+
+/**
+ * Saves the rules and recomputes the list straight away, so the person who
+ * tightened a window sees what it caught rather than waiting for the night job.
+ */
+export async function updateAlertConfig(input: { thresholds: Thresholds; rules: unknown }) {
+  const session = await assertPermission("alerts.configure");
+  const db = await getDb();
+
+  await db.transaction(async (tx) => {
+    const { before, after } = await saveAlertConfig(
+      tx as unknown as typeof db,
+      session.user.id,
+      input,
+    );
+    await recordAudit(
+      {
+        userId: session.user.id,
+        actorLabel: session.user.username,
+        action: "alerts.rules_updated",
+        entityType: "settings",
+        entityId: null,
+        before,
+        after,
+      },
+      tx as unknown as typeof db,
+    );
+  });
+
   return runAlertJob(db);
 }

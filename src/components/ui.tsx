@@ -270,7 +270,7 @@ export function Stat({
 }: {
   value: ReactNode;
   label: string;
-  tone?: "default" | "accent" | "critical" | "warning" | "quiet";
+  tone?: "default" | "accent" | "critical" | "warning" | "notice" | "quiet";
   hint?: string;
 }) {
   // Not built on Card: a tinted tile has to override Card's own background and
@@ -285,6 +285,7 @@ export function Stat({
     accent: { figure: "text-accent", shell: "border-accent/20 bg-accent-soft" },
     critical: { figure: "text-critical", shell: "border-critical/25 bg-critical-soft" },
     warning: { figure: "text-warning-ink", shell: "border-warning/25 bg-warning-soft" },
+    notice: { figure: "text-notice", shell: "border-notice/25 bg-notice-soft" },
     // A zero should not shout: nothing is wrong, so nothing draws the eye.
     quiet: { figure: "text-faint", shell: "border-rule bg-surface" },
   } as const;
@@ -294,7 +295,9 @@ export function Stat({
     // when the tile is inside a link -- most are, a few are not, and a tile
     // that rises under the cursor while going nowhere is a lie about it.
     <div
-      className={`stat rounded-2xl border px-5 py-5 shadow-[var(--shadow-card),var(--edge)] ${tint.shell}`}
+      // h-full: in a grid of tiles a label that wraps makes its tile taller,
+      // and the others in the row should grow with it rather than sit short.
+      className={`stat h-full rounded-2xl border px-5 py-5 shadow-[var(--shadow-card),var(--edge)] ${tint.shell}`}
     >
       {/* Label first, figure second. The figure still dominates -- it is three
           times the size -- but the eye gets told what it is counting before it

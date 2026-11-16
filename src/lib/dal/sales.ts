@@ -6,6 +6,7 @@ import { batches, items, returns, returnLines, sales, saleLines, users } from "@
 import { assertPermission } from "./session";
 import { addDays, today } from "@/lib/format/date";
 import { panelTakingsByDay } from "@/lib/panel/amounts";
+import { tillTakingsOn } from "@/lib/dashboard/queries";
 import { getSettings } from "./settings";
 import { recordAudit } from "@/lib/audit";
 import {
@@ -131,49 +132,43 @@ export async function listSales(opts: { limit?: number } = {}) {
     .limit(opts.limit ?? 100);
 }
 
-/** Takings so far today, for the dashboard. Voided sales do not count. */
+/**
+ * Takings so far today, for the dashboard. Voided sales do not count.
+ *
+ * Refunds come off, exactly as they do in the sales report: two different
+ * answers to "what did we take today" would be worse than either.
+ *
+ * `yesterdaySoFar` is what the till had taken by this time yesterday, so the
+ * comparison is like for like. It leaves the Panel out on both sides -- a
+ * Panel order has a date and no clock, so "by this time" means nothing for it.
+ */
 export async function todaysTakings() {
   await assertPermission("sales.create");
   const db = await getDb();
   const { timezone } = await getSettings();
+  const day = today();
 
-  const [sold] = await db
-    .select({
-      total: sql<number>`coalesce(sum(${sales.total}), 0)::bigint`,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(sales)
-    .where(
-      and(
-        eq(sales.status, "completed"),
-        sql`(${sales.soldAt} at time zone ${timezone})::date
-            = (now() at time zone ${timezone})::date`,
-      ),
-    );
-
-  // Refunds come off, exactly as they do in the sales report. Two different
-  // answers to "what did we take today" would be worse than either.
-  const [refunded] = await db
-    .select({ total: sql<number>`coalesce(sum(${returns.refundTotal}), 0)::bigint` })
-    .from(returns)
-    .where(
-      sql`(${returns.returnedAt} at time zone ${timezone})::date
-          = (now() at time zone ${timezone})::date`,
-    );
+  const till = await tillTakingsOn(db, { day, timezone });
+  const before = await tillTakingsOn(db, {
+    day: addDays(day, -1),
+    timezone,
+    until: new Date(Date.now() - 86_400_000),
+  });
 
   // What the Panel took in today, approved only. It is takings but not a basket,
   // so it raises the total and leaves the transaction count alone.
-  const day = today();
   const panelPaid = (await panelTakingsByDay(db, day, day)).get(day)?.paid ?? 0;
 
-  const gross = Number(sold?.total ?? 0);
-  const refunds = Number(refunded?.total ?? 0);
   return {
-    total: gross - refunds + panelPaid,
-    gross,
-    refunds,
-    count: sold?.count ?? 0,
+    total: till.net + panelPaid,
+    gross: till.gross,
+    refunds: till.refunds,
+    count: till.count,
     panel: panelPaid,
+    till: till.net,
+    /** Rounded: an average basket in fractional rupiah is noise. */
+    average: till.count > 0 ? Math.round(till.gross / till.count) : 0,
+    yesterdaySoFar: before.net,
   };
 }
 

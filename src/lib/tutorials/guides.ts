@@ -188,6 +188,8 @@ export const GUIDES: readonly Guide[] = [
       { id: "kinds" },
       { id: "routine", tip: true },
       { id: "act", permissions: ["alerts.manage"] },
+      // Only for whoever the owner has let decide what counts as urgent.
+      { id: "rules", permissions: ["alerts.configure"], tip: true, warn: true },
       { id: "critical", warn: true },
     ],
   },

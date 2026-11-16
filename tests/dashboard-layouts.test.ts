@@ -8,6 +8,8 @@ import {
   DEFAULT_LAYOUT,
   WIDGETS,
   WIDGET_PERMISSION,
+  WIDGET_SIZE,
+  layoutSpans,
   refusalToSaveLayout,
   resolveLayout,
   visibleWidgets,
@@ -139,6 +141,47 @@ describe("a layout is never a grant", () => {
 
   it("every widget names a permission", () => {
     expect(Object.keys(WIDGET_PERMISSION).sort()).toEqual([...WIDGETS].sort());
+  });
+});
+
+describe("rows of two halves or one full", () => {
+  it("every widget has a size", () => {
+    expect(Object.keys(WIDGET_SIZE).sort()).toEqual([...WIDGETS].sort());
+  });
+
+  it("pairs halves and leaves full widgets alone", () => {
+    expect(layoutSpans(["sales_chart", "busy_hours", "top_products"])).toEqual([
+      { key: "sales_chart", wide: true },
+      { key: "busy_hours", wide: false },
+      { key: "top_products", wide: false },
+    ]);
+  });
+
+  it("widens a half with no partner instead of leaving a hole beside it", () => {
+    // The next widget is full-width...
+    expect(layoutSpans(["busy_hours", "sales_chart"])).toEqual([
+      { key: "busy_hours", wide: true },
+      { key: "sales_chart", wide: true },
+    ]);
+    // ...or there is none: a cashier's dashboard is the owner's with pieces
+    // missing, and must not look like it.
+    expect(layoutSpans(["busy_hours", "top_products", "recent_sales"])).toEqual([
+      { key: "busy_hours", wide: false },
+      { key: "top_products", wide: false },
+      { key: "recent_sales", wide: true },
+    ]);
+  });
+
+  it("nothing in, nothing out", () => {
+    expect(layoutSpans([])).toEqual([]);
+  });
+});
+
+describe("cost prices stay behind reports.financial", () => {
+  it("the only widget that shows money the pharmacy paid needs that permission", () => {
+    expect(WIDGET_PERMISSION.money_overview).toBe("reports.financial");
+    const manager = grantOf(false, "items.view", "alerts.view", "sales.create", "reports.sales");
+    expect(visibleWidgets(WIDGETS, manager)).not.toContain("money_overview");
   });
 });
 
