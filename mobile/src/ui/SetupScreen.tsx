@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { DeviceRole } from "@/lib/offline/contract";
 import { normaliseServerUrl, ping } from "../lib/api";
+import { randomId } from "../lib/id";
 import { readDevice, readQueue } from "../lib/store";
 import { Alert, Bar, Spinner } from "./components";
 import { useApp } from "./context";
@@ -67,7 +68,7 @@ export function SetupScreen() {
     }
     const serverChanged = existing && existing.serverUrl !== url;
     setDevice({
-      deviceId: existing?.deviceId ?? crypto.randomUUID(),
+      deviceId: existing?.deviceId ?? randomId(),
       deviceName: name.trim(),
       role,
       serverUrl: url,

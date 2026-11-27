@@ -22,6 +22,24 @@ Tailscale is the network security: only devices on the pharmacy's tailnet can
 reach the server. The app adds no login of its own beyond the normal staff
 username and password.
 
+## Which phones
+
+Android 7.0 and later. The app runs inside the phone's WebView, which on
+Android 7–9 is Chrome or "Android System WebView" from the Play Store; the app
+needs Chrome 61 or later, which any phone that has updated since 2017 has. A
+phone with an older WebView shows a notice with a Play Store button instead of
+the app. The build, the polyfills and the CSS fallbacks that make Chrome 61
+enough are listed in the root `CLAUDE.md`.
+
+Android 7.0 and 7.1.0 do not trust Let's Encrypt, which issues the
+`https://….ts.net` certificate, so the app carries the two ISRG roots itself
+(`res/raw/`, `res/xml/network_security_config.xml`). Without them those phones
+cannot reach the server at all. One gap remains: the in-app update download
+goes through Android's download manager, which uses only the phone's own
+roots, so on 7.0 it is expected to fail over https (not yet tried on a
+device). If it does, install the update from a computer (`adb install -r`) or
+download it over the plain `http://` LAN address.
+
 ## Getting it onto a phone
 
 Staff download it from the website: **Aplikasi Android** in the menu (under

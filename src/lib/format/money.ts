@@ -14,6 +14,29 @@ export type MoneyOptions = {
   bare?: boolean;
 };
 
+/*
+ * Building an Intl formatter costs far more than using one -- on an old
+ * Android phone, enough to feel when a till screen prints thirty prices per
+ * keystroke. There are only a handful of distinct option sets, so each is
+ * built once.
+ */
+const moneyFormatters = new Map<string, Intl.NumberFormat>();
+
+function moneyFormatter(bare: boolean, currency: string, decimals: number): Intl.NumberFormat {
+  const key = `${bare ? 1 : 0}|${currency}|${decimals}`;
+  let formatter = moneyFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat("id-ID", {
+      style: bare ? "decimal" : "currency",
+      currency,
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+    moneyFormatters.set(key, formatter);
+  }
+  return formatter;
+}
+
 /**
  * Formats an integer amount for display: 15000 -> "Rp 15.000".
  *
@@ -26,12 +49,7 @@ export function formatMoney(amount: number, opts: MoneyOptions = {}): string {
   const { decimals = 0, currency = "IDR", bare = false } = opts;
   const value = decimals > 0 ? amount / 10 ** decimals : amount;
 
-  const formatter = new Intl.NumberFormat("id-ID", {
-    style: bare ? "decimal" : "currency",
-    currency,
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
+  const formatter = moneyFormatter(bare, currency, decimals);
 
   // Intl renders IDR as "Rp15.000" with no break; a space reads better on a
   // receipt and in dense tables.

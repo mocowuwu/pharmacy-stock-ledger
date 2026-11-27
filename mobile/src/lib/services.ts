@@ -28,6 +28,7 @@ import {
   rememberUser,
   type OfflineSignInProblem,
 } from "./signin";
+import { randomId } from "./id";
 import * as store from "./store";
 import { applySyncResults, SYNC_BATCH } from "./sync";
 import { buildSale, type CartLine, type SaleInput, type SaleRefusal } from "./till";
@@ -328,8 +329,13 @@ export async function onlineSignIn(
 
   if (device.role === "till") {
     onPreparing?.();
-    const verifier = response.user.mustChangePassword ? null : await makeVerifier(password);
-    store.writeUsers(rememberUser(store.readUsers(), response.user, response.serverTime, verifier));
+    // The verifier is 210,000 rounds of PBKDF2 -- around a second on an old
+    // phone -- so it is worked out while the network does its part instead of
+    // before it. The person is remembered at once (the snapshot asks for the
+    // users this phone knows), and the verifier is added when it is ready.
+    const verifying = response.user.mustChangePassword ? Promise.resolve(null) : makeVerifier(password);
+    verifying.catch(() => undefined);
+    store.writeUsers(rememberUser(store.readUsers(), response.user, response.serverTime, null));
     // Send anything rung offline, then take a fresh copy. Neither may keep
     // the person from the website for long: the website refreshes the
     // snapshot itself every 15 minutes.
@@ -340,6 +346,17 @@ export async function onlineSignIn(
       })(),
       new Promise((resolve) => setTimeout(resolve, PREPARE_BUDGET_MS)),
     ]);
+    const verifier = await verifying;
+    if (verifier) {
+      const signedIn = response.user;
+      store.writeUsers({
+        users: store
+          .readUsers()
+          .users.map((u) =>
+            u.id === signedIn.id && u.credentialStamp === signedIn.credentialStamp ? { ...u, verifier } : u,
+          ),
+      });
+    }
   } else if (store.readQueue().sales.length > 0) {
     await syncQueue(device).catch(() => undefined);
   }
@@ -443,7 +460,7 @@ export function recordSale(
     now: check.now,
     elapsed: c.elapsed,
     wall: c.wall,
-    clientId: input.clientId ?? crypto.randomUUID(),
+    clientId: input.clientId ?? randomId(),
   });
   if (!outcome.ok) return outcome;
 

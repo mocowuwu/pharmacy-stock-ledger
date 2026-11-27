@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Who the app trusts for https, on top of the phone's own list.
+
+  The pharmacy server is reached at its Tailscale address, https://….ts.net,
+  whose certificate comes from Let's Encrypt and chains to ISRG Root X1 (or
+  X2). Android only added those roots in 7.1.1, and since Let's Encrypt
+  stopped cross-signing through the old DST root, a phone on Android 7.0
+  refuses the server outright: setup says it cannot be reached. Bundling the
+  two roots here fixes that without trusting anything else; on newer phones
+  they are already in the system list and this changes nothing.
+
+  The roots are the ISRG originals (raw/isrg_root_x1.crt, raw/isrg_root_x2.crt, PEM text;
+  .crt rather than .pem because the repository ignores *.pem as secrets;
+  SHA-256 96:BC:EC:06… and 69:72:9B:8E…), valid to 2035 and 2040.
+
+  cleartextTrafficPermitted keeps a plain http:// LAN address working: once a
+  network security config exists, Android reads cleartext policy from here
+  and ignores the manifest's usesCleartextTraffic.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/isrg_root_x1" />
+            <certificates src="@raw/isrg_root_x2" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

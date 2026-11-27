@@ -57,11 +57,20 @@ async function request<T>(
     headers?: Record<string, string>;
   },
 ): Promise<T> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), init.timeoutMs ?? REQUEST_TIMEOUT_MS);
+  // The timeout is a race, not only an abort: AbortController arrived in
+  // Chrome 66, and on an older WebView `new AbortController()` threw before
+  // the request was even made. Where it exists it still cancels the request.
+  const controller = typeof AbortController === "function" ? new AbortController() : null;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller?.abort();
+      reject(new Unreachable());
+    }, init.timeoutMs ?? REQUEST_TIMEOUT_MS);
+  });
   let response: Response;
   try {
-    response = await fetch(`${server}${path}`, {
+    const sent = fetch(`${server}${path}`, {
       method: init.method,
       headers: {
         Accept: "application/json",
@@ -70,12 +79,15 @@ async function request<T>(
         ...init.headers,
       },
       body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
-      signal: controller.signal,
+      signal: controller?.signal,
       // The API authenticates with the bearer token; the website's cookie is
       // not needed and should not ride along.
       credentials: "omit",
       cache: "no-store",
     });
+    // A request that loses the race may still fail later; that is not news.
+    sent.catch(() => undefined);
+    response = await Promise.race([sent, timedOut]);
   } catch {
     throw new Unreachable();
   } finally {

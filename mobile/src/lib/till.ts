@@ -146,22 +146,79 @@ function normal(s: string | null | undefined): string {
   return (s ?? "").toLowerCase().normalize("NFKD");
 }
 
-/** Resolves a scanned or typed barcode, GS1 or plain, against item barcodes and codes. */
+/*
+ * Both lookups below are built once per catalogue rather than on every
+ * keystroke. Lower-casing and Unicode-normalising three names for each of a
+ * few thousand items, per letter typed, was what made the till lag on old
+ * phones; a barcode scanner types a dozen characters in a burst and then
+ * presses Enter, so it paid that a dozen times and then walked every barcode
+ * again. The catalogue array is replaced, never edited, when a new snapshot
+ * arrives, so keying on it is safe.
+ */
+
+/** Separates the fields so a query cannot match across two of them. */
+const FIELD_BREAK = "\u0000";
+
+const searchKeys = new WeakMap<readonly SnapshotItem[], string[]>();
+
+function searchKeysFor(items: readonly SnapshotItem[]): string[] {
+  let keys = searchKeys.get(items);
+  if (!keys) {
+    keys = items.map((i) => [normal(i.genericName), normal(i.brandName), normal(i.code)].join(FIELD_BREAK));
+    searchKeys.set(items, keys);
+  }
+  return keys;
+}
+
+type CodeIndex = {
+  /** Lower-cased item code -> position of the first item with it. */
+  codes: Map<string, number>;
+  /** A barcode as stored, and each of its GTIN forms -> position of the first item with it. */
+  barcodes: Map<string, number>;
+};
+
+const codeIndexes = new WeakMap<readonly SnapshotItem[], CodeIndex>();
+
+function codeIndexFor(items: readonly SnapshotItem[]): CodeIndex {
+  let index = codeIndexes.get(items);
+  if (!index) {
+    const codes = new Map<string, number>();
+    const barcodes = new Map<string, number>();
+    const put = (map: Map<string, number>, key: string, at: number) => {
+      if (key !== "" && !map.has(key)) map.set(key, at);
+    };
+    items.forEach((item, at) => {
+      put(codes, item.code.toLowerCase(), at);
+      for (const barcode of item.barcodes) {
+        put(barcodes, barcode, at);
+        for (const v of gtinVariants(barcode)) put(barcodes, v, at);
+      }
+    });
+    index = { codes, barcodes };
+    codeIndexes.set(items, index);
+  }
+  return index;
+}
+
+/**
+ * Resolves a scanned or typed barcode, GS1 or plain, against item barcodes and
+ * codes. When more than one item would match, the one earliest in the
+ * catalogue wins, as it did when the catalogue was walked in order.
+ */
 export function findByCode(items: readonly SnapshotItem[], raw: string): SnapshotItem | null {
   const scan = parseScan(raw);
   const code =
     scan.kind === "gs1" ? scan.gtin : scan.kind === "plain" ? scan.code : raw.trim();
   if (!code) return null;
-  const wanted = new Set(gtinVariants(code));
-  const trimmed = raw.trim().toLowerCase();
-  for (const item of items) {
-    if (item.code.toLowerCase() === trimmed) return item;
-    for (const barcode of item.barcodes) {
-      if (barcode === code) return item;
-      if (gtinVariants(barcode).some((v) => wanted.has(v))) return item;
-    }
-  }
-  return null;
+  const index = codeIndexFor(items);
+  const candidates = [index.codes.get(raw.trim().toLowerCase()), index.barcodes.get(code)];
+  // A code with no digits has the empty string as its only GTIN form, which
+  // used to match any item whose barcode had no digits either. Empty forms
+  // are never indexed, so it no longer does.
+  for (const v of gtinVariants(code)) if (v !== "") candidates.push(index.barcodes.get(v));
+  let best = -1;
+  for (const at of candidates) if (at !== undefined && (best < 0 || at < best)) best = at;
+  return best < 0 ? null : items[best];
 }
 
 export const MIN_QUERY = 2;
@@ -174,14 +231,13 @@ export function searchItems(
   const q = normal(query.trim());
   if (q.length < MIN_QUERY) return [];
   const exact = /^[\d\x1d\]]/u.test(query.trim()) ? findByCode(items, query) : null;
-  const matches = items.filter(
-    (i) =>
-      normal(i.genericName).includes(q) ||
-      normal(i.brandName).includes(q) ||
-      normal(i.code).includes(q),
-  );
-  const out = exact ? [exact, ...matches.filter((m) => m.id !== exact.id)] : matches;
-  return out.slice(0, limit);
+  const keys = searchKeysFor(items);
+  const out: SnapshotItem[] = exact ? [exact] : [];
+  // Stops at the limit instead of filtering the whole catalogue first.
+  for (let i = 0; i < items.length && out.length < limit; i += 1) {
+    if (keys[i].indexOf(q) >= 0 && items[i] !== exact) out.push(items[i]);
+  }
+  return out;
 }
 
 export function itemName(item: SnapshotItem): string {
@@ -203,14 +259,12 @@ export function cartTotals(
   discount: number,
 ): SaleTotals {
   const byId = itemIndex(snapshot);
-  return saleTotals(
-    cart.flatMap((l) => {
-      const item = byId.get(l.itemId);
-      return item ? [{ qty: l.qty, unitPrice: item.price, taxExempt: item.isTaxExempt }] : [];
-    }),
-    discount,
-    snapshot.data.tax,
-  );
+  const lines: Array<{ qty: number; unitPrice: number; taxExempt: boolean }> = [];
+  for (const l of cart) {
+    const item = byId.get(l.itemId);
+    if (item) lines.push({ qty: l.qty, unitPrice: item.price, taxExempt: item.isTaxExempt });
+  }
+  return saleTotals(lines, discount, snapshot.data.tax);
 }
 
 export type SaleInput = {
