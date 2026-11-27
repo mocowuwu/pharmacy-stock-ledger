@@ -33,7 +33,7 @@ export type FileName = (typeof FILES)[keyof typeof FILES];
 
 /** `device.json` -- written by the setup screen and on each online sign-in. */
 export type DeviceFile = {
-  /** crypto.randomUUID(), made once at setup. */
+  /** randomId(), made once at setup. */
   deviceId: string;
   deviceName: string;
   role: DeviceRole;

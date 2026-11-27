@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { PAYMENT_METHODS, type PaymentMethod, type SnapshotItem } from "@/lib/offline/contract";
 import { RESTRICTED_DRUG_CLASSES } from "@/lib/catalogue/enums";
 import type { MessageKey } from "../i18n";
@@ -13,6 +13,7 @@ import {
   syncQueue,
   type OnlineSale,
 } from "../lib/services";
+import { randomId } from "../lib/id";
 import { hasPermission } from "../lib/signin";
 import { readQueue, readSnapshot, readState } from "../lib/store";
 import {
@@ -52,6 +53,7 @@ import { useBackHandler } from "./back";
 
 const NO_ITEMS: SnapshotItem[] = [];
 const NO_INDEX = new Map<string, SnapshotItem>();
+const NO_USED: Record<string, number> = {};
 
 const METHOD_ICONS: Record<PaymentMethod, IconName> = {
   tunai: "cash",
@@ -102,6 +104,9 @@ export function TillScreen({ readOnly }: { readOnly: boolean }) {
   void revision;
 
   const [query, setQuery] = useState("");
+  // The field shows every letter at once; the results follow when the phone
+  // has a moment. On a slow phone the list no longer holds up the typing.
+  const shownQuery = useDeferredValue(query);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [paying, setPaying] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -127,20 +132,30 @@ export function TillScreen({ readOnly }: { readOnly: boolean }) {
 
   const items = snapshot?.data.items ?? NO_ITEMS;
   const byId = snapshot ? itemIndex(snapshot) : NO_INDEX;
+  const queue = readQueue();
+  // Both are cached reads, so these only recompute when a file changes.
+  const used = useMemo(
+    () => (snapshot ? usedByBatch(snapshot, state.usage, queue) : NO_USED),
+    [snapshot, state.usage, queue],
+  );
+  const results = useMemo(() => searchItems(items, shownQuery), [items, shownQuery]);
   const clearToast = useCallback(() => setToast(null), []);
   useBackHandler(paying, () => setPaying(false));
   useBackHandler(scanning, () => setScanning(false));
 
-  function add(item: SnapshotItem, announce = false) {
-    setNotFound(null);
-    setCart((lines) => {
-      const found = lines.find((l) => l.itemId === item.id);
-      if (found) return lines.map((l) => (l.itemId === item.id ? { ...l, qty: l.qty + 1 } : l));
-      return [...lines, { itemId: item.id, qty: 1 }];
-    });
-    buzz();
-    if (announce) setToast(t("till.added", { name: itemName(item) }));
-  }
+  const add = useCallback(
+    (item: SnapshotItem, announce = false) => {
+      setNotFound(null);
+      setCart((lines) => {
+        const found = lines.find((l) => l.itemId === item.id);
+        if (found) return lines.map((l) => (l.itemId === item.id ? { ...l, qty: l.qty + 1 } : l));
+        return [...lines, { itemId: item.id, qty: 1 }];
+      });
+      buzz();
+      if (announce) setToast(t("till.added", { name: itemName(item) }));
+    },
+    [t],
+  );
 
   function onScanned(code: string) {
     setScanning(false);
@@ -157,8 +172,6 @@ export function TillScreen({ readOnly }: { readOnly: boolean }) {
   // the server judges expiry itself; the phone's day only shapes the display.
   const now = pass.ok ? pass.now : online ? moment.wall : Date.parse(snapshot.data.pass.issuedAt);
   const today = offlineToday(now, tz);
-  const used = usedByBatch(snapshot, state.usage, readQueue());
-  const results = searchItems(items, query);
   const totals = cartTotals(snapshot, cart, 0);
   const units = cart.reduce((n, l) => n + l.qty, 0);
   const unavailable = scanUnavailable();
@@ -174,7 +187,8 @@ export function TillScreen({ readOnly }: { readOnly: boolean }) {
   // A barcode scanner types the code and presses Enter.
   function onSearchKey(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key !== "Enter" || readOnly || !query.trim()) return;
-    const hit = findByCode(items, query) ?? (results.length === 1 ? results[0] : null);
+    const typed = searchItems(items, query);
+    const hit = findByCode(items, query) ?? (typed.length === 1 ? typed[0] : null);
     if (hit) {
       add(hit, true);
       setQuery("");
@@ -280,51 +294,16 @@ export function TillScreen({ readOnly }: { readOnly: boolean }) {
 
         {query.trim().length > 0 && query.trim().length < MIN_QUERY ? <p className="hint">{t("till.minChars")}</p> : null}
 
-        {query.trim().length >= MIN_QUERY ? (
-          results.length === 0 ? (
-            <div className="card">
-              <Empty icon="search">{t("till.noResults")}</Empty>
-            </div>
-          ) : (
-            <div className="card flush">
-              {results.map((item) => {
-                const stock = stockOf(item, used, today, tz);
-                const inCart = cart.find((l) => l.itemId === item.id)?.qty ?? 0;
-                const nextExpiry = item.batches
-                  .filter((b) => b.expiryDate >= today)
-                  .map((b) => b.expiryDate)
-                  .sort()[0];
-                return (
-                  <div className="product" key={item.id}>
-                    <div className="body">
-                      <div className="name">{itemName(item)}</div>
-                      <div className="meta">
-                        <span className="price">{formatMoney(item.price)}</span>
-                        <DrugMark drugClass={item.drugClass} withLabel={false} />
-                        <span>{stock.sellable > 0 ? t("till.stock", { n: stock.sellable, unit: item.unit }) : t("till.outOfStock")}</span>
-                        {nextExpiry ? <span>{t("till.expires", { date: formatExpiry(nextExpiry, locale) })}</span> : null}
-                      </div>
-                      {stock.expired > 0 ? (
-                        <div className="meta">
-                          <span className="warn">{t("till.expiredStock", { n: stock.expired })}</span>
-                        </div>
-                      ) : null}
-                    </div>
-                    {!readOnly ? (
-                      <button
-                        className={`add-btn ${inCart ? "soft" : "primary"}`}
-                        disabled={stock.sellable <= inCart}
-                        onClick={() => add(item)}
-                        aria-label={t("till.add")}
-                      >
-                        {inCart ? <span className="num">{inCart}</span> : <Icon name="plus" size={22} />}
-                      </button>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          )
+        {shownQuery.trim().length >= MIN_QUERY ? (
+          <Results
+            results={results}
+            used={used}
+            today={today}
+            timezone={tz}
+            cart={cart}
+            readOnly={readOnly}
+            onAdd={add}
+          />
         ) : null}
 
         {!readOnly ? (
@@ -428,6 +407,78 @@ export function TillScreen({ readOnly }: { readOnly: boolean }) {
   );
 }
 
+/**
+ * The search results. Kept apart and memoised so that a keystroke -- which
+ * re-renders the till -- redraws the rows only once the deferred query has
+ * caught up, not on every letter.
+ */
+const Results = memo(function Results({
+  results,
+  used,
+  today,
+  timezone,
+  cart,
+  readOnly,
+  onAdd,
+}: {
+  results: SnapshotItem[];
+  used: Record<string, number>;
+  today: string;
+  timezone: string;
+  cart: CartLine[];
+  readOnly: boolean;
+  onAdd: (item: SnapshotItem) => void;
+}) {
+  const { t, locale } = useApp();
+  if (results.length === 0) {
+    return (
+      <div className="card">
+        <Empty icon="search">{t("till.noResults")}</Empty>
+      </div>
+    );
+  }
+  return (
+    <div className="card flush">
+      {results.map((item) => {
+        const stock = stockOf(item, used, today, timezone);
+        const inCart = cart.find((l) => l.itemId === item.id)?.qty ?? 0;
+        let nextExpiry: string | undefined;
+        for (const b of item.batches) {
+          if (b.expiryDate >= today && (nextExpiry === undefined || b.expiryDate < nextExpiry)) nextExpiry = b.expiryDate;
+        }
+        return (
+          <div className="product" key={item.id}>
+            <div className="body">
+              <div className="name">{itemName(item)}</div>
+              <div className="meta">
+                <span className="price">{formatMoney(item.price)}</span>
+                <DrugMark drugClass={item.drugClass} withLabel={false} />
+                <span>{stock.sellable > 0 ? t("till.stock", { n: stock.sellable, unit: item.unit }) : t("till.outOfStock")}</span>
+                {nextExpiry ? <span>{t("till.expires", { date: formatExpiry(nextExpiry, locale) })}</span> : null}
+              </div>
+              {stock.expired > 0 ? (
+                <div className="meta">
+                  <span className="warn">{t("till.expiredStock", { n: stock.expired })}</span>
+                </div>
+              ) : null}
+            </div>
+            {!readOnly ? (
+              <button
+                className={`add-btn ${inCart ? "soft" : "primary"}`}
+                disabled={stock.sellable <= inCart}
+                onClick={() => onAdd(item)}
+                aria-label={t("till.add")}
+              >
+                {inCart ? <span className="num">{inCart}</span> : <Icon name="plus" size={22} />}
+              </button>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+});
+
 function PaymentSheet({
   cart,
   onClose,
@@ -505,7 +556,7 @@ function PaymentSheet({
     const input = { cart, discount, paymentMethod: method, tendered: cash ? tendered : null, notes, cashier: session };
     // One id for both attempts: if the server booked the sale but its answer
     // was lost, the offline copy is recognised when it syncs.
-    const clientId = crypto.randomUUID();
+    const clientId = randomId();
     setBusy(true);
 
     if (device && reachable !== false && liveToken(session.id)) {

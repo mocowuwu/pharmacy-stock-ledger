@@ -49,8 +49,11 @@
   --chrome-ink: #edeaf6;
   --chrome-muted: #9a93b5;
   --chrome-rule: #3a3252;
-  --shadow: 0 1px 2px rgb(23 20 31 / 0.05), 0 4px 16px -6px rgb(109 59 235 / 0.12);
-  --shadow-lift: 0 -8px 24px -12px rgb(23 20 31 / 0.25);
+  --shadow: 0 1px 2px rgba(23, 20, 31, 0.05), 0 4px 16px -6px rgba(109, 59, 235, 0.12);
+  --shadow-lift: 0 -8px 24px -12px rgba(23, 20, 31, 0.25);
+  /* The focus ring: the accent at 18%, spelled out because WebViews before
+     Chrome 111 drop a color-mix() -- and the ring with it. */
+  --accent-ring: rgba(109, 59, 235, 0.18);
   --radius: 16px;
   --sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: "Geist Mono", ui-monospace, "Roboto Mono", monospace;
@@ -70,6 +73,7 @@
     --accent-strong: #b39afa;
     --accent-soft: #241d3a;
     --accent-contrast: #120e22;
+    --accent-ring: rgba(155, 123, 245, 0.18);
     --critical: #e5645a;
     --critical-soft: #2e1614;
     --warning: #d9b24a;
@@ -79,8 +83,8 @@
     --notice-soft: #14202e;
     --ok: #4cc283;
     --ok-soft: #122419;
-    --shadow: 0 1px 2px rgb(0 0 0 / 0.3);
-    --shadow-lift: 0 -8px 24px -12px rgb(0 0 0 / 0.6);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-lift: 0 -8px 24px -12px rgba(0, 0, 0, 0.6);
     color-scheme: dark;
   }
 }
@@ -137,9 +141,9 @@ body {
   background: var(--chrome-2); color: var(--chrome-ink);
 }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
-.dot.online { background: #3fb573; box-shadow: 0 0 0 3px rgb(63 181 115 / 0.2); }
-.dot.offline { background: #e0a23a; box-shadow: 0 0 0 3px rgb(224 162 58 / 0.2); }
-.dot.locked { background: #e5645a; box-shadow: 0 0 0 3px rgb(229 100 90 / 0.2); }
+.dot.online { background: #3fb573; box-shadow: 0 0 0 3px rgba(63, 181, 115, 0.2); }
+.dot.offline { background: #e0a23a; box-shadow: 0 0 0 3px rgba(224, 162, 58, 0.2); }
+.dot.locked { background: #e5645a; box-shadow: 0 0 0 3px rgba(229, 100, 90, 0.2); }
 .dot.checking { background: var(--chrome-muted); animation: pulse 1.2s ease-in-out infinite; }
 
 /* ------------------------------------------------------------ the page */
@@ -198,7 +202,7 @@ input::placeholder { color: var(--faint); }
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
+  box-shadow: 0 0 0 4px var(--accent-ring);
 }
 .field { position: relative; }
 .field > .icon-btn { position: absolute; right: 4px; top: 4px; color: var(--muted); }
@@ -260,7 +264,7 @@ button.small { min-height: 40px; padding: 6px 12px; font-size: 14px; }
   background: var(--chrome); color: var(--chrome-ink);
   border-radius: 14px; padding: 12px 16px; font-size: 14.5px; font-weight: 600;
   display: flex; gap: 10px; align-items: center;
-  box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.5);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
   animation: rise 0.2s ease-out;
 }
 .with-dock ~ .toast, .toast.above-dock { bottom: 108px; }
@@ -304,7 +308,7 @@ button.list-row:active:not(:disabled) { transform: none; background: var(--surfa
 
 /* ------------------------------------------------------------ choices */
 
-.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.choices { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 8px; gap: 8px; }
 .choices.three { grid-template-columns: 1fr 1fr 1fr; }
 .choice {
   text-align: left; font-weight: 500; padding: 14px; align-items: flex-start; justify-content: flex-start;
@@ -402,7 +406,7 @@ button.list-row:active:not(:disabled) { transform: none; background: var(--surfa
 
 /* The payment sheet. */
 .scrim {
-  position: fixed; inset: 0; background: rgb(15 13 22 / 0.55); z-index: 50;
+  position: fixed; inset: 0; background: rgba(15, 13, 22, 0.55); z-index: 50;
   display: flex; align-items: flex-end; justify-content: center;
   animation: fade 0.15s ease-out;
 }
@@ -446,14 +450,14 @@ button.list-row:active:not(:disabled) { transform: none; background: var(--surfa
    rounded white border is drawn on top of it. */
 .scanner .frame {
   position: absolute; left: 12%; right: 12%; top: 32%; height: 22%;
-  box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.45);
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.45);
 }
 .scanner .frame::before {
   content: ""; position: absolute; inset: -3px;
-  border: 3px solid rgb(255 255 255 / 0.9); border-radius: 18px;
+  border: 3px solid rgba(255, 255, 255, 0.9); border-radius: 18px;
 }
 .scanner .caption { position: absolute; left: 0; right: 0; top: calc(32% - 44px); text-align: center; color: #fff; font-weight: 600; }
-.scanner .close { position: absolute; right: 16px; top: 16px; background: rgb(0 0 0 / 0.5); color: #fff; border: 0; }
+.scanner .close { position: absolute; right: 16px; top: 16px; background: rgba(0, 0, 0, 0.5); color: #fff; border: 0; }
 .scanner .fallback { position: absolute; left: 16px; right: 16px; bottom: 24px; }
 
 /* ------------------------------------------------------------ the receipt */
@@ -466,6 +470,46 @@ button.list-row:active:not(:disabled) { transform: none; background: var(--surfa
 .receipt .offline-note { text-align: center; font-weight: 700; border: 1.5px solid currentColor; border-radius: 6px; padding: 4px; margin: 8px 0; letter-spacing: 0.04em; }
 .receipt .lot { color: var(--muted); font-size: 11.5px; }
 .receipt .grand { font-weight: 800; font-size: 15px; }
+
+/* ------------------------------------------------------------ old WebViews */
+
+/*
+ * Flex `gap` arrived in Chrome 84; an Android 7 phone that never updates its
+ * WebView is older. polyfills.ts measures it and sets `.no-flex-gap` on <html>
+ * when it is missing, and these margins stand in for every flex gap above.
+ * Grid gaps need nothing: `grid-gap` has worked since Chrome 57. When adding
+ * a flex gap above, add its margin here too.
+ */
+.no-flex-gap .bar > * + *,
+.no-flex-gap .alert > * + *,
+.no-flex-gap .toast > * + *,
+.no-flex-gap .cart-line .top > * + *,
+.no-flex-gap .cart-line .bottom > * + *,
+.no-flex-gap .splash .note > * + * { margin-left: 10px; }
+.no-flex-gap .list-row > * + *,
+.no-flex-gap .product > * + *,
+.no-flex-gap .dock .inner > * + * { margin-left: 12px; }
+.no-flex-gap .row > * + *,
+.no-flex-gap .receipt .line > * + *,
+.no-flex-gap .choice strong > * + * { margin-left: 8px; }
+.no-flex-gap .pill > * + * { margin-left: 6px; }
+.no-flex-gap .mark > * + * { margin-left: 5px; }
+.no-flex-gap .chip > * + * { margin-left: 4px; }
+.no-flex-gap .choice > * + * { margin-left: 0; margin-top: 6px; }
+.no-flex-gap .splash > * + * { margin-top: 18px; }
+/* Wrapping rows: every item keeps space on its right and below. */
+.no-flex-gap .list-row .meta > *,
+.no-flex-gap .product .meta > * { margin: 0 10px 2px 0; }
+.no-flex-gap .quick > * { margin: 0 8px 8px 0; }
+.no-flex-gap .quick { margin-bottom: -8px; }
+/* An icon followed by its label inside a button; icon-only buttons stay centred. */
+.no-flex-gap button:not(.icon-btn):not(.add-btn):not(.scan-btn) > svg,
+.no-flex-gap button:not(.icon-btn):not(.add-btn):not(.scan-btn) > .spinner { margin-right: 8px; }
+.no-flex-gap .stepper button > svg { margin-right: 0; }
+/* The same where an icon is followed by bare text, which `* + *` cannot reach. */
+.no-flex-gap .pill > .dot { margin-right: 6px; }
+.no-flex-gap .splash .note > .spinner { margin-right: 10px; }
+.no-flex-gap .choice strong > svg { margin-right: 8px; }
 
 @media print {
   @page { size: 80mm auto; margin: 3mm; }

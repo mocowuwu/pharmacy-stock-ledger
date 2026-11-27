@@ -431,7 +431,23 @@ tsconfig, eslint and vitest. It imports the server's pure modules through `@/`
 -- `totals`, `fefo`, `gs1`, `money`, `date`, `contract` -- so anything those
 modules import must stay free of `server-only`, drizzle and Node built-ins, or
 the app's bundle breaks. `cd mobile && npm test` covers the offline rules;
-`npm run apk` builds the APK. `mobile/README.md` documents the native bridge
+`npm run apk` builds the APK.
+
+**The app runs on Android 7 with a WebView as old as Chrome 61.** Pharmacy
+phones are old and many never update their WebView. The build targets
+`chrome61` (JS and CSS, `mobile/vite.config.ts`); `mobile/src/polyfills.ts`
+fills in the few library calls newer than that, and `mobile/index.html` shows
+an "update your WebView" notice instead of a blank screen on anything older.
+In the app's code and in the shared server modules it bundles: no
+`crypto.randomUUID` (use `randomId` in `mobile/src/lib/id.ts`), no
+`AbortController` without a fallback, no `color-mix()` or `rgb(r g b / a)`
+inside custom properties, and every new flex `gap` gets its margin under
+`.no-flex-gap` in `mobile/src/styles.css`. `es2020` once meant Chrome 80 and
+the app never got past the launch screen on older phones. Android 7.0 also
+lacks Let's Encrypt's roots, which the `ts.net` address needs; they ship in
+`res/raw/` and `network_security_config.xml`.
+
+`mobile/README.md` documents the native bridge
 and the files the website's `AppBridge` reads and writes -- a change to either
 side's file formats is a change to both.
 

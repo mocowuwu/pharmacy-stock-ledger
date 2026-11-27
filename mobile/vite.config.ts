@@ -29,7 +29,19 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
-    target: "es2020",
+    /*
+     * Android 7 is the oldest phone the app supports, and its WebView is
+     * whatever the Play Store last installed -- possibly years old. Chrome 61
+     * is the floor because it is the first to run module scripts, which is
+     * how Vite loads the app; esbuild rewrites newer syntax (optional
+     * chaining, `??`, class fields, object spread) down to it. Library calls
+     * newer than that are filled in by src/polyfills.ts, and a WebView older
+     * still gets index.html's "update your WebView" notice, not a blank
+     * screen. `es2020` here used to mean Chrome 80: on anything older the
+     * script failed to parse and the phone never got past the launch screen.
+     */
+    target: "chrome61",
+    cssTarget: "chrome61",
   },
   test: {
     environment: "node",

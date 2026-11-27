@@ -49,22 +49,33 @@ export function adoptPharmacyTimezone(zone: string | null | undefined): void {
  * implementation detail and never reaches the screen.
  */
 export function today(timezone: string = pharmacyTimezone()): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
+  return isoDayFormatter(timezone).format(new Date());
 }
 
 /** The calendar date an instant falls on in the pharmacy's timezone. */
 export function dayOf(instant: Date, timezone: string = pharmacyTimezone()): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(instant);
+  return isoDayFormatter(timezone).format(instant);
+}
+
+/*
+ * One formatter per timezone. Building an Intl formatter costs far more than
+ * using one, and these are asked for on every expiry check -- felt on the
+ * Android till's older phones, measurable on the server.
+ */
+const isoDayFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function isoDayFormatter(timezone: string): Intl.DateTimeFormat {
+  let formatter = isoDayFormatters.get(timezone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    isoDayFormatters.set(timezone, formatter);
+  }
+  return formatter;
 }
 
 /** Parses `YYYY-MM-DD` to a UTC-midnight epoch, for whole-day arithmetic only. */

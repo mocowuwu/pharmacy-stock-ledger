@@ -8,6 +8,51 @@
   </head>
   <body>
     <div id="root"></div>
+    <!--
+      The one thing that must work on any WebView: saying it is too old.
+      The app is built for Chrome 61 and later (vite.config.ts). An Android 7
+      phone whose WebView has never been updated can be older; there the app's
+      script never runs, and without this the cashier would stare at a blank
+      screen with no idea why. Plain ES5, no modules, so it runs everywhere.
+      Shown when module scripts are unsupported (nomodule), when the app fails
+      before it starts (a script error), or when it has not started in 15 s.
+      The words are in both languages because the app's own catalogue is not
+      loaded yet. Update the link in both languages together.
+    -->
+    <script>
+      (function () {
+        var shown = false;
+        function tooOld() {
+          if (shown || window.__appBooted) return;
+          shown = true;
+          var root = document.getElementById("root");
+          document.body.style.margin = "0";
+          root.innerHTML =
+            '<div style="font-family:sans-serif;background:#221c33;color:#edeaf6;min-height:100vh;box-sizing:border-box;margin:0;padding:32px 24px;line-height:1.5;text-align:center">' +
+            '<h2 style="font-size:20px;margin:0 0 12px">Perbarui WebView ponsel ini</h2>' +
+            '<p style="margin:0 0 16px;color:#c9c3dc">Aplikasi Apotek membutuhkan versi Android System WebView (atau Chrome) yang lebih baru. ' +
+            'Buka Play Store, perbarui <b>Android System WebView</b> dan <b>Chrome</b>, lalu buka aplikasi ini lagi.</p>' +
+            '<p style="margin:0 0 24px;color:#9a93b5;font-size:14px">This phone’s WebView is too old for the app. ' +
+            'Update Android System WebView and Chrome from the Play Store, then open the app again.</p>' +
+            '<a href="market://details?id=com.google.android.webview" style="display:inline-block;background:#6d3beb;color:#fff;' +
+            'padding:14px 22px;border-radius:12px;text-decoration:none;font-weight:bold">Buka Play Store</a>' +
+            "</div>";
+          // Let the launch screen give way, or the notice is hidden behind it.
+          try {
+            window.PharmacyNative && window.PharmacyNative.ready();
+          } catch (e) {}
+        }
+        window.__appTooOld = tooOld;
+        window.addEventListener("error", function () {
+          // Only before the app has started: later errors are the app's own.
+          if (!window.__appBooted) setTimeout(tooOld, 0);
+        });
+        setTimeout(tooOld, 15000);
+      })();
+    </script>
+    <script nomodule>
+      window.__appTooOld();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
